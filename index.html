@@ -805,6 +805,8 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  <label style="display:flex;gap:9px;align-items:flex-start;font-size:12px"><input type="checkbox" id="ghRemember"> Запомнить токен в браузере на этом устройстве (удобно, но небезопасно на общем компьютере)</label>
  <label style="display:flex;gap:9px;align-items:flex-start;font-size:12px"><input type="checkbox" id="ghAuto" checked> Автоматически сохранять изменения в GitHub после подключения</label>
  <div class="gh-actions"><button class="btn btn-primary" type="button" id="ghConnect">Подключить и проверить</button><button class="btn" type="button" id="ghUpload">Сохранить на GitHub</button><button class="btn" type="button" id="ghRefresh">Проверить облако</button></div>
+ <div class="gh-actions"><button class="btn btn-primary" type="button" id="ghLoadNow">⬇ Загрузить финансовые данные из GitHub</button></div>
+ <div class="gh-note">Подключение GitHub не всегда означает, что облачная база уже открыта. Если просчёт пустой, нажми «Загрузить финансовые данные из GitHub». Программа покажет количество строк и периодов до замены локальных данных; облачная копия останется неизменной.</div>
  <div class="gh-message" id="ghMessage" role="status" aria-live="polite">GitHub не подключён.</div>
  <div id="ghConflict"><strong style="font-size:13px">Локальные и облачные данные различаются</strong><p id="ghConflictText">Для защиты учёта автоматическая замена отключена. Выбери нужную версию.</p><div class="gh-actions"><button type="button" class="btn" id="ghLoad">Загрузить с GitHub</button><button type="button" class="btn" id="ghForceUpload">Заменить данные GitHub текущими</button></div></div>
  <div class="gh-actions"><button class="btn" type="button" id="ghDownloadLocal">⇩ Скачать локальную JSON-копию</button><button class="btn" type="button" id="ghDisconnect">Отключить GitHub</button></div>
@@ -871,13 +873,22 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
   if(!r.data.private)throw Error('Репозиторий публичный. Для финансовых данных требуется private-репозиторий.');
   return r.data;
 }
+ function isEmptyInstallation(){
+   if(state.rows.length!==0 || state.snapshots.length!==1 || (state.snapshots[0]&&state.snapshots[0].id!=='INIT'))return false;
+   if(ops.cash.length||ops.invoices.length||ops.payments.length||ops.allocations.length)return false;
+   if(Object.values(ops.openings||{}).some(v=>Number(v&&typeof v==='object'?v.amount:v)||0))return false;
+   if((ops.suppliers||[]).some(v=>Number(v.opening)||Number(v.openingBalance)||Number(v.balance)||0))return false;
+   return true;
+ }
  function synced(r){ready=true;remote=r;setMeta(r?r.sha:null,fingerprint(getSnapshot()));clearConflict();msg('✓ GitHub подключён · данные синхронизированы', 'ok')}
  async function checkRemote(bootstrap){if(!configReady())throw Error('Сначала укажи репозиторий и токен.');if(busy)return;busy=true;msg('Проверяем приватный GitHub и облачную копию…');try{
    await checkRepoPrivate();let found=await getCloud(),local=fingerprint(getSnapshot());remote=found;
    if(!found){if(meta.sha){conflict('Облачная копия была удалена или перемещена. Можно загрузить сюда локальные данные, но сначала проверь адрес и путь.');msg('В GitHub нет ранее синхронизированной копии.', 'error')}else{ready=false;clearConflict();msg('✓ Приватный репозиторий доступен. Нажми «Сохранить на GitHub» для первой загрузки.')}}
    else if(found.hash===local){synced(found)}
-   else if(!meta.sha && !readStore(localStorage,'landa_proschet_offline_v1') && !readStore(localStorage,'landa_finance_operations_v1') && state.rows.length===0 && state.snapshots.length===1 && !ops.cash.length && !ops.invoices.length && !ops.payments.length){
-     msg('Новый браузер: первая загрузка финансовых данных из приватного GitHub…');restoreRemote(found,true);
+   else if(isEmptyInstallation() && found.data.proschet.rows.length>0){
+     // Initial localStorage can already contain the empty SEED after startup.
+     // Such a placeholder must not be pushed over the real cloud backup.
+     ready=false;clearConflict();msg('Найдена облачная база: '+found.data.proschet.rows.length+' строк, '+found.data.proschet.snapshots.length+' периодов. Загружаем её…');restoreRemote(found,true);
    }
    else if(meta.repo===conf.repo&&meta.path===conf.path&&meta.sha===found.sha){
       ready=true;clearConflict();msg('Есть локальные изменения. Отправляем их в GitHub…');if(conf.auto)queued=true;
@@ -928,9 +939,20 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  el('ghClose').addEventListener('click',()=>el('githubDialog').close());
  action('ghConnect',async()=>{storeForm();await checkRemote(false)});
  action('ghRefresh',async()=>{storeForm();await checkRemote(false)});
- action('ghUpload',async()=>{storeForm();await checkRepoPrivate();if(!ready){let existing=await getCloud();if(existing){remote=existing;conflict('На GitHub уже есть данные. Перед перезаписью выбери версию.');msg('⚠ Облачный файл существует. Требуется явное подтверждение.','error');return}if(!confirm('Создать в GitHub первую копию текущих данных?'))return;}await upload(true)});
- action('ghLoad',async()=>{await checkRepoPrivate();remote=await getCloud();if(!remote)throw Error('В GitHub пока нет данных.');if(!confirm('Заменить ВСЕ локальные финансовые данные данными из GitHub? Рекомендуется сначала скачать локальную копию.'))return;restoreRemote(remote,false)});
- action('ghForceUpload',async()=>{if(!confirm('Перезаписать облачный файл данными ЭТОГО устройства? Облачная версия сохранится только в истории GitHub.'))return;storeForm();await upload(true)});
+ action('ghUpload',async()=>{storeForm();await checkRepoPrivate();const existing=await getCloud();if(existing && isEmptyInstallation() && existing.data.proschet.rows.length>0){remote=existing;ready=false;conflict('На GitHub уже есть '+existing.data.proschet.rows.length+' строк! Запрещено заменять существующую базу пустой программой. Выбери «Загрузить финансовые данные из GitHub».');msg('⚠ Облачная база не пуста. Сначала загрузи данные из GitHub.','error');return}if(!ready){if(existing){remote=existing;conflict('На GitHub уже есть данные. Перед перезаписью выбери версию.');msg('⚠ Облачный файл существует. Требуется явное подтверждение.','error');return}if(!confirm('Создать в GitHub первую копию текущих данных?'))return;}await upload(true)});
+ async function userLoadCloud(){
+   storeForm();await checkRepoPrivate();const found=await getCloud();if(!found)throw Error('В GitHub нет файла '+conf.path+'.');
+   const local=getSnapshot();
+   const same=fingerprint(found)===fingerprint(local);
+   if(same){synced(found);msg('✓ Облачная база уже открыта: '+found.data.proschet.rows.length+' строк, '+found.data.proschet.snapshots.length+' периодов.','ok');return}
+   let prompt='В GitHub найдена финансовая база: '+found.data.proschet.rows.length+' строк и '+found.data.proschet.snapshots.length+' периодов.\n\nЗагрузить её в LANDA на этом устройстве?';
+   if(!isEmptyInstallation())prompt+='\n\nВНИМАНИЕ: локальные записи будут заменены. Сначала можно скачать локальную JSON-копию.';
+   if(!confirm(prompt)){msg('Облачная база найдена, загрузка отменена. Локальные данные не менялись.');return}
+   ready=false;clearTimeout(timer);queued=false;remote=found;restoreRemote(found,false);
+ }
+ action('ghLoadNow',userLoadCloud);
+ action('ghLoad',userLoadCloud);
+ action('ghForceUpload',async()=>{storeForm();const existing=await getCloud();if(existing&&isEmptyInstallation()&&existing.data.proschet.rows.length>0)throw Error('Нельзя перезаписать непустую облачную базу пустым просчётом. Сначала загрузи данные из GitHub.');if(!confirm('Перезаписать облачный файл данными ЭТОГО устройства? Облачная версия сохранится только в истории GitHub.'))return;await upload(true)});
  action('ghDownloadLocal',()=>{if(typeof downloadBackup==='function')downloadBackup();else throw Error('Выгрузка недоступна')});
  action('ghDisconnect',()=>{if(!confirm('Отключить синхронизацию GitHub на этом устройстве? Локальные финансовые данные останутся.'))return;clearTimeout(timer);ready=false;remote=null;token='';delStore(localStorage,CONFKEY);delStore(localStorage,METAKEY);delStore(localStorage,LOCAL_TOKEN);delStore(sessionStorage,LOCAL_TOKEN);conf={repo:'',path:'landa-data/backup.json',remember:false,auto:true};meta={repo:'',path:'',sha:null,hash:null};el('ghToken').value='';el('ghRepo').value='';el('ghPath').value=conf.path;clearConflict();msg('☁ GitHub отключён. Локальные данные сохранены.')});
  window.addEventListener('landa:data-changed',()=>{if(ready){msg('● Локально сохранено · ожидает GitHub');queueUpload()}else if(conf.repo){msg('● Локальные изменения. GitHub сейчас не синхронизирован.') }});
