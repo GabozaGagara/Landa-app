@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LANDA v11 — GitHub Landa-finance</title>
+<meta name="description" content="Автономная программа: наличные ₽ и $, карты, Авито Доставка, накладные СДЭК, три поставщика и финансовый просчёт. Не требует интернета.">
+<style>
+:root{--ink:#15233c;--muted:#748199;--line:#e8edf4;--main:#f5f7fb;--white:#fff;--nav:#102039;--nav2:#18304f;--blue:#375be6;--blueLite:#eef2ff;--green:#13866d;--red:#cd4352;--yellow:#d1912c;--shadow:0 10px 30px rgba(27,45,83,.045)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;color:var(--ink);background:var(--main);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Arial,sans-serif}button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.5}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid rgba(55,91,230,.24);outline-offset:2px}button,.textinput,select{transition:border-color .15s,background .15s}a{color:var(--blue)}
+.layout{min-height:100vh;display:grid;grid-template-columns:274px minmax(0,1fr)}aside{background:var(--nav);color:#e9f1ff;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:29px 15px 20px;overflow-y:auto;scrollbar-width:thin}main{min-width:0;max-width:1800px;width:100%;margin:0 auto;padding:32px clamp(20px,3.3vw,52px) 80px}
+.brand{display:flex;gap:12px;align-items:center;padding:0 12px 26px;border-bottom:1px solid #29405f}.mark{background:linear-gradient(135deg,#6c86ff,#375be6);width:39px;height:39px;border-radius:11px;display:grid;place-items:center;font-size:20px;font-weight:800;box-shadow:0 7px 18px #111f3f}.brandname{font-size:17px;font-weight:800;letter-spacing:.05em}.branddesc{color:#9eb1ce;font-size:11px;margin-top:1px}.sidelabel{padding:25px 13px 8px;color:#738caa;letter-spacing:.12em;font-size:10px;text-transform:uppercase;font-weight:800}.nav-btn{display:flex;align-items:center;gap:10px;min-height:44px;border:0;color:#afc0d9;background:transparent;border-radius:9px;padding:8px 12px;text-align:left;width:100%;margin:2px 0;font-size:12.5px}.nav-btn:hover{background:#1a3555;color:white}.nav-btn.active{background:#3157bb;color:white;box-shadow:0 5px 12px rgba(3,11,37,.12)}.nav-icon{font-size:16px;width:20px;text-align:center;filter:saturate(.75)}.nav-text{flex:1;font-weight:650}.nav-num{font-size:11px;color:#89a1be;font-variant-numeric:tabular-nums}.nav-btn.active .nav-num{color:#dee9ff}.sidebar-bottom{margin-top:auto;padding:24px 12px 0;font-size:12px;color:#9eb0cc}.sidebar-bottom .offline{display:flex;align-items:center;gap:7px}.dot{display:inline-block;width:7px;height:7px;background:#42cc9c;border-radius:50%;box-shadow:0 0 0 3px #1c4c50}.sidebar-bottom p{font-size:11px;line-height:1.7;color:#7f97b4}
+.heading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:25px}.eyebrow{font-size:10px;color:#5676b3;letter-spacing:.17em;text-transform:uppercase;font-weight:800}.heading h1{font-size:clamp(24px,2.5vw,34px);line-height:1.18;letter-spacing:-.04em;margin:6px 0 8px;font-weight:830}.heading p{color:var(--muted);margin:0;font-size:13px}.actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:9px;padding-top:6px}.btn{border-radius:9px;min-height:39px;padding:9px 14px;display:inline-flex;gap:8px;align-items:center;justify-content:center;font-weight:700;font-size:12px;border:1px solid #dce4f0;background:white;color:var(--ink)}.btn:hover{background:#f3f6fd;border-color:#c2cee5}.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 4px 12px rgba(55,91,230,.14)}.btn-primary:hover{background:#294bcb;color:white;border-color:#294bcb}.btn-ghost{background:transparent;border-color:transparent;color:#61718d}.btn:active{transform:translateY(1px)}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:white;border:1px solid var(--line);border-radius:13px;padding:13px 15px;margin-bottom:16px;box-shadow:var(--shadow)}.select-wrap{display:flex;align-items:center;gap:9px;min-width:210px}.select-wrap label{font-size:11px;text-transform:uppercase;letter-spacing:.09em;font-weight:800;color:var(--muted)}select{min-height:37px;border:1px solid var(--line);border-radius:8px;padding:7px 28px 7px 10px;max-width:100%;background:white;color:var(--ink);cursor:pointer}.spacer{flex:1}.saved{font-size:11px;color:var(--green);display:flex;align-items:center;gap:5px;min-width:140px;justify-content:flex-end}.saved.error{color:var(--red)}
+.kpis{display:grid;grid-template-columns:1.65fr repeat(3,1fr);gap:12px;margin-bottom:22px}.kpi{border:1px solid var(--line);border-radius:14px;background:white;padding:20px 21px;min-width:0;box-shadow:var(--shadow)}.kpi.primary{background:linear-gradient(125deg,#2647ae,#4265da);color:#fff;border-color:#3156ca;position:relative;overflow:hidden}.kpi.primary:after{content:"";position:absolute;width:160px;height:160px;background:rgba(255,255,255,.065);right:-35px;top:-75px;border-radius:50%}.kpi-label{font-size:11px;text-transform:uppercase;letter-spacing:.09em;font-weight:800;color:#78859a}.primary .kpi-label{color:#d0ddff}.kpi-value{font-weight:820;letter-spacing:-.04em;white-space:nowrap;font-size:clamp(20px,2.2vw,31px);margin:9px 0 4px;font-variant-numeric:tabular-nums}.kpi:not(.primary) .kpi-value{font-size:clamp(17px,1.7vw,25px)}.kpi-caption{font-size:11px;color:#8995a7}.primary .kpi-caption{color:#dde8ff}.positive{color:var(--green)!important}.negative{color:var(--red)!important}.primary .positive,.primary .negative{color:white!important}
+.insight{border:1px solid #dbe7f0;border-radius:10px;background:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:21px;color:#5c6e89;font-size:12px}.insight strong{color:var(--ink)}.insight .good{color:var(--green)}.insight .bad{color:var(--red)}.insighticon{width:28px;height:28px;flex:none;background:#eef6f6;border-radius:8px;display:grid;place-items:center}.sectionbar{display:flex;align-items:center;justify-content:space-between;gap:15px;margin:17px 0 13px}.sectionbar h2{margin:0;font-size:18px;font-weight:790;letter-spacing:-.025em}.sectionbar small{display:block;color:var(--muted);font-weight:450;font-size:12px;margin-top:4px}.overview{display:grid;grid-template-columns:1.12fr 1fr;gap:13px;margin-bottom:23px}.panel{border-radius:14px;background:#fff;border:1px solid var(--line);padding:18px 19px;box-shadow:var(--shadow);min-width:0}.panel-hd{display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:800;font-size:13px;margin-bottom:13px}.panel-hd span:last-child{color:#95a3b4;font-size:11px;font-weight:500}.barrow{display:grid;grid-template-columns:minmax(90px,160px) minmax(30px,1fr) minmax(80px,118px);align-items:center;gap:10px;margin:12px 0}.barrow .name{font-size:11px;color:#5d6d83;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bartrack{height:7px;background:#edf1f8;border-radius:8px;overflow:hidden}.barfill{height:100%;border-radius:8px;background:#6981ef;max-width:100%}.barvalue{font-size:11px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.trendwrap{height:148px;overflow:hidden}.trendwrap svg{width:100%;height:145px;display:block}.trend-foot{display:flex;justify-content:space-between;color:var(--muted);font-size:10px;margin-top:3px}.filters{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:5px 0 16px}.search-wrap{position:relative;flex:1;min-width:200px}.search-wrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#90a0b3}.textinput{width:100%;min-height:41px;border-radius:9px;background:#fff;border:1px solid #dfe6f0;padding:9px 13px;color:var(--ink)}.search-wrap .textinput{padding-left:41px}.textinput::placeholder{color:#a0abc0}.pills{display:flex;gap:3px;background:#e9edf6;padding:4px;border-radius:9px}.pill{border:0;padding:8px 11px;color:#7a89a0;border-radius:7px;background:transparent;font-size:11px;font-weight:750;white-space:nowrap}.pill.active{background:#fff;box-shadow:0 1px 4px #b8c1d044;color:#253b6c}.filter-count{font-size:11px;color:var(--muted)}
+.group-card{border-radius:13px;border:1px solid var(--line);background:white;margin-bottom:13px;box-shadow:var(--shadow);overflow:hidden}.group-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;cursor:pointer;background:#fff}.group-head:hover{background:#fcfdff}.group-title{font-size:14px;font-weight:830;display:flex;gap:10px;align-items:center}.group-icon{width:29px;height:29px;border-radius:9px;background:var(--blueLite);color:#4b69d5;display:inline-grid;place-items:center;font-size:15px}.group-head .sub{display:block;color:var(--muted);font-size:11px;font-weight:450;margin-top:2px}.group-amount{font-weight:830;font-size:17px;font-variant-numeric:tabular-nums}.group-total{display:flex;align-items:center;gap:22px}.arrow{transition:transform .2s;color:#8492ab}.group-card.collapsed .arrow{transform:rotate(-90deg)}.group-content{border-top:1px solid var(--line)}.group-card.collapsed .group-content{display:none}.subheading{display:flex;gap:10px;justify-content:space-between;align-items:center;padding:12px 20px 8px;background:#fbfcff;color:#7c8baa;font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-weight:850}.subheading b{font-size:10px;color:#9da8ba;font-weight:700}.item{display:grid;grid-template-columns:minmax(210px,1fr) minmax(100px,145px) minmax(100px,164px) 32px;gap:12px;align-items:center;padding:10px 20px;border-bottom:1px solid #f0f3f8;min-height:62px}.item:last-child{border-bottom:0}.item:hover{background:#f9fbff}.item-name{font-weight:670;font-size:12.5px;line-height:1.4;word-break:break-word}.item-meta{color:#96a3b6;font-size:10px;margin-top:4px;display:flex;align-items:center;gap:7px}.item-code{font-variant-numeric:tabular-nums;background:#f2f5fa;border-radius:5px;padding:1px 5px}.item-diff{text-align:right;font-size:11px;color:#98a4b5;font-variant-numeric:tabular-nums}.item-diff .negative{color:var(--red)}.item-diff .positive{color:var(--green)}.moneyinput{width:100%;min-height:37px;border-radius:8px;border:1px solid transparent;background:#f6f8fc;color:#172841;text-align:right;padding:7px 10px;font-size:14px;font-weight:770;font-variant-numeric:tabular-nums}.moneyinput:hover{border-color:#becdf1;background:white}.moneyinput:focus{border-color:#7b93ec;background:white;outline:none;box-shadow:0 0 0 3px #4268ec17}.moneyinput.blank{color:#a4afbf;font-weight:550}.editbtn{border:0;background:none;color:#899ab2;font-size:20px;border-radius:8px;width:32px;height:32px}.editbtn:hover{background:#ebf0fa;color:#3157bb}.empty{padding:28px;text-align:center;color:var(--muted);font-size:13px}.footnote{color:#8190a7;font-size:11px;margin-top:18px;line-height:1.8}.value-muted{color:#a0afc3}.notincluded{background:#fff8ee;color:#b0772b;font-size:10px;border-radius:5px;padding:3px 7px;margin-left:5px;font-weight:700}
+#toast{position:fixed;bottom:24px;right:26px;z-index:50;max-width:min(420px,calc(100vw - 32px));background:#20334c;color:white;border-radius:10px;padding:12px 18px;opacity:0;pointer-events:none;transform:translateY(10px);transition:opacity .2s,transform .2s;box-shadow:0 10px 30px #18233e33;font-size:12px}#toast.on{opacity:1;transform:translateY(0)}
+dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;color:var(--ink);width:min(475px,calc(100vw - 24px));box-shadow:0 35px 95px #09152855}dialog::backdrop{background:#06162a88;backdrop-filter:blur(2px)}.modal-hd{padding:21px 24px 17px;border-bottom:1px solid var(--line);font-size:19px;font-weight:820;letter-spacing:-.02em}.modal-body{padding:22px 24px}.field{display:block;margin-bottom:15px}.field span{display:block;color:#67768b;font-size:11px;font-weight:750;margin-bottom:7px}.field .textinput,.field select{width:100%}.field-hint{color:#8a97a9;font-size:11px;margin-top:6px}.modal-ft{display:flex;justify-content:flex-end;gap:9px;margin-top:21px}.modal-ft .danger{margin-right:auto;color:var(--red)}.modal-info{background:#f4f7ff;color:#5f739e;border-radius:8px;padding:10px 12px;font-size:11px;line-height:1.65}input[type=date]{color-scheme:light}.mobiletop{display:none}
+@media(max-width:1170px){.layout{grid-template-columns:220px minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.overview{grid-template-columns:1fr}.item{grid-template-columns:minmax(180px,1fr) 100px 125px 28px;gap:8px}.barrow{grid-template-columns:150px minmax(30px,1fr) 110px}}
+@media(max-width:780px){.layout{display:block}.mobiletop{display:flex;background:var(--nav);color:white;align-items:center;justify-content:space-between;padding:11px 16px;position:sticky;top:0;z-index:15}.mobiletop strong{letter-spacing:.09em}.mobiletop button{background:#264264;color:white;border:0;border-radius:7px;padding:7px 10px}aside{position:fixed;z-index:20;left:0;top:0;width:min(300px,86vw);height:100dvh;transform:translateX(-110%);transition:transform .2s;box-shadow:8px 0 30px #1a253341}aside.show{transform:translateX(0)}.overlay.show{position:fixed;inset:0;background:#06152c7f;z-index:19}main{padding:21px 14px 60px}.heading{display:block}.actions{justify-content:flex-start;margin-top:14px}.kpis{gap:9px}.kpi{padding:15px}.kpi-value,.kpi:not(.primary) .kpi-value{font-size:21px}.toolbar{gap:9px}.saved{min-width:0}.item{grid-template-columns:minmax(100px,1fr) 95px 30px;gap:7px;padding:10px 12px}.item-diff{display:none}.group-head{padding:13px}.subheading{padding:10px 13px}.group-amount{font-size:13px}.group-total{gap:9px}.item-name{font-size:12px}.moneyinput{font-size:12px;padding:5px}.filters{gap:8px}.search-wrap{width:100%;min-width:100%;}.footnote{font-size:10px}.barrow{grid-template-columns:100px minmax(30px,1fr) 96px;gap:6px}}
+@media(max-width:410px){.pills{width:100%;justify-content:space-around}.pill{padding:8px}.kpi-label{font-size:9px}.kpi-value,.kpi:not(.primary) .kpi-value{font-size:18px}.kpi-caption{font-size:10px}.group-title{font-size:12px}}
+@media print{aside,.mobiletop,.actions,.filters,.toolbar .btn,.editbtn,.insight,.overview{display:none!important}.layout{display:block}main{padding:0}.kpis{grid-template-columns:repeat(4,1fr)}.group-card{break-inside:avoid}.moneyinput{border:0;background:none}body{background:white}}
+
+/* NEW: warehouse supply ledger and real cashbook */
+.ops-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.ops-grid.four .ops-card{padding:16px 17px}
+.ops-grid.four .ops-big{font-size:clamp(19px,2vw,28px)}
+@media(max-width:1130px){.ops-grid.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.ops-grid.four{grid-template-columns:1fr}}
+
+.page[hidden],.ops-hidden[hidden]{display:none!important}.op-nav{padding:0 0 4px}.op-divider{margin:10px 10px;border:0;border-top:1px solid #2b4360}.nav-btn.core{color:#d7e4fa;font-size:13px}.nav-btn.core.active{background:#3157bb;color:white}.nav-btn .nav-icon{font-size:16px}.ops-head{margin-bottom:22px}.ops-intro{color:#718096;font-size:12px;line-height:1.65;margin:0 0 20px}.ops-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:0 0 22px}.ops-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.ops-card{background:white;border:1px solid var(--line);border-radius:14px;padding:19px 20px;min-width:0;box-shadow:var(--shadow)}.ops-card.primary{background:linear-gradient(115deg,#2446aa,#4367de);color:white;border-color:#395bc4}.ops-card h3{font-size:13px;margin:0 0 7px}.ops-card p{font-size:11px;color:#7d8da5;margin:4px 0}.ops-card.primary p,.ops-card.primary .ops-label{color:#d5e2ff}.ops-label{font-size:11px;color:#8490a4;text-transform:uppercase;font-weight:800;letter-spacing:.06em}.ops-big{font-size:clamp(22px,2.3vw,32px);font-weight:850;letter-spacing:-.04em;margin:8px 0 3px;white-space:nowrap;font-variant-numeric:tabular-nums}.ops-sub{font-size:12px;color:#8c9bb0}.ops-card.primary .ops-sub{color:#dce8ff}.ops-kv{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid #edf1f6;padding-top:9px;margin-top:9px;font-size:12px}.ops-kv strong{font-variant-numeric:tabular-nums}.ops-section{margin:23px 0 10px;display:flex;align-items:center;justify-content:space-between;gap:12px}.ops-section h2{font-size:17px;margin:0;letter-spacing:-.02em}.ops-section p{margin:5px 0 0;color:#8997a8;font-size:11px}.op-buttons{display:flex;gap:8px;flex-wrap:wrap}.ops-notice{background:#f0f5ff;border:1px solid #dce6fa;border-radius:10px;padding:12px 14px;color:#506787;font-size:12px;line-height:1.7;margin:10px 0 20px}.ops-notice.warn{background:#fff9ed;border-color:#f4e5c4;color:#8c682c}.ops-list{border:1px solid var(--line);border-radius:13px;background:white;overflow-x:auto;box-shadow:var(--shadow)}.ops-table{width:100%;border-collapse:collapse;text-align:left;font-size:12px;min-width:650px}.ops-table th{padding:12px 14px;background:#f8faff;color:#7c8aa3;font-size:10px;letter-spacing:.055em;text-transform:uppercase;font-weight:800;white-space:nowrap}.ops-table td{padding:12px 14px;border-top:1px solid #eef1f7;vertical-align:top}.ops-table tbody tr:hover{background:#fafcff}.ops-table td strong{font-weight:790}.ops-table .right,.ops-table th.right{text-align:right}.ops-table small{display:block;color:#8796ab;font-size:10px;margin-top:3px;line-height:1.5}.ops-table .nowrap{white-space:nowrap}.ops-status{display:inline-flex;border-radius:5px;padding:3px 7px;background:#eef3ff;color:#4f6ca7;font-size:10px;font-weight:800;white-space:nowrap}.ops-status.green{background:#e5f6f1;color:#128368}.ops-status.amber{background:#fff4dd;color:#a27321}.ops-status.red{background:#fff0f1;color:#bf4650}.ops-mini{border:1px solid #d9e2f1;background:#fff;border-radius:7px;font-size:11px;padding:6px 9px;color:#425c91;font-weight:750;white-space:nowrap}.ops-mini:hover{background:#eff3ff}.ops-mini.danger{color:#c04c56}.ops-td-actions{white-space:nowrap;text-align:right}.ops-empty{padding:35px 16px;text-align:center;color:#8a98ac;font-size:12px}.ops-segment{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:13px 0}.ops-segment button{border:1px solid #dce4f0;border-radius:7px;padding:7px 11px;background:#fff;color:#7a8ba3;font-size:12px}.ops-segment button.active{background:#eaf0ff;border-color:#cbd9ff;color:#2f4d9c;font-weight:800}.ops-inline{display:flex;gap:11px;align-items:center;flex-wrap:wrap}.ops-inline .textinput{max-width:350px}.op-inline-stats{display:flex;gap:18px;flex-wrap:wrap;color:#74849b;font-size:11px;margin:8px 0 16px}.op-inline-stats strong{color:var(--ink)}.op-twocol{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:13px}.op-fieldrow{display:grid;grid-template-columns:1fr 1fr;gap:11px}.op-fieldrow .field{min-width:0}.op-modal{width:min(760px,calc(100vw - 24px));max-height:min(90dvh,900px);overflow-y:auto}.op-modal .modal-hd{position:sticky;top:0;background:#fff;z-index:2}.field textarea{width:100%;resize:vertical;font-family:inherit;min-height:90px;line-height:1.5}.op-help{background:#f5f7fc;color:#6d7d92;font-size:11px;padding:10px 12px;border-radius:8px;margin:7px 0 15px;line-height:1.65}.op-checkbox{display:flex;align-items:flex-start;gap:9px;cursor:pointer;margin:7px 0 15px;font-size:12px;color:#51627c}.op-checkbox input{margin-top:2px}.op-preview{font-size:12px;color:#4f668e;background:#edf3ff;border-radius:8px;padding:12px;margin:4px 0}.op-badge{display:inline-flex;background:#f1f4f9;border-radius:6px;padding:4px 8px;font-size:11px;color:#61718b;margin-right:5px}.op-formnote{font-size:11px;color:#8594a8;line-height:1.65}.op-linklike{border:0;background:transparent;color:#3658bb;font-weight:700;cursor:pointer;padding:0}.op-linklike:hover{text-decoration:underline}.op-supplier-card{cursor:pointer;transition:border-color .2s}.op-supplier-card:hover{border-color:#a5b6ef}.op-supplier-card.active{border-color:#6280e8;box-shadow:0 0 0 2px #6786e828}.op-modal .modal-ft{position:sticky;bottom:-22px;padding-top:13px;background:#fff}.ops-smallnote{font-size:11px;color:#8a99af}.op-split{border-bottom:1px dashed #e1e7f2;margin:18px 0}.op-pair{display:flex;gap:7px;flex-wrap:wrap}.op-split .op-pair{margin-bottom:14px}.ops-card .positive,.ops-card .negative{font-weight:790}.op-reconcile{background:#f8fafc;border:1px solid #e6ebf2;border-radius:10px;padding:14px;font-size:12px;line-height:1.8}.op-hide{display:none!important}
+@media(max-width:1100px){.ops-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.op-twocol{grid-template-columns:1fr}}
+@media(max-width:640px){.ops-grid,.ops-grid.two{grid-template-columns:1fr}.ops-card{padding:16px}.op-fieldrow{grid-template-columns:1fr;gap:0}.ops-big{font-size:25px}.ops-section{align-items:flex-start;flex-direction:column}.ops-table{min-width:610px}.op-modal .modal-body{padding:17px}.heading.ops-head{margin-bottom:18px}}
+@media print{.page[hidden]{display:none!important}.ops-table{min-width:0}.ops-mini,.op-buttons{display:none}.op-modal{display:none}}
+
+
+/* v4: fixes hidden delete controls and inline diagnostics in top-layer dialogs */
+[hidden]{display:none!important}
+.form-feedback,.input-feedback{border:1px solid #f1bcbf;background:#fff0f0;color:#942f3b;border-radius:9px;padding:10px 12px;font-size:12px;line-height:1.5;margin:10px 0}
+.input-feedback{margin:7px 0 0;padding:7px 9px}
+[aria-invalid="true"]{border-color:#c44f61!important;box-shadow:0 0 0 2px #efc8ce50}
+#actionConfirmDialog{width:min(500px,calc(100vw - 24px));max-height:85vh}
+#actionConfirmDialog p{color:#536580;font-size:13px;line-height:1.7;margin:0}
+#actionConfirmYes{background:#b43f4d;border-color:#b43f4d;color:white}
+#persistenceWarning{padding:12px 18px;margin:12px auto;max-width:1050px;background:#fff0eb;border:1px solid #f0b9ab;border-radius:10px;color:#7c3634;font-size:12px;line-height:1.6}
+
+/* v5: startup / runtime visibility. Never silently imply the program is working. */
+#launchStatus{padding:9px 16px;margin:0 0 13px;border:1px solid #eac58d;background:#fff6e5;border-radius:9px;color:#865b19;font-size:12px;line-height:1.55}
+#launchStatus[data-state="ok"]{background:#eff8f4;border-color:#cbe5d7;color:#276849}
+#launchStatus[data-state="error"],#runtimeErrorPanel{background:#fff0ef;border:1px solid #e6b4b0;color:#923f43}
+#runtimeErrorPanel{border-radius:9px;margin:6px 0 16px;padding:14px 17px;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
+.form-feedback.working{background:#ecf3ff;color:#294a8b;border-color:#c6d6f7}
+.ops-usd-cost{font-size:11px;line-height:1.45;color:#64748b;margin-top:8px;overflow-wrap:anywhere}.ops-usd-cost .rate-note{display:block;font-size:10px;color:#8794a8;margin-top:2px}.ops-card.primary .ops-usd-cost,.ops-card.primary .ops-usd-cost .rate-note{color:#e0eaff}
+.invoice-status-select{display:inline-block;border:1px solid #dbe2f0;border-radius:7px;padding:6px 8px;max-width:170px;color:#354768;font-size:11px;background:#fff}.invoice-status-select:focus{outline:2px solid #7c9de6}
+
+/* GitHub sync */
+#githubDialog{width:min(700px,calc(100vw - 20px));max-height:92vh;overflow:auto;border:0;border-radius:16px;box-shadow:0 26px 90px #13243c45;color:#15233c;padding:0}
+#githubDialog::backdrop{background:#0b18378c}
+#githubDialog .gh-body{padding:20px 24px 24px;display:grid;gap:12px}
+.gh-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.gh-input{border:1px solid #dbe3ed;border-radius:9px;font:inherit;width:100%;padding:12px;background:white;color:#16253c}
+.gh-label{font-size:12px;font-weight:700;color:#526581;display:grid;gap:6px}
+.gh-actions{display:flex;gap:8px;flex-wrap:wrap}
+.gh-message{white-space:pre-wrap;background:#f2f6fb;border:1px solid #e2e9f2;padding:10px 12px;border-radius:9px;font-size:12px;color:#385171;min-height:40px}
+.gh-message.error{background:#fff1f0;color:#9e2632;border-color:#f5d1cf}.gh-message.ok{background:#eafaf4;color:#08745b;border-color:#cde9db}
+.gh-note{font-size:12px;color:#5f6e83;line-height:1.55}
+.gh-warning{font-size:12px;border-left:3px solid #d6a046;background:#fff8e9;padding:10px 12px}
+#ghConflict{display:none;padding:12px;background:#fff7e6;border:1px solid #e5c897;border-radius:9px}
+#ghConflict.show{display:block}
+#ghConflict p{margin:0 0 10px;font-size:12px}
+#ghConflict button{margin:3px}
+.gh-pill{display:inline-block;font-size:11px;padding:3px 8px;background:#e8edf8;border-radius:20px;color:#4b6183}
+@media(max-width:580px){.gh-grid{grid-template-columns:1fr}#githubDialog .gh-body{padding:15px}}
+</style>
+</head>
+<body>
+<div class="mobiletop"><strong>◈ LANDA / УЧЁТ</strong><button id="menuToggle" type="button">☰ Разделы</button></div>
+<div class="overlay" id="overlay"></div>
+<div class="layout">
+<aside id="sidebar"><div class="brand"><div class="mark">≋</div><div><div class="brandname">LANDA</div><div class="branddesc">Деньги, поставки, расчёты</div></div></div><div class="sidelabel">Управление</div><nav class="op-nav"><button type="button" class="nav-btn core" data-page="dashboard"><span class="nav-icon">▦</span><span class="nav-text">Сводка</span></button><button type="button" class="nav-btn core" data-page="cash"><span class="nav-icon">₽</span><span class="nav-text">Деньги · касса / карты / Авито</span></button><button type="button" class="nav-btn core" data-page="suppliers"><span class="nav-icon">⇄</span><span class="nav-text">Поставщики · оплаты</span></button><button type="button" class="nav-btn core" data-page="invoices"><span class="nav-icon">▤</span><span class="nav-text">Накладные · СДЭК</span></button><button type="button" class="nav-btn core" data-page="proschet"><span class="nav-icon">∑</span><span class="nav-text">Финансовый просчёт</span></button></nav><hr class="op-divider"><div class="sidelabel" id="proschetNavLabel" hidden>Группы просчёта</div><nav id="nav" hidden></nav><div class="sidebar-bottom"><div class="offline"><span class="dot"></span> Локальное сохранение</div><p>Изменения хранятся в браузере. Можно включить автоматическую синхронизацию с приватным GitHub.</p><button class="btn" id="githubSyncSide" style="width:100%;color:#d1e1ff;background:#213b5b;border-color:#31506f;margin-bottom:8px" type="button">☁ Синхронизация GitHub</button><div id="githubStatusSide" style="padding:0 4px 10px;color:#b4c6e0;font-size:11px">☁ GitHub не настроен</div><button class="btn" id="pasteBackupSide" style="width:100%;color:#d1e1ff;background:#213b5b;border-color:#31506f;margin-bottom:8px" type="button">↑ Вставить JSON-копию</button><button class="btn" id="backupSide" style="width:100%;color:#d1e1ff;background:#213b5b;border-color:#31506f" type="button">⇩ Полная копия</button></div></aside>
+<main>
+<div id="launchStatus" data-state="pending" role="status"><strong>LANDA v11: проверка запуска…</strong> Если сообщение не исчезает, JavaScript не выполняется. Не вводите данные в этом просмотрщике: скачайте файл и откройте в Chrome или Edge.</div>
+<div id="runtimeErrorPanel" hidden role="alert"><strong>Ошибка выполнения программы:</strong> <span id="runtimeErrorText"></span><div>Сохраните полную резервную копию, не повторяйте ввод, пока не проверите журнал.</div></div>
+<div id="persistenceWarning" hidden role="alert"><strong>⚠ Сохранение недоступно в этом режиме браузера.</strong> Откройте HTML-файл напрямую в Chrome / Edge (не во встроенном просмотрщике мессенджера), разрешите хранение данных и скачайте полную JSON-копию. Пока это сообщение видно, после закрытия страницы изменения могут пропасть.</div>
+<section id="proschetPage" class="page" hidden>
+ <div class="heading"><div><div class="eyebrow">Управление финансовыми остатками</div><h1>Финансовый просчёт</h1><p>Считайте, обновляйте и сравнивайте данные по разделам — без Excel и интернета.</p></div><div class="actions"><button type="button" class="btn" id="undoBtn" title="Отменить последнее изменение">↶ Отменить</button><button type="button" class="btn" id="openBackup">⇩ Выгрузить</button><button type="button" class="btn btn-primary" id="newSnap">＋ Новый расчёт</button></div></div>
+ <div class="toolbar"><div class="select-wrap"><label for="snapSelect">Дата</label><select id="snapSelect" aria-label="Период расчета"></select></div><span class="spacer"></span><button class="btn btn-ghost" id="importJson" type="button">↑ Восстановить копию</button><button class="btn btn-ghost" id="pasteBackupToolbar" type="button">⇧ Вставить JSON</button><div class="saved" id="saved"><span>●</span> Данные загружены</div></div>
+ <section class="kpis" id="kpis" aria-label="Итоги расчета"></section>
+ <div class="insight" id="reconcile"></div>
+ <section class="overview" aria-label="Динамика и распределение"><div class="panel"><div class="panel-hd"><span>Структура по разделам</span><span>5 основных групп</span></div><div id="barList"></div></div><div class="panel"><div class="panel-hd"><span>История общего итога</span><span>последние 16 периодов</span></div><div class="trendwrap" id="trendChart"></div><div class="trend-foot" id="trendDates"></div></div></section>
+ <div class="sectionbar"><div><h2 id="listTitle">Позиции просчёта</h2><small id="listSubtitle"></small></div><button type="button" class="btn" id="addRow">＋ Добавить позицию</button></div>
+ <div class="filters"><div class="search-wrap"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m16.3 16.3 4.5 4.5"></path></svg><input class="textinput" id="search" type="search" placeholder="Поиск по названиям и категориям…" autocomplete="off" aria-label="Поиск позиций"></div><div class="pills" role="group" aria-label="Фильтр сумм"><button type="button" class="pill active" data-filter="active">Ненулевые</button><button type="button" class="pill" data-filter="all">Все</button><button type="button" class="pill" data-filter="changed">Изменения</button><button type="button" class="pill" data-filter="empty">Пустые</button></div><span class="filter-count" id="rowCount"></span></div>
+ <div id="groups"></div>
+ <div class="footnote">Источник: только лист <strong>«Подсчет»</strong> файла LANDA-Corporation(1).xlsx. Основные строки (5–287) включены в итог, дополнительные показатели и сверка — отдельно. Положительные и отрицательные значения считаются с исходным знаком; валюта строк не пересчитывается автоматически. В ячейках можно писать выражения: <strong>120000+35000-5000</strong>. Изменения сохраняются в этом браузере автоматически. Для переноса на другое устройство используйте резервную копию JSON.</div>
+</section>
+<!-- Modules are intentionally separate: cash movements, supplier settlements and CDEK invoices. -->
+<section id="dashboardPage" class="page" hidden>
+ <div class="heading ops-head"><div><div class="eyebrow">LANDA / УЧЁТ ДЕНЕГ И ПОСТАВОК</div><h1>Рабочая сводка</h1><p>Наличные, карты, средства в Авито Доставке, поставщики и накладные — отдельные балансы.</p></div><div class="actions"><button type="button" class="btn btn-primary" data-action="newInvoice">＋ Накладная</button><button type="button" class="btn" data-action="newPayment">↗ Оплата поставщику</button></div></div>
+ <div class="ops-grid" id="dashboardKpis"></div><div class="ops-notice" id="dashboardNote"></div>
+ <div class="ops-section"><div><h2>Расчёты с поставщиками</h2><p>Баланс в долларах: плюсовой — аванс у поставщика, минусовой — вы должны.</p></div></div>
+ <div class="ops-grid" id="dashboardSuppliers"></div>
+ <div class="ops-section"><div><h2>Накладные, требующие внимания</h2><p>По каждой видно стоимость товара и сколько денег зачтено.</p></div><button class="btn" type="button" data-go="invoices">Все накладные</button></div>
+ <div class="ops-list" id="dashboardInvoices"></div>
+</section>
+<section id="cashPage" class="page" hidden>
+ <div class="heading ops-head"><div><div class="eyebrow">РАЗДЕЛ 01 / КАССОВЫЙ УЧЁТ</div><h1>Деньги: наличные, карты и Авито</h1><p>Наличные ₽ и $, деньги на картах ₽ и ожидаемые выплаты Авито ₽. Поставщики и накладные — отдельно.</p></div><div class="actions"><button class="btn" type="button" data-action="openings">⚙ Начальные остатки</button><button class="btn" type="button" data-action="newTransfer">⇄ Между счетами</button><button class="btn btn-primary" type="button" data-action="newCash">＋ Операция</button></div></div>
+ <div class="ops-grid four" id="cashKpis"></div>
+ <div class="ops-section"><div><h2>Покупка долларов</h2><p>Укажите количество USD, фактический курс и источник рублей — наличные или карты.</p></div><button class="btn btn-primary" type="button" data-action="newExchange">⇄ Купить $ за ₽</button></div>
+ <div class="ops-notice">Поступление на карту учитывайте в счёте <strong>Карты ₽</strong>. Продажа через Авито Доставку — в счёте <strong>Авито Доставка ₽</strong> как ожидаемую выплату (по сумме к получению). Когда Авито перечислит деньги, сделайте <strong>перевод Авито → Карты</strong>, а не второе поступление. Оплату поставщикам записывайте в разделе «Поставщики».</div>
+ <div class="ops-section"><div><h2>Журнал движения денег</h2><p>Для выплат поставщикам используйте раздел «Поставщики». Переводы между своими счетами не вводите как поступление или расход.</p></div><button class="btn" type="button" data-action="exportCash">↓ CSV журнала</button></div>
+ <div class="ops-segment" id="cashFilters"><button type="button" data-cash-filter="all" class="active">Все операции</button><button type="button" data-cash-filter="RUB">Наличные ₽</button><button type="button" data-cash-filter="USD">Наличные $</button><button type="button" data-cash-filter="CARD">Карты ₽</button><button type="button" data-cash-filter="AVITO">Авито Доставка ₽</button></div>
+ <div class="ops-list" id="cashTable"></div>
+</section>
+<section id="suppliersPage" class="page" hidden>
+ <div class="heading ops-head"><div><div class="eyebrow">РАЗДЕЛ 02 / ВЗАИМОРАСЧЁТЫ</div><h1>Поставщики и оплаты</h1><p>Отдельный долларовый баланс Анны, Алины и Анатолия. Платежи и авансы привязываются к накладным.</p></div><div class="actions"><button type="button" class="btn btn-primary" data-action="newPayment">↗ Отправить деньги</button><button type="button" class="btn" data-action="newInvoice">＋ Накладная</button><button type="button" class="btn" data-action="supplierOpening">⚙ Начальный баланс</button></div></div>
+ <div class="ops-grid" id="supplierCards"></div>
+ <div class="ops-section"><div><h2 id="supplierTitle">Операции поставщика</h2><p>Плюс — наш аванс у поставщика. Минус — сумма, которую ещё необходимо оплатить.</p></div><button class="btn" type="button" data-action="exportSuppliers">↓ CSV взаиморасчетов</button></div>
+ <div class="ops-notice" id="supplierReconcile"></div>
+ <div class="ops-section"><div><h2>Накладные поставщика</h2><p>Чтобы закрыть конкретную накладную авансом, нажмите «Зачесть аванс».</p></div></div><div class="ops-list" id="supplierInvoices"></div>
+ <div class="ops-section"><div><h2>История переводов</h2><p>После удаления платежа отменяется и связанное списание из кассы.</p></div></div><div class="ops-list" id="supplierPayments"></div>
+</section>
+<section id="invoicesPage" class="page" hidden>
+ <div class="heading ops-head"><div><div class="eyebrow">РАЗДЕЛ 03 / ПОСТАВКИ</div><h1>Накладные и товары</h1><p>Поставщик, товары, сумма в долларах, СДЭК и статус доставки в одном месте.</p></div><div class="actions"><button class="btn btn-primary" type="button" data-action="newInvoice">＋ Добавить накладную</button><button class="btn" type="button" data-action="importInvoices">↑ Загрузить CSV СДЭК</button><button class="btn" type="button" data-action="exportInvoices">↓ CSV накладных</button></div></div>
+ <div class="ops-grid" id="invoiceKpis"></div><div class="ops-notice">Накладные можно импортировать из CSV (только «Брест»), а стоимость товара и доставки в $ вносится <strong>вручную</strong> (можно вставлять список товаров из выгрузки). Прямой синхронизации с «МойСклад» и СДЭК пока нет. Новые накладные не увеличивают долг автоматически. При статусе «Вручен» проверьте суммы и нажмите «Начислить поставщику».</div>
+ <div class="filters"><div class="search-wrap"><input class="textinput" id="invoiceSearch" type="search" placeholder="Поиск по товару, артикулу, номеру, трек-номеру…" autocomplete="off" style="padding-left:13px"></div><select id="invoiceSupplierFilter" aria-label="Фильтр поставщика"></select><select id="invoiceStateFilter" aria-label="Фильтр оплаты"><option value="all">Все оплаты</option><option value="open">Не закрыты</option><option value="paid">Оплачены</option><option value="transit">В пути</option></select></div>
+ <div class="ops-list" id="invoiceTable"></div>
+</section>
+<dialog id="supplierOpeningDialog" class="op-modal"><div class="modal-hd">Начальный баланс поставщика</div><form id="supplierOpeningForm" class="modal-body" novalidate><div class="op-fieldrow"><label class="field"><span>Поставщик</span><select name="supplierId" required></select></label><label class="field"><span>Дата начала учета</span><input type="date" class="textinput" name="date" required></label></div><label class="field"><span>Баланс на начало, $ (с минусом или плюсом)</span><input class="textinput" name="amount" inputmode="decimal" type="text" required placeholder="−2000 (долг) или 2000 (аванс)"></label><div class="modal-info"><strong>Минус</strong> — вы уже должны поставщику, будет создана отдельная учетная строка «Начальный долг». <strong>Плюс</strong> — у него лежит ваш аванс; его можно будет зачесть в новые накладные. Касса не меняется.<br>Не добавляйте начальный долг, если вы уже занесли те же старые накладные, иначе задолженность удвоится.</div><div class="modal-ft"><button type="button" class="btn" data-close="supplierOpeningDialog">Отмена</button><button type="submit" class="btn btn-primary">Добавить начальный баланс</button></div></form></dialog>
+<dialog id="cashDialog" class="op-modal"><div class="modal-hd">Поступление или расход</div><form id="cashForm" class="modal-body" novalidate><div class="op-fieldrow"><label class="field"><span>Тип</span><select name="kind" required><option value="income">Поступление</option><option value="expense">Расход</option></select></label><label class="field"><span>Счёт</span><select name="currency" required><option value="RUB">Наличные ₽</option><option value="USD">Наличные $</option><option value="CARD">Карты ₽</option><option value="AVITO">Авито Доставка ₽</option></select></label></div><div class="op-fieldrow"><label class="field"><span>Сумма</span><input name="amount" class="textinput" type="text" inputmode="decimal" placeholder="Например, 50000" required></label><label class="field"><span>Дата</span><input name="date" type="date" class="textinput" required></label></div><label id="usdRateField" class="field op-hide"><span>Курс покупки ₽ за 1 $ (если известен)</span><input class="textinput" name="rate" inputmode="decimal" type="text" placeholder="Например, 92.50"><small class="op-formnote">По этому курсу будет рассчитана рублёвая стоимость поступивших долларов. Если неизвестен — оставьте пустым.</small></label><label class="field"><span>Статья</span><select name="category"><option>Выручка / поступление</option><option>Перевод клиента на карту</option><option>Продажа через Авито Доставку</option><option>Внесение денег</option><option>Выдача / расход</option><option>Возврат клиенту</option><option>Хозяйственные расходы</option><option>Корректировка</option><option>Другое</option></select></label><label class="field"><span>Клиент / заказ / комментарий</span><input name="note" class="textinput" maxlength="280" placeholder="Например, наличная выручка"></label><div class="modal-info">Запишите поступление от клиента на выбранный счёт. Для Авито укажите ожидаемую <strong>чистую выплату</strong> и номер заказа в комментарии. Перемещение денег между собственными счетами делайте кнопкой «Между счетами», чтобы не удваивать выручку. Оплата поставщикам — только в их разделе.</div><div class="modal-ft"><button type="button" class="btn" data-close="cashDialog">Отмена</button><button type="submit" class="btn btn-primary">Записать операцию</button></div></form></dialog>
+
+<dialog id="transferDialog" class="op-modal">
+ <div class="modal-hd">Перевод между своими счетами</div>
+ <form id="transferForm" class="modal-body" novalidate>
+  <div class="op-fieldrow"><label class="field"><span>Откуда</span><select name="from" required><option value="AVITO">Авито Доставка ₽</option><option value="RUB">Наличные ₽</option><option value="CARD">Карты ₽</option></select></label><label class="field"><span>Куда</span><select name="to" required><option value="CARD">Карты ₽</option><option value="RUB">Наличные ₽</option></select></label></div>
+  <div class="op-fieldrow"><label class="field"><span>Сумма перевода, ₽</span><input name="amount" class="textinput" inputmode="decimal" placeholder="Например, 10000" required></label><label class="field"><span>Дата</span><input name="date" class="textinput" type="date" required></label></div>
+  <label class="field"><span>Примечание / номер заказа Авито</span><input name="note" class="textinput" maxlength="280" placeholder="Например, выплата по заказу №1234"></label>
+  <div id="transferPreview" class="op-preview">Выберите счета и сумму.</div>
+  <div class="modal-info">Перевод <strong>не является новой выручкой</strong>. Он одновременно уменьшает один рублёвый баланс и увеличивает другой. Авито Доставка → Карты означает фактическую выплату от Авито. Переводы в Авито не предусмотрены.</div>
+  <div class="modal-ft"><button type="button" class="btn" data-close="transferDialog">Отмена</button><button class="btn btn-primary" type="submit">Провести перевод</button></div>
+ </form>
+</dialog>
+<dialog id="exchangeDialog" class="op-modal"><div class="modal-hd">Покупка долларов за рубли</div><form id="exchangeForm" class="modal-body" novalidate><div class="op-fieldrow"><label class="field"><span>Куплено, $</span><input class="textinput" name="usd" type="text" inputmode="decimal" placeholder="1000" required></label><label class="field"><span>Курс покупки, ₽ / $</span><input class="textinput" name="rate" type="text" inputmode="decimal" placeholder="95.50" required></label></div><div class="op-fieldrow"><label class="field"><span>Откуда списать рубли</span><select name="sourceRub" required><option value="RUB">Наличные ₽</option><option value="CARD">Карты ₽</option></select></label><label class="field"><span>Дата обмена</span><input class="textinput" type="date" name="date" required></label></div><label class="field"><span>Примечание</span><input class="textinput" name="note" maxlength="280" placeholder="Где покупали, условия"></label><div class="op-preview" id="exchangePreview">Укажите количество долларов и курс.</div><div class="modal-info">Создаются две связанные записи: расход рублей с выбранного счёта и приход наличных долларов. Удаляются только вместе.</div><div class="modal-ft"><button type="button" class="btn" data-close="exchangeDialog">Отмена</button><button type="submit" class="btn btn-primary">Зафиксировать покупку</button></div></form></dialog>
+<dialog id="usdRateDialog" class="op-modal"><div class="modal-hd">Курс ранее внесённых долларов</div><form id="usdRateForm" class="modal-body" novalidate><div class="modal-info" id="usdRateInfo">Укажите реальный курс, по которому получили доллары.</div><label class="field"><span>Фактический курс, ₽ за 1 $</span><input name="rate" class="textinput" type="text" inputmode="decimal" placeholder="Например, 92.50" required></label><div class="modal-ft"><button type="button" class="btn" data-close="usdRateDialog">Отмена</button><button type="submit" class="btn btn-primary">Сохранить курс</button></div></form></dialog>
+<dialog id="openingDialog" class="op-modal"><div class="modal-hd">Начальные остатки по счетам</div><form id="openingForm" class="modal-body" novalidate><div class="op-fieldrow"><label class="field"><span>Наличные рубли, ₽</span><input class="textinput" name="RUB" inputmode="decimal" type="text" required></label><label class="field"><span>Наличные доллары, $</span><input class="textinput" name="USD" inputmode="decimal" type="text" required></label></div><label class="field"><span>Курс покупки начальных долларов, ₽ за 1 $</span><input class="textinput" name="USD_rate" type="text" inputmode="decimal" placeholder="Если знаете, например 93.50"><small class="op-formnote">Необязательно. Если курс старого остатка неизвестен, программа покажет его отдельно без рублёвой оценки.</small></label><div class="op-fieldrow"><label class="field"><span>На картах, ₽</span><input class="textinput" type="text" name="CARD" inputmode="decimal" required></label><label class="field"><span>В Авито Доставке к получению, ₽</span><input class="textinput" type="text" name="AVITO" inputmode="decimal" required></label></div><div class="ops-notice warn">Начальные остатки — деньги и ожидаемые выплаты <strong>до первой операции</strong> в журнале. Не вводите здесь сумму, уже отражённую поступлениями, иначе деньги будут посчитаны дважды.</div><div class="modal-ft"><button type="button" class="btn" data-close="openingDialog">Отмена</button><button class="btn btn-primary" type="submit">Установить остатки</button></div></form></dialog>
+<dialog id="invoiceDialog" class="op-modal"><div class="modal-hd" id="invoiceDialogTitle">Новая накладная</div><form id="invoiceForm" class="modal-body" novalidate><div class="op-fieldrow"><label class="field"><span>Поставщик</span><select name="supplierId" required></select></label><label class="field"><span>Дата отправки / накладной</span><input class="textinput" name="date" type="date" required></label></div><div class="op-fieldrow"><label class="field"><span>Номер накладной / заказа</span><input class="textinput" name="number" maxlength="100" placeholder="Например, AN-1234" required></label><label class="field"><span>Трек / накладная СДЭК</span><input class="textinput" name="tracking" maxlength="100" placeholder="Номер СДЭК (необязательно)"></label></div><div class="op-fieldrow"><label class="field"><span>Статус доставки</span><select name="status"><option value="created">Создан</option><option value="transit">В пути</option><option value="ready">Готов к выдаче</option><option value="delivered">Вручен</option></select></label><label class="field"><span>Номер документа в «МойСклад»</span><input class="textinput" name="moysklad" maxlength="100" placeholder="Необязательно"></label></div><label class="field"><span>Список товаров</span><textarea class="textinput" name="items" rows="5" placeholder="Название товара; Количество; Цена за 1 шт. в $; Артикул&#10;Робот-пылесос А; 2; 300; SKU-123&#10;Фильтр; 5; 20; F-456"></textarea><div class="field-hint">Каждый товар — с новой строки. Разделитель — точка с запятой. Количество × цена = стоимость. Можно оставить пустым и указать только общую сумму.</div></label><div class="op-fieldrow"><label class="field"><span>Стоимость товара, $</span><input class="textinput" name="amount" type="text" inputmode="decimal" placeholder="2000.00"><small class="op-formnote">Можно указать вручную, даже если есть список товаров. Если пусто — сумма товаров автоматически.</small></label><label class="field"><span>Стоимость доставки, $</span><input class="textinput" name="deliveryCost" type="text" inputmode="decimal" placeholder="0.00"><small class="op-formnote">Учитывается отдельно от товаров.</small></label></div>
+<label class="op-checkbox"><input type="checkbox" name="includeDelivery"> <span>Доставку оплачиваю <strong>этому поставщику</strong> — включить её в долг перед ним</span></label>
+<div class="op-fieldrow"><label class="field"><span>Отправитель СДЭК</span><input class="textinput" name="sender" placeholder="ФИО отправителя (необязательно)"></label><label class="field"><span>Маршрут / город</span><input class="textinput" name="route" placeholder="Брест (необязательно)"></label></div><div class="op-preview" id="invoicePreview">Укажите товары или сумму.</div><label class="field"><span>Комментарий</span><textarea class="textinput" name="note" rows="2" maxlength="500" placeholder="Особенности доставки / заказа"></textarea></label><label class="op-checkbox"><input type="checkbox" name="applyAdvance"> <span>После сохранения <strong>зачесть свободный аванс</strong> поставщика в эту накладную (если он есть)</span></label><div class="modal-info">Сохранение новой накладной само по себе не создаёт долг. После статуса «Вручен» нажмите «Начислить поставщику». Для старых накладных уже начисленный долг сохраняется. Доставка включается в долг только при установленной галочке.</div><div class="modal-ft"><button type="button" class="btn" data-close="invoiceDialog">Отмена</button><button class="btn btn-primary" type="submit">Сохранить накладную</button></div></form></dialog>
+<dialog id="cdekImportDialog" class="op-modal"><div class="modal-hd">Импорт накладных СДЭК из CSV</div><div class="modal-body">
+<div class="op-help"><strong>Условие:</strong> загружаются только строки с отдельным словом «Брест» (регистр не важен).<br><strong>Алина:</strong> Малагин Вадим, Малагина Елена, Малинина Алина.<br><strong>Анна:</strong> Нестер Дмитрий.<br><strong>Анатолий:</strong> Анатолий.<br>Нераспознанные отправители и дубли пропускаются. В импортированных накладных стоимости по умолчанию 0 $ — укажите их самостоятельно. Долг не начисляется автоматически.</div>
+<label class="field"><span>Выберите CSV-файл СДЭК (UTF-8 или Windows-1251)</span><input id="cdekCsvFile" class="textinput" type="file" accept=".csv,text/csv,text/plain"></label>
+<div class="op-preview" id="cdekCsvReport" aria-live="polite">Выберите CSV, чтобы увидеть предварительную проверку.</div>
+<div id="cdekCsvPreview" class="ops-list" style="max-height:300px;overflow:auto"></div>
+<div class="modal-ft"><button class="btn" type="button" data-close="cdekImportDialog">Отмена</button><button class="btn btn-primary" id="cdekCsvCommit" type="button" disabled>Добавить отобранные накладные</button></div></div></dialog>
+<dialog id="paymentDialog" class="op-modal"><div class="modal-hd">Перевод поставщику</div><form id="paymentForm" class="modal-body" novalidate><div class="op-fieldrow"><label class="field"><span>Поставщик</span><select name="supplierId" id="paymentSupplier" required></select></label><label class="field"><span>Дата перевода</span><input class="textinput" name="date" type="date" required></label></div><div class="op-fieldrow"><label class="field"><span>Отправлено, $</span><input class="textinput" name="amount" type="text" inputmode="decimal" placeholder="2000" required></label><label class="field"><span>Зачесть в накладную</span><select name="invoiceId" id="paymentInvoice"></select></label></div><label class="op-checkbox"><input type="checkbox" name="fromCash" checked> <span><strong>Списать $ из долларовой кассы</strong> — если деньги действительно ушли из наличных долларов. Если перевели с другого источника, снимите галочку.</span></label><label class="field"><span>Комментарий / подтверждение перевода</span><input class="textinput" name="note" maxlength="300" placeholder="Например, оплата 26.10 / номер перевода"></label><div class="op-preview" id="paymentPreview">Укажите поставщика и сумму.</div><div class="modal-info">Перевод всегда изменяет баланс поставщика. Если выбрать накладную, в неё зачтётся сумма до размера долга; остаток станет свободным авансом. Аванс можно позже зачесть в другие накладные.</div><div class="modal-ft"><button class="btn" type="button" data-close="paymentDialog">Отмена</button><button class="btn btn-primary" type="submit">Сохранить перевод</button></div></form></dialog>
+
+</main></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<dialog id="actionConfirmDialog" aria-labelledby="actionConfirmTitle"><div class="modal-hd" id="actionConfirmTitle">Подтвердите действие</div><div class="modal-body"><p id="actionConfirmText"></p><div class="modal-ft"><button id="actionConfirmNo" class="btn" type="button">Отмена</button><button id="actionConfirmYes" class="btn btn-primary" type="button">Да, выполнить</button></div></div></dialog>
+
+<dialog id="editDialog"><div class="modal-hd" id="editTitle">Позиция</div><form id="editForm" class="modal-body" method="dialog" novalidate><label class="field"><span>Название строки</span><input class="textinput" name="name" maxlength="200" required></label><label class="field"><span>Основной раздел</span><select name="group" id="editGroup"></select></label><label class="field"><span>Подгруппа (можно изменить)</span><input class="textinput" name="subgroup" list="subgroups" maxlength="100" required><datalist id="subgroups"></datalist></label><label class="field"><span>Значение за выбранную дату, ₽</span><input class="textinput" name="amount" inputmode="decimal" placeholder="0 или 25000+3000"></label><div class="modal-info" id="sourceInfo">Сумма участвует в общем итоге, если строка находится в одном из основных разделов.</div><div class="modal-ft"><button class="btn btn-ghost danger" type="button" id="removeRow" hidden>Удалить</button><button class="btn" value="cancel" type="button" id="cancelEdit">Отмена</button><button type="submit" class="btn btn-primary">Сохранить</button></div></form></dialog>
+<dialog id="snapshotDialog"><div class="modal-hd">Новый расчёт</div><form id="snapshotForm" class="modal-body" method="dialog" novalidate><label class="field"><span>Дата нового расчёта</span><input class="textinput" type="date" name="date" required></label><label class="field"><span>Название (необязательно)</span><input class="textinput" name="label" placeholder="Например, еженедельный расчёт" maxlength="75"></label><div class="modal-info">Будут скопированы остатки рабочих строк выбранного периода. Доходы/расходы и контрольные показатели прошлого периода не переносятся. После создания измените нужные суммы — итог пересчитается сам.</div><div class="modal-ft"><button type="button" class="btn" id="cancelSnapshot">Отмена</button><button type="submit" class="btn btn-primary">Создать расчёт</button></div></form></dialog>
+<dialog id="exportDialog"><div class="modal-hd">Выгрузка и резервные копии</div><div class="modal-body"><p style="color:#61718b;margin-top:0;font-size:12px">Выберите формат. JSON сохраняет всю историю и группировку, CSV содержит текущий период и открывается в Excel.</p><button class="btn" id="downloadJson" style="width:100%;margin-bottom:11px" type="button">⇩ JSON — вся история и изменения</button><button class="btn" id="downloadCsv" style="width:100%;margin-bottom:16px" type="button">⇩ CSV — текущий период для Excel</button><button class="btn" id="pasteBackupFromExport" type="button" style="width:100%;margin-bottom:11px">↑ Вставить резервную копию из буфера</button><button class="btn" id="restoreEmbeddedFromExport" type="button" style="width:100%;margin-bottom:16px">↺ Восстановить встроенную копию от 27.10.2026</button><button type="button" class="btn btn-ghost" id="closeExport" style="width:100%">Закрыть</button></div></dialog>
+<dialog id="pasteBackupDialog" aria-labelledby="pasteBackupTitle" style="width:min(730px,calc(100vw - 24px));max-height:92vh;">
+ <div class="modal-hd" id="pasteBackupTitle">Восстановление копии из текста JSON</div>
+ <div class="modal-body">
+  <p style="font-size:13px;color:#5b6b7f;margin-top:0">Вставь содержимое резервной копии (Ctrl+V / ⌘+V) в поле ниже. Подходит полная JSON-копия LANDA и старая копия одного просчёта. Перед заменой данных программа попросит подтверждение.</p>
+  <label class="field" for="pasteBackupText"><span>Текст резервной копии JSON</span><textarea id="pasteBackupText" class="textinput" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder='{ "app": "LANDA-suite", "backupVersion": 3, ... }' style="min-height:180px;max-height:45vh;width:100%;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;line-height:1.5"></textarea></label>
+  <div id="pasteBackupFeedback" role="status" aria-live="polite" style="font-size:12px;line-height:1.55;color:#425c78;margin:9px 0;white-space:pre-wrap"></div>
+  <div class="modal-ft" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+   <button id="pasteBackupClipboard" class="btn" type="button">Вставить из буфера</button>
+   <button id="pasteBackupCheck" class="btn" type="button">Проверить копию</button>
+   <button id="pasteBackupCancel" class="btn btn-ghost" type="button">Отмена</button>
+   <button id="pasteBackupApply" class="btn btn-primary" type="button">Восстановить данные</button>
+  </div>
+  <div style="padding-top:14px;margin-top:13px;border-top:1px solid #e1e7ef;font-size:12px;color:#637387">В эту версию уже встроена твоя полная копия от 27.10.2026. Для восстановления её не нужно вставлять вручную.</div>
+  <button id="pasteBackupEmbedded" class="btn" type="button" style="margin-top:9px;width:100%">Загрузить встроенную копию 27.10.2026</button>
+ </div>
+</dialog>
+<input id="fileInput" type="file" accept=".json,application/json" hidden>
+<script>
+(function(){
+ function report(text){
+   var panel=document.getElementById('runtimeErrorPanel'),detail=document.getElementById('runtimeErrorText');
+   if(detail)detail.textContent=String(text||'Неизвестная ошибка').slice(0,600);
+   if(panel)panel.hidden=false;
+   var state=document.getElementById('launchStatus');
+   if(state){state.dataset.state='error';state.innerHTML='<strong>LANDA v11: есть ошибка в работе.</strong> Подробности показаны ниже. Не дублируйте уже записанные операции.';}
+ }
+ window.addEventListener('error',function(e){if(e.target===window)report(e.message||'Ошибка JavaScript')},true);
+ window.addEventListener('unhandledrejection',function(e){report((e.reason&&e.reason.message)||String(e.reason))});
+ window.__landaReportError=report;
+})();
+</script>
+<script type="application/json" id="embeddedBackup">{"app":"LANDA-suite","backupVersion":3,"createdAt":"2026-10-27T00:00:00Z","proschet":{"version":1,"sheet":"Подсчет","workbook":"LANDA-Corporation(1).xlsx","groups":[{"id":"markets","label":"Маркетплейсы","included":true},{"id":"partners","label":"Пылесосные дела","included":true},{"id":"office","label":"Офисные дела","included":true},{"id":"cards","label":"Остатки на картах","included":true},{"id":"other","label":"Долги / висяки / прочее","included":true},{"id":"extras","label":"Контроль и другие записи","included":false}],"snapshots":[{"id":"INIT","date":"2026-10-27","label":"Начальный расчёт","source":"Новая установка"}],"rows":[],"controlTotals":{}},"operations":{"version":1,"openings":{"RUB":0,"USD":0,"CARD":0,"AVITO":0},"nextSeq":0,"suppliers":[{"id":"anna","name":"Анна"},{"id":"alina","name":"Алина"},{"id":"anatoly","name":"Анатолий"}],"invoices":[],"payments":[],"allocations":[],"cash":[]}}</script>
+<script type="application/json" id="seed">{"version":1,"sheet":"Подсчет","workbook":"LANDA-Corporation(1).xlsx","groups":[{"id":"markets","label":"Маркетплейсы","included":true},{"id":"partners","label":"Пылесосные дела","included":true},{"id":"office","label":"Офисные дела","included":true},{"id":"cards","label":"Остатки на картах","included":true},{"id":"other","label":"Долги / висяки / прочее","included":true},{"id":"extras","label":"Контроль и другие записи","included":false}],"snapshots":[{"id":"INIT","date":"2026-10-27","label":"Начальный расчёт","source":"Новая установка"}],"rows":[],"controlTotals":{}}</script>
+<script>
+'use strict';
+const SEED=JSON.parse(document.getElementById('seed').textContent);
+const EMBEDDED_BACKUP=JSON.parse(document.getElementById('embeddedBackup').textContent);const KEY='landa_proschet_offline_v1';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const deep=o=>JSON.parse(JSON.stringify(o));
+const fmt=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2});
+const fmtRub=n=>(n<0?'−':'')+fmt.format(Math.abs(n))+' ₽';
+const fmtShort=n=>(n<0?'−':'')+fmt.format(Math.abs(n));
+const fmtCompact=n=>{let a=Math.abs(n),s=a>=1e6?fmt.format(n/1e6)+' млн':a>=1000?fmt.format(n/1000)+' тыс':fmt.format(n);return s};
+const icons={all:'▦',markets:'◈',partners:'◇',office:'▤',cards:'▣',other:'≋',extras:'⚙'};
+const groupMap=Object.fromEntries(SEED.groups.map(g=>[g.id,g]));
+let state=loadState(), snap=state.snapshots[state.snapshots.length-1].id,activeGroup='all',filter='active',searchText='',collapsed=new Set(),undo=[],editingId=null;
+function loadState(){try{const raw=localStorage.getItem(KEY);if(raw){let d=JSON.parse(raw);if(validate(d))return d}}catch(e){}return deep(EMBEDDED_BACKUP.proschet&&validate(EMBEDDED_BACKUP.proschet)?EMBEDDED_BACKUP.proschet:SEED)}
+function validate(d){return !!(d&&d.version===1&&Array.isArray(d.rows)&&Array.isArray(d.snapshots)&&Array.isArray(d.groups)&&d.rows.length<10000&&d.snapshots.length<1500&&d.rows.every(r=>r.id&&r.name&&r.values&&typeof r.values==='object'&&groupMap[r.group])&&d.snapshots.every(s=>s.id&&s.label))}
+function savedMsg(msg='Сохранено в браузере',bad=false){$('saved').innerHTML=(bad?'⚠ ':'● ')+esc(msg);$('saved').classList.toggle('error',bad)}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));savedMsg();try{window.dispatchEvent(new Event('landa:data-changed'))}catch(_){}return true}catch(e){savedMsg('Нет доступа к сохранению — сделайте копию',true);showStorageWarning();return false}}
+function toast(s){
+ let dialogs=[...document.querySelectorAll('dialog[open]')].filter(d=>d.id!=='actionConfirmDialog'); let dialog=dialogs.length?dialogs[dialogs.length-1]:null;
+ if(dialog){
+   let slot=dialog.querySelector('.form-feedback');
+   if(!slot){slot=document.createElement('div');slot.className='form-feedback';slot.setAttribute('role','alert');let footer=dialog.querySelector('.modal-ft');if(footer)footer.before(slot);else dialog.appendChild(slot)}
+   slot.textContent=s;slot.hidden=false;
+ }
+ let el=$('toast');el.textContent=s;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),4800)
+}
+function clearDialogWarnings(dialog){if(!dialog)return;dialog.querySelectorAll('.form-feedback,.input-feedback').forEach(el=>el.remove());dialog.querySelectorAll('[aria-invalid="true"]').forEach(el=>el.removeAttribute('aria-invalid'))}
+function askConfirm(message,onYes,onNo=()=>{}){
+ let dlg=$('actionConfirmDialog'),yes=$('actionConfirmYes'),no=$('actionConfirmNo');
+ if(!dlg||typeof dlg.showModal!=='function'){toast('Для подтверждения используйте полноценный браузер Chrome или Edge.');onNo();return}
+ $('actionConfirmText').textContent=message;
+ const finish=accepted=>{if(dlg.open)dlg.close();yes.removeEventListener('click',onYesClick);no.removeEventListener('click',onNoClick);dlg.removeEventListener('cancel',onCancel);if(accepted)onYes();else onNo()};
+ const onYesClick=()=>finish(true),onNoClick=()=>finish(false),onCancel=e=>{e.preventDefault();finish(false)};
+ yes.addEventListener('click',onYesClick);no.addEventListener('click',onNoClick);dlg.addEventListener('cancel',onCancel);
+ dlg.showModal();no.focus();
+}
+function askConfirmAsync(message){return new Promise(resolve=>askConfirm(message,()=>resolve(true),()=>resolve(false)))}
+function showStorageWarning(){let box=$('persistenceWarning');if(box)box.hidden=false}
+
+function pushUndo(){undo.push(deep(state));if(undo.length>12)undo.shift();$('undoBtn').disabled=false}
+function undoNow(){if(!undo.length)return;state=undo.pop();if(!state.snapshots.some(s=>s.id===snap))snap=state.snapshots[state.snapshots.length-1].id;save();render();toast('Последнее действие отменено')}
+function nval(row,s=snap){let v=row.values[s];return typeof v==='number'&&Number.isFinite(v)?v:0}
+function hasval(row,s=snap){return Object.prototype.hasOwnProperty.call(row.values,s)}
+function included(r){return r.group!=='extras'}
+function previousId(){let idx=state.snapshots.findIndex(s=>s.id===snap);return idx>0?state.snapshots[idx-1].id:null}
+function groupTotal(g,id=snap){return state.rows.reduce((t,r)=>t+(r.group===g?nval(r,id):0),0)}
+function total(id=snap){return state.rows.reduce((t,r)=>t+(included(r)?nval(r,id):0),0)}
+function numColor(n){return n<0?'negative':n>0?'positive':''}
+function dateText(d){if(!d)return '';let parts=d.split('-');return parts.length===3?`${parts[2]}.${parts[1]}.${parts[0]}`:d}
+function evaluated(s){let expr=String(s||'').trim().replace(/^=/,'').replace(/\s|\u00a0|\u202f/g,'').replace(/−/g,'-').replace(/,/g,'.');if(expr==='')return null;if(expr.length>160||!/^[0-9.+\-*/()]+$/.test(expr))throw Error('Некорректное выражение');let i=0;function eat(ch){if(expr[i]===ch){i++;return true}return false}function atom(){if(eat('+'))return atom();if(eat('-'))return -atom();if(eat('(')){let x=sum();if(!eat(')'))throw Error('Нет закрывающей скобки');return x}let st=i;while(/[0-9.]/.test(expr[i]||'')&&i<expr.length)i++;if(st===i)throw Error('Ожидалось число');let s=expr.slice(st,i);if(!/^\d*\.?\d+$/.test(s))throw Error('Неправильное число');return Number(s)}function prod(){let x=atom();while(i<expr.length){if(eat('*'))x*=atom();else if(eat('/')){let d=atom();if(!d)throw Error('Делить на ноль нельзя');x/=d}else break}return x}function sum(){let x=prod();while(i<expr.length){if(eat('+'))x+=prod();else if(eat('-'))x-=prod();else break}return x}let answer=sum();if(i!==expr.length||!Number.isFinite(answer)||Math.abs(answer)>1e14)throw Error('Не удалось вычислить значение');return Math.round(answer*100)/100}
+function modifyValue(id,v){let r=state.rows.find(r=>r.id===id);if(!r)return;let num;try{num=evaluated(v)}catch(e){toast('Ошибка: '+e.message);renderGroups();return}if((num===null&&!hasval(r))||(num!==null&&r.values[snap]===num))return;pushUndo();if(num===null)delete r.values[snap];else r.values[snap]=num;save();render();toast('Значение изменено')}
+function render(){renderNav();renderSelect();renderStats();renderOverview();renderPills();renderGroups();$('undoBtn').disabled=undo.length===0}
+function renderSelect(){let cur=$('snapSelect');cur.innerHTML=state.snapshots.map(s=>`<option value="${esc(s.id)}" ${s.id===snap?'selected':''}>${esc(s.label)}${s.date?'':' · без даты'}</option>`).join('')}
+function renderNav(){let arr=[{id:'all',label:'Все позиции'},...state.groups];$('nav').innerHTML=arr.map(g=>{let n=g.id==='all'?state.rows.length:state.rows.filter(r=>r.group===g.id).length;return `<button class="nav-btn ${g.id===activeGroup?'active':''}" data-nav="${g.id}"><span class="nav-icon">${icons[g.id]}</span><span class="nav-text">${esc(g.label)}</span><span class="nav-num">${n}</span></button>`}).join('')}
+function renderStats(){let main=state.rows.filter(included),now=total(),p=previousId(),change=p?now-total(p):null,plus=main.reduce((x,r)=>x+Math.max(0,nval(r)),0),negative=main.reduce((x,r)=>x+Math.min(0,nval(r)),0),active=main.filter(r=>nval(r)!==0).length;let cur=state.snapshots.find(s=>s.id===snap);
+$('kpis').innerHTML=`<div class="kpi primary"><div class="kpi-label">Общий итог · ${esc(cur?.label)}</div><div class="kpi-value">${fmtRub(now)}</div><div class="kpi-caption">${active} ненулевых позиций • 5 основных разделов</div></div><div class="kpi"><div class="kpi-label">Положительные суммы</div><div class="kpi-value">${fmtRub(plus)}</div><div class="kpi-caption">Все положительные строки</div></div><div class="kpi"><div class="kpi-label">Отрицательные суммы</div><div class="kpi-value negative">${fmtRub(negative)}</div><div class="kpi-caption">С учетом исходных минусов</div></div><div class="kpi"><div class="kpi-label">К прошлому расчёту</div><div class="kpi-value ${change===null?'':numColor(change)}">${change===null?'—':(change>0?'+':'')+fmtRub(change)}</div><div class="kpi-caption">${p?'От '+esc(state.snapshots.find(s=>s.id===p)?.label||p):'Предыдущего периода нет'}</div></div>`;
+let benchmark=state.controlTotals?.[snap],difference=typeof benchmark==='number'?now-benchmark:null;
+$('reconcile').innerHTML=`<span class="insighticon">${difference===0?'✓':difference===null?'ℹ':'!'}</span><div>${difference===null?`<strong>Новый или недатированный расчёт.</strong> Общий итог автоматически суммирует все рабочие строки; контрольного значения из Excel для него нет.`:difference===0?`<strong class="good">Сверка с исходным Excel совпадает.</strong> Контрольный итог: ${fmtRub(benchmark)}. Все рабочие строки учтены.`:`<strong class="bad">Есть отличие от оригинала.</strong> Контроль Excel: ${fmtRub(benchmark)}; текущая разница: <strong>${fmtRub(difference)}</strong>. Изменения в программе не меняют Excel.`}</div>`}
+function renderOverview(){let parts=state.groups.filter(g=>g.included).map(g=>({...g,sum:groupTotal(g.id)}));let scale=Math.max(...parts.map(x=>Math.abs(x.sum)),1);
+$('barList').innerHTML=parts.map(g=>`<div class="barrow"><span class="name" title="${esc(g.label)}">${esc(g.label)}</span><div class="bartrack"><div class="barfill" style="width:${Math.abs(g.sum)/scale*100}%;background:${g.sum<0?'#e5808b':'#7085e9'}"></div></div><span class="barvalue ${numColor(g.sum)}">${fmtCompact(g.sum)} ₽</span></div>`).join('');
+let ordered=state.snapshots.filter(s=>s.date).slice().sort((a,b)=>a.date.localeCompare(b.date));let upto=ordered.findIndex(s=>s.id===snap);if(upto<0)upto=ordered.length-1;let points=ordered.slice(Math.max(0,upto-15),upto+1).map(s=>({s,v:total(s.id)}));if(!points.length){$('trendChart').innerHTML='';$('trendDates').innerHTML='';return}
+let min=Math.min(...points.map(p=>p.v)),max=Math.max(...points.map(p=>p.v)),pad=Math.max((max-min)*.16,1),w=640,h=150,L=12,R=14,T=12,B=12;min-=pad;max+=pad;
+let xx=i=>L+(points.length===1?0.5:i/(points.length-1))*(w-L-R),yy=v=>T+(max-v)/(max-min)*(h-T-B);let coords=points.map((p,i)=>[xx(i),yy(p.v)]),d=coords.map((p,i)=>(i?'L':'M')+p.map(n=>n.toFixed(1)).join(' ')).join(' ');let area=d+` L ${xx(points.length-1)} ${h} L ${xx(0)} ${h} Z`;
+let guides=[0,.5,1].map(v=>{let y=(T+v*(h-T-B)).toFixed(1);return `<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="#edf1f7" stroke-width="1"/>`}).join('');
+$('trendChart').innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="График итога по датам"><defs><linearGradient id="trendshade" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#7085e9" stop-opacity=".22"/><stop offset="1" stop-color="#7085e9" stop-opacity=".005"/></linearGradient></defs>${guides}<path d="${area}" fill="url(#trendshade)"/><path d="${d}" fill="none" stroke="#4c6add" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>${coords.map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="${points[i].s.id===snap?5:3}" fill="${points[i].s.id===snap?'#234aca':'#7291f1'}" stroke="white" stroke-width="2"><title>${esc(points[i].s.label)}: ${fmtRub(points[i].v)}</title></circle>`).join('')}</svg>`;
+$('trendDates').innerHTML=`<span>${esc(points[0].s.label)}</span><span>${esc(points[points.length-1].s.label)}</span>`}
+function renderPills(){document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x.dataset.filter===filter))}
+function matches(r){if(activeGroup!=='all'&&r.group!==activeGroup)return false;if(searchText&&!(r.name+' '+r.subgroup+' '+(groupMap[r.group]?.label||'')).toLocaleLowerCase('ru').includes(searchText))return false;let v=nval(r),p=previousId();if(filter==='active')return v!==0;if(filter==='empty')return !hasval(r)||v===0;if(filter==='changed')return p&&v!==nval(r,p);return true}
+function renderGroups(){let show=state.rows.filter(matches);$('rowCount').textContent=show.length+' из '+state.rows.filter(r=>activeGroup==='all'||r.group===activeGroup).length;let groups=state.groups.filter(g=>activeGroup==='all'||activeGroup===g.id);
+$('listTitle').textContent=activeGroup==='all'?'Позиции просчёта':groupMap[activeGroup]?.label||'Позиции';$('listSubtitle').textContent=filter==='active'?'Показаны только ненулевые значения на выбранную дату':'Можно редактировать каждую строку прямо в таблице';
+$('groups').innerHTML=groups.map(g=>{let rs=show.filter(r=>r.group===g.id);if(!rs.length)return '';let sum=groupTotal(g.id),buckets={};for(let r of rs){(buckets[r.subgroup]??=[]).push(r)}
+let table=Object.entries(buckets).map(([sub,items])=>`<div class="subheading"><span>${esc(sub)}</span><b>${items.length} поз.</b></div>${items.map(renderRow).join('')}`).join('');let all=state.rows.filter(r=>r.group===g.id);return `<section class="group-card ${collapsed.has(g.id)?'collapsed':''}" data-group="${esc(g.id)}"><div class="group-head" data-collapse="${esc(g.id)}" role="button" tabindex="0" aria-expanded="${!collapsed.has(g.id)}"><div><div class="group-title"><span class="group-icon">${icons[g.id]}</span><span>${esc(g.label)}${!g.included?'<span class="notincluded">вне итога</span>':''}</span></div><span class="sub">${rs.length} показано из ${all.length} позиций</span></div><div class="group-total"><div class="group-amount ${numColor(sum)}">${fmtRub(sum)}</div><span class="arrow">⌄</span></div></div><div class="group-content">${table}</div></section>`}).join('')||'<div class="group-card empty">Нет строк, подходящих под выбранные фильтры. Переключите «Все» или измените поиск.</div>'}
+function renderRow(r){let value=hasval(r)?fmtShort(nval(r)):'';let p=previousId(),diff=p?nval(r)-nval(r,p):null;let note=r.notes?.[snap];return `<div class="item" data-row="${esc(r.id)}"><div><div class="item-name" title="${esc(r.name)}">${esc(r.name)}</div><div class="item-meta"><span class="item-code">${r.sourceRow?'Стр. '+r.sourceRow:'Новая позиция'}</span>${note?`<span title="${esc(note)}">✎ Есть примечание</span>`:''}</div></div><div class="item-diff ${diff===null?'':numColor(diff)}">${diff===null?'':diff===0?'—':(diff>0?'+':'')+fmtShort(diff)}</div><input class="moneyinput ${hasval(r)?'':'blank'}" data-amount="${esc(r.id)}" aria-label="Значение ${esc(r.name)}" inputmode="decimal" type="text" value="${esc(value)}" placeholder="—" autocomplete="off" title="Введите число или арифметическое выражение"></input><button type="button" class="editbtn" data-edit="${esc(r.id)}" aria-label="Редактировать позицию ${esc(r.name)}" title="Переименовать или перенести в группу">···</button></div>`}
+function fillGroupOptions(selectId,selected){$(selectId).innerHTML=state.groups.map(g=>`<option value="${esc(g.id)}" ${g.id===selected?'selected':''}>${esc(g.label)}</option>`).join('')}
+function fillSubgroups(g){let groups=[...new Set(state.rows.filter(r=>r.group===g).map(r=>r.subgroup))].sort();$('subgroups').innerHTML=groups.map(v=>`<option value="${esc(v)}"></option>`).join('')}
+function openRow(id){let r=state.rows.find(x=>x.id===id);editingId=id||null;$('editTitle').textContent=r?'Редактировать позицию':'Новая позиция';let f=$('editForm');fillGroupOptions('editGroup',r?.group||(activeGroup==='all'?'other':activeGroup));f.elements.name.value=r?.name||'';f.elements.subgroup.value=r?.subgroup||'Разное';f.elements.amount.value=r&&hasval(r)?fmtShort(nval(r)):'';$('removeRow').hidden=!r;$('sourceInfo').textContent=r?.sourceRow?'Исходная строка Excel: '+r.sourceRow+'. '+(r.group==='extras'?'Дополнительный показатель не входит в итог.':'Сумма входит в общий итог.')+(Object.keys(r.aux||{}).length?' Отдельные служебные значения: '+Object.entries(r.aux).map(([k,v])=>k+' = '+fmtShort(v)).join('; ')+'.':''): 'В рабочих разделах позиция сразу участвует в подсчете. В разделе «Контроль и другие записи» — нет.';fillSubgroups(f.elements.group.value);$('editDialog').showModal();f.elements.name.focus()}
+function closeMobile(){$('sidebar').classList.remove('show');$('overlay').classList.remove('show')}
+function download(content,filename,mime){let blob=new Blob([content],{type:mime});let url=URL.createObjectURL(blob);let a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),800)}
+function downloadBackup(){let file='LANDA-резервная-копия-'+(state.snapshots.find(s=>s.id===snap)?.date||'архив')+'.json';download(JSON.stringify(state,null,2),file,'application/json;charset=utf-8');toast('Резервная копия JSON скачана')}
+function downloadCSV(){let pid=previousId(),qs=v=>'"'+String(v??'').replace(/"/g,'""')+'"';let cols=['Раздел','Подгруппа','Строка','Источник (номер строки)','Сумма ₽','Предыдущий период ₽','Изменение ₽','Примечание'];let lines=[cols.map(qs).join(';')];for(let g of state.groups){for(let r of state.rows.filter(x=>x.group===g.id)){let prev=pid?nval(r,pid):'',diff=pid?nval(r)-nval(r,pid):'';lines.push([g.label,r.subgroup,r.name,r.sourceRow||'',hasval(r)?nval(r):'',prev,diff,[r.notes?.[snap]||'',...Object.entries(r.aux||{}).map(([k,v])=>k+': '+v)].filter(Boolean).join('; ')].map(qs).join(';'))}}lines.push(['ИТОГ','', '', '',total()].map(qs).join(';'));download('\ufeff'+lines.join('\r\n'),'LANDA-просчет-'+(state.snapshots.find(s=>s.id===snap)?.date||snap)+'.csv','text/csv;charset=utf-8');toast('CSV для Excel скачан')}
+function changeSnapshotDate(){let raw=new FormData($('snapshotForm')),date=raw.get('date'),custom=String(raw.get('label')||'').trim();if(!date)return;let existing=state.snapshots.find(s=>s.date===date);if(existing){toast('На эту дату расчет уже есть');return}let id='new-'+date+'-'+Date.now();pushUndo();let ss={id,date,label:custom?custom+' · '+dateText(date):dateText(date),source:'Создано в программе'};state.snapshots.push(ss);for(let r of state.rows){if(included(r)&&hasval(r,snap))r.values[id]=nval(r,snap)}snap=id;activeGroup='all';filter='active';save();render();$('snapshotDialog').close();toast('Новый расчёт создан. Измените необходимые остатки.')}
+$('snapSelect').addEventListener('change',e=>{snap=e.target.value;render()});$('undoBtn').addEventListener('click',undoNow);
+$('nav').addEventListener('click',e=>{let btn=e.target.closest('[data-nav]');if(!btn)return;activeGroup=btn.dataset.nav;renderNav();renderGroups();closeMobile();window.scrollTo({top:0,behavior:'smooth'})});
+$('search').addEventListener('input',e=>{searchText=e.target.value.toLocaleLowerCase('ru').trim();renderGroups()});
+document.querySelector('.pills').addEventListener('click',e=>{let target=e.target.closest('[data-filter]');if(!target)return;filter=target.dataset.filter;renderPills();renderGroups()});
+$('groups').addEventListener('change',e=>{let input=e.target.closest('[data-amount]');if(input)modifyValue(input.dataset.amount,input.value)});
+$('groups').addEventListener('keydown',e=>{if(e.target.matches('[data-amount]')&&e.key==='Enter'){e.target.blur();e.preventDefault()}if(e.target.closest('[data-collapse]')&&['Enter',' '].includes(e.key)){e.preventDefault();e.target.click()}});
+$('groups').addEventListener('click',e=>{let edit=e.target.closest('[data-edit]');if(edit)return openRow(edit.dataset.edit);let head=e.target.closest('[data-collapse]');if(head){let g=head.dataset.collapse;collapsed.has(g)?collapsed.delete(g):collapsed.add(g);renderGroups()}});
+$('addRow').addEventListener('click',()=>openRow(null));$('editGroup').addEventListener('change',e=>{fillSubgroups(e.target.value);$('editForm').elements.subgroup.value='Разное'});
+$('editForm').addEventListener('submit',e=>{e.preventDefault();let f=e.target,name=f.elements.name.value.trim(),g=f.elements.group.value,sub=f.elements.subgroup.value.trim()||'Разное';if(!name){toast('Укажите название');return}let amount;try{amount=evaluated(f.elements.amount.value)}catch(err){toast('Ошибка суммы: '+err.message);return}pushUndo();if(editingId){let r=state.rows.find(x=>x.id===editingId);r.name=name;r.group=g;r.subgroup=sub;if(amount===null)delete r.values[snap];else r.values[snap]=amount}else{let id='custom-'+Date.now()+'-'+Math.round(Math.random()*10000);state.rows.push({id,sourceRow:null,name,group:g,subgroup:sub,values:amount===null?{}:{[snap]:amount},notes:{}})}save();$('editDialog').close();render();toast('Позиция сохранена')});
+$('cancelEdit').addEventListener('click',()=>$('editDialog').close());
+$('removeRow').addEventListener('click',()=>{
+ let r=state.rows.find(x=>x.id===editingId);
+ if(!r){toast('Не удалось найти выбранную строку');return}
+ const name=r.name, original=Boolean(r.sourceRow);
+ askConfirm(`Удалить строку «${name}» из ВСЕХ дат просчёта? ${original?'Это строка из исходного Excel. ':''}Суммы прошлых расчётов тоже изменятся. Действие можно отменить кнопкой «Отменить».`,()=>{
+  pushUndo();state.rows=state.rows.filter(x=>x.id!==r.id);save();$('editDialog').close();render();toast('Строка удалена из просчёта. Для восстановления нажмите «Отменить».')
+ });
+});
+$('newSnap').addEventListener('click',()=>{let f=$('snapshotForm');let today=new Date();let d=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');f.elements.date.value=d;f.elements.label.value='';$('snapshotDialog').showModal()});
+$('snapshotForm').addEventListener('submit',e=>{e.preventDefault();changeSnapshotDate()});$('cancelSnapshot').addEventListener('click',()=>$('snapshotDialog').close());
+$('openBackup').addEventListener('click',()=>$('exportDialog').showModal());$('closeExport').addEventListener('click',()=>$('exportDialog').close());$('downloadJson').addEventListener('click',downloadBackup);$('downloadCsv').addEventListener('click',downloadCSV);$('backupSide').addEventListener('click',downloadBackup);
+$('importJson').addEventListener('click',()=>$('fileInput').click());$('fileInput').addEventListener('change',async e=>{let file=e.target.files?.[0];if(!file)return;try{if(file.size>8e6)throw Error('Файл слишком большой');let backup=JSON.parse(await file.text());if(!validate(backup))throw Error('Неверный формат копии');if(!await askConfirmAsync('Восстановить резервную копию? Текущие изменения будут заменены.'))return;pushUndo();state=backup;snap=state.snapshots[state.snapshots.length-1].id;save();render();toast('Резервная копия восстановлена')}catch(error){toast('Не удалось загрузить файл: '+error.message)}finally{e.target.value=''}});
+$('menuToggle').addEventListener('click',()=>{$('sidebar').classList.toggle('show');$('overlay').classList.toggle('show')});$('overlay').addEventListener('click',closeMobile);
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('search').focus()}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();downloadBackup()}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)){e.preventDefault();undoNow()}});
+if(!state.snapshots.some(s=>s.id===snap))snap=state.snapshots[state.snapshots.length-1].id;
+render();
+</script>
+<script>
+'use strict';
+// Operational records live beside, but never overwrite, the original calculation ledger.
+const OPS_KEY='landa_finance_operations_v1';
+const DEFAULT_OPS={version:1,openings:{RUB:0,USD:0,CARD:0,AVITO:0},nextSeq:0,suppliers:[{id:'anna',name:'Анна'},{id:'alina',name:'Алина'},{id:'anatoly',name:'Анатолий'}],invoices:[],payments:[],allocations:[],cash:[]};
+const CASH_ACCOUNTS={RUB:'Наличные ₽',USD:'Наличные $',CARD:'Карты ₽',AVITO:'Авито Доставка ₽'};
+const cashKinds={income:'Поступление',expense:'Расход',exchangeRUB:'Покупка долларов',exchangeUSD:'Покупка долларов',supplier:'Перевод поставщику',transfer:'Перевод между своими счетами'};
+const isRubAccount=k=>['RUB','CARD','AVITO'].includes(k);
+const cashUnit=k=>k==='USD'?'USD':'RUB';
+const cashLabel=k=>CASH_ACCOUNTS[k]||k;
+function normalizeOps(data){let d=data;d.openings=d.openings||{};for(let account of Object.keys(CASH_ACCOUNTS)){if(!Number.isFinite(d.openings[account]))d.openings[account]=0}return d}
+
+function isOps(d){return !!(d&&d.version===1&&d.openings&&Number.isFinite(d.openings.RUB)&&Number.isFinite(d.openings.USD)&&Array.isArray(d.suppliers)&&Array.isArray(d.invoices)&&Array.isArray(d.payments)&&Array.isArray(d.allocations)&&Array.isArray(d.cash)&&d.invoices.length<30000&&d.payments.length<30000&&d.cash.length<60000&&d.allocations.length<40000&&d.invoices.every(x=>x&&x.id&&x.supplierId&&Number.isFinite(x.total)&&x.total>=0)&&d.payments.every(x=>x&&x.id&&x.supplierId&&Number.isFinite(x.amount)&&x.amount>0)&&d.allocations.every(x=>x&&x.paymentId&&x.invoiceId&&Number.isFinite(x.amount)&&x.amount>0)&&d.cash.every(x=>x&&x.id&&Object.prototype.hasOwnProperty.call(CASH_ACCOUNTS,x.currency)&&Number.isFinite(x.amount)))}
+function loadOps(){try{let d=JSON.parse(localStorage.getItem(OPS_KEY));if(isOps(d))return normalizeOps(d)}catch(e){}return normalizeOps(deep(EMBEDDED_BACKUP.operations&&isOps(EMBEDDED_BACKUP.operations)?EMBEDDED_BACKUP.operations:DEFAULT_OPS))}
+let ops=loadOps(),currentPage='dashboard',selectedSupplier='anna',cashFilter='all',invoiceFilter='all',supplierInvoiceFilter='all',editingInvoiceId=null;
+const moneyCents=n=>Math.round(Number(n)*100),fromCents=n=>Math.round(n)/100;
+const cashFmt=(n,c)=>(n<0?'−':'')+fmt.format(Math.abs(n))+(cashUnit(c)==='RUB'?' ₽':' $');
+const signedCashFmt=(n,c)=>(n>0?'+':n<0?'−':'')+fmt.format(Math.abs(n))+(cashUnit(c)==='RUB'?' ₽':' $');
+const opId=type=>type+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,9);
+const nextSeq=()=>{ops.nextSeq=(ops.nextSeq||0)+1;return ops.nextSeq};
+const opDate=()=>{let d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')};
+const supName=id=>ops.suppliers.find(s=>s.id===id)?.name||'Неизвестный';
+const CDEK_STATUS={created:'Создан',transit:'В пути',ready:'Готов к выдаче',delivered:'Вручен'};
+const statusCode=i=>i.status==='received'?'delivered':CDEK_STATUS[i.status]?i.status:'created';
+const invoiceAccrued=i=>!!(i.isOpening||i.accrued===true||(i.accrued===undefined&&['received','transit'].includes(i.status)));
+const invoiceAmount=inv=>invoiceAccrued(inv)?moneyCents(inv.total):0;
+const amountInput=(s,positive=true)=>{let n=evaluated(s);if(n===null||!Number.isFinite(n)||(positive&&n<=0))throw Error('Введите сумму больше нуля');return moneyCents(n)};
+const roundCents=n=>fromCents(moneyCents(n));
+function saveOps(){try{let data=JSON.stringify(ops);localStorage.setItem(OPS_KEY,data);if(localStorage.getItem(OPS_KEY)!==data)throw Error('Браузер не подтвердил запись данных');savedMsg();try{window.dispatchEvent(new Event('landa:data-changed'))}catch(_){}return true}catch(e){savedMsg('Не удалось сохранить! Скачайте копию.',true);showStorageWarning();return false}}
+function opCommit(msg){
+ let ok=saveOps(),renderError=null;
+ try{renderOps()}catch(err){renderError=err;window.__landaReportError('Ошибка обновления журналов: '+(err&&err.message||String(err)))}
+ if(renderError){toast(ok?'Запись сохранена, но журнал не обновился. Сделайте резервную копию и проверьте её.':'Не удалось подтвердить сохранение и обновить журнал. Сделайте резервную копию.');return}
+ toast(ok?msg:msg+' — ВНИМАНИЕ: браузер не сохранил изменения! Скачайте резервную копию!');
+}
+function balanceCash(c){return fromCents(moneyCents(ops.openings[c]||0)+ops.cash.filter(x=>x.currency===c).reduce((s,x)=>s+moneyCents(x.amount),0))}
+// FIFO valuation of dollar cash: original acquisition rates, never today's market rate.
+// Older manual USD receipts and opening balances can have an unknown rate: those
+// dollars are shown as unvalued, not as 0-ruble cash.
+function usdValuation(){
+ const lots=[];
+ let deficit=0;
+ const openingCents=moneyCents(ops.openings.USD||0);
+ if(openingCents>0){
+   const openingRate=Number.isFinite(ops.openingUsdRate)&&ops.openingUsdRate>0?moneyCents(ops.openingUsdRate):null;
+   lots.push({usd:openingCents,rate:openingRate});
+ }
+ for(const record of ops.cash.filter(r=>r.currency==='USD').slice().sort(sortAsc)){
+   let cents=moneyCents(record.amount);
+   if(cents>0){
+     if(deficit){const covered=Math.min(deficit,cents);deficit-=covered;cents-=covered}
+     if(cents>0){
+       const rate=Number.isFinite(record.rate)&&record.rate>0?moneyCents(record.rate):null;
+       lots.push({usd:cents,rate});
+     }
+   }else if(cents<0){
+     let spend=-cents;
+     while(spend>0&&lots.length){
+       const first=lots[0];const taken=Math.min(first.usd,spend);
+       first.usd-=taken;spend-=taken;
+       if(!first.usd)lots.shift();
+     }
+     if(spend)deficit+=spend;
+   }
+ }
+ let knownUSD=0,unknownUSD=0,costRubCents=0;
+ for(const lot of lots){
+   if(lot.rate===null)unknownUSD+=lot.usd;
+   else{knownUSD+=lot.usd;costRubCents+=Math.round(lot.usd*lot.rate/100)}
+ }
+ return {knownUSD:fromCents(knownUSD),unknownUSD:fromCents(unknownUSD),costRub:fromCents(costRubCents),deficit:fromCents(deficit)};
+}
+function usdCostMarkup(){
+ const v=usdValuation();
+ if(v.deficit>0)return '<div class="ops-usd-cost">Рублёвая стоимость не определена: отрицательный долларовый остаток в истории.</div>';
+ if(v.knownUSD<=0&&v.unknownUSD>0)return `<div class="ops-usd-cost">Стоимость в ₽: нужен курс для ${cashFmt(v.unknownUSD,'USD')}<span class="rate-note">Укажите курс начального остатка или поступлений.</span></div>`;
+ if(v.unknownUSD>0)return `<div class="ops-usd-cost">По известным курсам: ${cashFmt(v.costRub,'RUB')}<span class="rate-note">Ещё ${cashFmt(v.unknownUSD,'USD')} без курса — в рублёвую сумму не включены</span></div>`;
+ if(v.knownUSD<=0)return '<div class="ops-usd-cost">По курсам покупки: 0 ₽</div>';
+ return `<div class="ops-usd-cost">По курсам покупки: ${cashFmt(v.costRub,'RUB')}<span class="rate-note">Средний курс остатка: ${fmt.format(v.costRub/v.knownUSD)} ₽/$ · FIFO</span></div>`;
+}
+function supplierTotals(id){let inv=ops.invoices.filter(i=>i.supplierId===id),payments=ops.payments.filter(p=>p.supplierId===id),allInvoiceCents=inv.reduce((s,i)=>s+invoiceAmount(i),0),paidCents=payments.reduce((s,p)=>s+moneyCents(p.amount),0),allocatedCents=ops.allocations.filter(a=>inv.some(i=>i.id===a.invoiceId)).reduce((s,a)=>s+moneyCents(a.amount),0),open=allInvoiceCents-allocatedCents,advance=paidCents-allocatedCents;return {invoices:inv.length,payments:payments.length,total:fromCents(allInvoiceCents),paid:fromCents(paidCents),allocated:fromCents(allocatedCents),open:fromCents(open),advance:fromCents(advance),balance:fromCents(paidCents-allInvoiceCents)}}
+function invoicePaid(id){return fromCents(ops.allocations.filter(a=>a.invoiceId===id).reduce((s,a)=>s+moneyCents(a.amount),0))}
+function invoiceDue(i){return fromCents(Math.max(0,invoiceAmount(i)-moneyCents(invoicePaid(i.id))))}
+function paymentAllocated(id){return fromCents(ops.allocations.filter(a=>a.paymentId===id).reduce((s,a)=>s+moneyCents(a.amount),0))}
+function paymentFree(p){return fromCents(Math.max(0,moneyCents(p.amount)-moneyCents(paymentAllocated(p.id))))}
+function addAllocation(paymentId,invoiceId,amount){let p=ops.payments.find(x=>x.id===paymentId),i=ops.invoices.find(x=>x.id===invoiceId);if(!p||!i||p.supplierId!==i.supplierId)throw Error('Платёж и накладная должны иметь одного поставщика');let take=Math.min(moneyCents(paymentFree(p)),moneyCents(invoiceDue(i)),moneyCents(amount));if(take>0){ops.allocations.push({id:opId('alloc'),paymentId,invoiceId,amount:fromCents(take)});return fromCents(take)}return 0}
+function applyAdvance(invoiceId){let i=ops.invoices.find(x=>x.id===invoiceId);if(!i)return 0;let used=0;let available=ops.payments.filter(p=>p.supplierId===i.supplierId&&paymentFree(p)>0).sort(sortAsc);for(let p of available){let due=invoiceDue(i);if(due<=0)break;used+=addAllocation(p.id,i.id,due)}return roundCents(used)}
+function sortAsc(a,b){return (a.date||'').localeCompare(b.date||'')||((a.seq||0)-(b.seq||0))}
+function sortDesc(a,b){return (b.date||'').localeCompare(a.date||'')||((b.seq||0)-(a.seq||0))}
+function opTable(headers,rows,empty='Записей пока нет'){if(!rows.length)return `<div class="ops-empty">${esc(empty)}</div>`;return `<table class="ops-table"><thead><tr>${headers.map(h=>`<th class="${h.right?'right':''}">${esc(h.label||h)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`}
+function moneyStatus(i){if(!invoiceAccrued(i))return '<span class="ops-status amber">Не начислена</span>';let due=invoiceDue(i),paid=invoicePaid(i.id);return due<=0?'<span class="ops-status green">Оплачена</span>':paid>0?'<span class="ops-status amber">Частично оплачена</span>':'<span class="ops-status red">Не оплачена</span>'}
+function supplierCard(id,clickable=false){let s=supplierTotals(id),b=s.balance;return `<div class="ops-card op-supplier-card ${selectedSupplier===id?'active':''}" ${clickable?`data-supplier-card="${esc(id)}" role="button" tabindex="0"`:' '}><h3>${esc(supName(id))}</h3><div class="ops-label">Баланс поставщика</div><div class="ops-big ${numColor(b)}">${b>0?'+':''}${cashFmt(b,'USD')}</div><div class="ops-sub">${b<0?'Мы должны поставщику':b>0?'Наш аванс у поставщика':'Взаиморасчёты закрыты'}</div><div class="ops-kv"><span>Не оплачено по накладным</span><strong class="negative">${cashFmt(s.open,'USD')}</strong></div><div class="ops-kv"><span>Свободный аванс</span><strong class="positive">${cashFmt(s.advance,'USD')}</strong></div></div>`}
+function invoiceRow(i,compact=false){
+ const charged=invoiceAccrued(i),p=invoicePaid(i.id),due=invoiceDue(i),avail=supplierTotals(i.supplierId).advance; const canApply=charged&&due>0&&avail>0,items=Array.isArray(i.items)?i.items:[],status=statusCode(i),good=Number.isFinite(i.goodsCost)?i.goodsCost:i.total;
+ const selectStatus=i.isOpening?'':`<select class="invoice-status-select" data-invoice-status="${esc(i.id)}" aria-label="Статус накладной ${esc(i.number)}">${Object.entries(CDEK_STATUS).map(([id,label])=>`<option value="${id}" ${status===id?'selected':''}>${label}</option>`).join('')}</select>`;
+ const actions=i.isOpening?'':`${charged?`<button class="ops-mini" data-uncharge="${esc(i.id)}" type="button">Отменить начисление</button>`:status==='delivered'?`<button class="ops-mini" data-charge="${esc(i.id)}" type="button">Начислить поставщику</button>`:''}`;
+ return `<tr><td class="nowrap"><strong>${esc(dateText(i.date))}</strong><small>${esc(supName(i.supplierId))}</small></td>
+ <td><strong>${i.isOpening?'Начальный долг':esc(i.number)}</strong><small>${i.isOpening?'Начальный долг без накладной СДЭК':'СДЭК: '+esc(i.tracking||'не указан')+(i.sender?' · '+esc(i.sender):'')+(i.route?' · '+esc(i.route):'')+(i.moysklad?' · МойСклад: '+esc(i.moysklad):'')}</small>${i.note?`<small>${esc(i.note)}</small>`:''}<div style="margin-top:7px">${selectStatus}</div></td>
+ <td>${items.length?`<details><summary class="op-linklike">${items.length} тов. · состав</summary><div class="op-help">${items.map(it=>`<div>${esc(it.name)}${it.sku?' ['+esc(it.sku)+']':''} — ${fmt.format(it.qty)} × ${cashFmt(it.price,'USD')}</div>`).join('')}</div></details>`:'<span class="ops-smallnote">Укажи товары в редакторе</span>'}</td>
+ <td class="right nowrap"><strong>${cashFmt(i.total,'USD')}</strong><small>Товар: ${cashFmt(good,'USD')}</small><small>Доставка: ${cashFmt(i.deliveryCost||0,'USD')}${i.includeDelivery?' · в долге':' · отдельно'}</small><small>${charged?'Начислено':'Ожидает начисления'}</small></td>
+ <td>${moneyStatus(i)}<small>${!charged?'На баланс не влияет':due>0?'Долг: '+cashFmt(due,'USD'):'Закрыта полностью'}</small>${charged?`<small>Зачтено: ${cashFmt(p,'USD')}</small>`:''}</td>
+ <td class="ops-td-actions">${actions} ${canApply?`<button class="ops-mini" type="button" data-apply="${esc(i.id)}">Зачесть аванс</button>`:''} ${!compact&&!i.isOpening?`<button class="ops-mini" type="button" data-edit-invoice="${esc(i.id)}">Изменить</button>`:''} ${!compact?`<button class="ops-mini danger" type="button" data-delete-invoice="${esc(i.id)}">Удалить</button>`:''}</td></tr>`
+}
+function invoicesTable(invoices,compact=false){return opTable(['Дата','Накладная / СДЭК','Товары',{label:'Сумма',right:true},'Оплата',{label:'Действия',right:true}],invoices.slice().sort(sortDesc).map(i=>invoiceRow(i,compact)),'Накладных пока нет. Добавьте первую накладную от поставщика.')}
+function renderDashboard(){let due=ops.suppliers.reduce((s,p)=>s+supplierTotals(p.id).open,0),adv=ops.suppliers.reduce((s,p)=>s+supplierTotals(p.id).advance,0),cR=balanceCash('RUB'),cU=balanceCash('USD'),cCard=balanceCash('CARD'),cAvito=balanceCash('AVITO');
+$('dashboardKpis').innerHTML=`<div class="ops-card primary"><div class="ops-label">Наличные ₽</div><div class="ops-big">${cashFmt(cR,'RUB')}</div><div class="ops-sub">Рублёвая касса</div></div><div class="ops-card"><div class="ops-label">Карты ₽</div><div class="ops-big ${numColor(cCard)}">${cashFmt(cCard,'CARD')}</div><div class="ops-sub">Поступления клиентов и выплаты</div></div><div class="ops-card"><div class="ops-label">Авито Доставка ₽</div><div class="ops-big ${numColor(cAvito)}">${cashFmt(cAvito,'AVITO')}</div><div class="ops-sub">Ожидается к выплате, не деньги на карте</div></div><div class="ops-card"><div class="ops-label">Наличные $</div><div class="ops-big ${numColor(cU)}">${cashFmt(cU,'USD')}</div><div class="ops-sub">Долларовая касса</div>${usdCostMarkup()}</div><div class="ops-card"><div class="ops-label">Не закрыто по накладным</div><div class="ops-big negative">${cashFmt(due,'USD')}</div><div class="ops-sub">Свободных авансов: ${cashFmt(adv,'USD')}</div></div>`;
+$('dashboardNote').innerHTML=`<strong>Учёт денег:</strong> карта и наличные — доступные деньги, а Авито Доставка — ожидаемая выплата. При перечислении от Авито на карту используйте <strong>«Между счетами»</strong>, не второй приход. Платёж поставщику ведите в разделе «Поставщики». Исторический «Просчёт» остаётся отдельно. Рублёвая стоимость наличных $ считается по курсам покупки оставшихся долларовых сумм (FIFO); для старых записей без курса нужна ручная оценка.${[cR,cU,cCard,cAvito].some(n=>n<0)?'<br><strong class="negative">Внимание: есть отрицательный баланс — проверьте начальные остатки и операции.</strong>':''}`;
+$('dashboardSuppliers').innerHTML=ops.suppliers.map(s=>supplierCard(s.id,true)).join('');let todo=ops.invoices.filter(i=>!i.isOpening&&(!invoiceAccrued(i)||invoiceDue(i)>0||statusCode(i)==='transit')).slice().sort(sortDesc).slice(0,8);$('dashboardInvoices').innerHTML=invoicesTable(todo,true)}
+function cashRows(){let running={};for(let account of Object.keys(CASH_ACCOUNTS))running[account]=moneyCents(ops.openings[account]||0);let results=[];for(let r of ops.cash.slice().sort(sortAsc)){if(!Object.prototype.hasOwnProperty.call(running,r.currency))continue;running[r.currency]+=moneyCents(r.amount);results.push({...r,running:fromCents(running[r.currency])})}return results.sort(sortDesc)}
+function renderCash(){let accounts=['RUB','USD','CARD','AVITO'];$('cashKpis').innerHTML=accounts.map((account,idx)=>{let b=balanceCash(account);return `<div class="ops-card ${idx===0?'primary':''}"><div class="ops-label">${cashLabel(account)}</div><div class="ops-big ${idx!==0?numColor(b):''}">${cashFmt(b,account)}</div><div class="ops-sub">Начало: ${cashFmt(ops.openings[account]||0,account)}${b<0?' · ⚠ проверьте остаток':''}${account==='AVITO'?' · к получению, ещё не на карте':''}</div>${account==='USD'?usdCostMarkup():''}</div>`}).join('');
+document.querySelectorAll('[data-cash-filter]').forEach(b=>b.classList.toggle('active',b.dataset.cashFilter===cashFilter));let rr=cashRows().filter(r=>cashFilter==='all'||r.currency===cashFilter);$('cashTable').innerHTML=opTable(['Дата','Операция / статья','Счёт',{label:'Движение',right:true},{label:'Остаток после',right:true},{label:'',right:true}],rr.map(r=>`<tr><td class="nowrap">${esc(dateText(r.date))}</td><td><strong>${esc(cashKinds[r.kind]||r.kind)}</strong><small>${esc(r.category||'')}${r.note?' · '+esc(r.note):''}${r.kind.startsWith('exchange')?' · курс '+fmt.format(r.rate||0)+' ₽/$':r.currency==='USD'&&r.kind==='income'?(r.rate?' · курс '+fmt.format(r.rate)+' ₽/$':' · курс неизвестен'):''}</small></td><td class="nowrap">${esc(cashLabel(r.currency))}</td><td class="right nowrap ${numColor(r.amount)}"><strong>${signedCashFmt(r.amount,r.currency)}</strong></td><td class="right nowrap">${cashFmt(r.running,r.currency)}</td><td class="ops-td-actions">${r.kind==='supplier'?'<span class="ops-smallnote">Удалить в оплатах</span>':`${r.currency==='USD'&&r.kind==='income'?`<button type="button" class="ops-mini" data-rate-cash="${esc(r.id)}">Курс</button> `:''}<button class="ops-mini danger" data-delete-cash="${esc(r.id)}">Удалить</button>`}</td></tr>`),'Операций пока нет. Установите начальные остатки и добавьте первое движение.')}
+function renderSuppliers(){if(!ops.suppliers.some(s=>s.id===selectedSupplier))selectedSupplier=ops.suppliers[0].id;$('supplierCards').innerHTML=ops.suppliers.map(s=>supplierCard(s.id,true)).join('');$('supplierTitle').textContent='Операции: '+supName(selectedSupplier);let s=supplierTotals(selectedSupplier);
+$('supplierReconcile').innerHTML=`<strong>${esc(supName(selectedSupplier))} · общая позиция: <span class="${numColor(s.balance)}">${s.balance>0?'+':''}${cashFmt(s.balance,'USD')}</span>.</strong> Получено по накладным: ${cashFmt(s.total,'USD')}. Переведено поставщику: ${cashFmt(s.paid,'USD')}. <strong>Нужно зачесть по накладным:</strong> ${cashFmt(s.open,'USD')}. <strong>Свободный аванс:</strong> ${cashFmt(s.advance,'USD')}.<br>Зачтённые платежи: ${cashFmt(s.allocated,'USD')}. Формула баланса: переводы − накладные.`;
+$('supplierInvoices').innerHTML=invoicesTable(ops.invoices.filter(i=>i.supplierId===selectedSupplier));let pay=ops.payments.filter(p=>p.supplierId===selectedSupplier).sort(sortDesc);
+$('supplierPayments').innerHTML=opTable(['Дата','Комментарий',{label:'Переведено',right:true},'Распределение','Источник',{label:'',right:true}],pay.map(p=>{let allocated=paymentAllocated(p.id),free=paymentFree(p),a=ops.allocations.filter(a=>a.paymentId===p.id);return `<tr><td class="nowrap">${esc(dateText(p.date))}</td><td>${esc(p.isOpening?'Начальный аванс':p.note||'Перевод поставщику')}</td><td class="right nowrap positive"><strong>+${cashFmt(p.amount,'USD')}</strong></td><td><strong>${allocated?cashFmt(allocated,'USD'):'Не распределён'}</strong>${a.length?`<small>${a.map(x=>{let i=ops.invoices.find(v=>v.id===x.invoiceId);return esc(i?.number||'Удалена')+': '+cashFmt(x.amount,'USD')}).join('; ')}</small>`:''}${free>0?`<small>Свободный аванс: ${cashFmt(free,'USD')}</small>`:''}</td><td>${p.isOpening?'На начало':p.fromCash?'Касса $':'Вне кассы'}</td><td class="ops-td-actions"><button class="ops-mini danger" data-delete-payment="${esc(p.id)}">Удалить</button></td></tr>`}),'Переводов пока нет. Добавьте первый платёж.')}
+function renderInvoices(){
+ let actual=ops.invoices.filter(i=>!i.isOpening),pending=actual.filter(i=>!invoiceAccrued(i));
+ let sum=actual.reduce((s,i)=>s+moneyCents(Number.isFinite(i.goodsCost)?i.goodsCost:i.total),0);
+ let billed=actual.reduce((s,i)=>s+invoiceAmount(i),0),paid=actual.reduce((s,i)=>s+moneyCents(invoicePaid(i.id)),0);
+ let transit=actual.filter(i=>statusCode(i)==='transit').length;
+ $('invoiceKpis').innerHTML=`<div class="ops-card"><div class="ops-label">Всего накладных</div><div class="ops-big">${actual.length}</div><div class="ops-sub">В пути: ${transit}</div></div><div class="ops-card"><div class="ops-label">Стоимость товаров</div><div class="ops-big">${cashFmt(fromCents(sum),'USD')}</div><div class="ops-sub">Доставка считается отдельно</div></div><div class="ops-card"><div class="ops-label">Начислено поставщикам</div><div class="ops-big negative">${cashFmt(fromCents(billed),'USD')}</div><div class="ops-sub">Не начислено: ${pending.length} накладных · незакрыто ${cashFmt(fromCents(billed-paid),'USD')}</div></div>`;
+ let f=$('invoiceSupplierFilter').value||'all';$('invoiceSupplierFilter').innerHTML='<option value="all">Все поставщики</option>'+ops.suppliers.map(s=>`<option value="${esc(s.id)}" ${s.id===f?'selected':''}>${esc(s.name)}</option>`).join('');
+ let search=$('invoiceSearch').value.toLocaleLowerCase('ru').trim(),what=$('invoiceStateFilter').value;
+ let records=actual.filter(i=>(f==='all'||f===i.supplierId)&&(what==='all'||(what==='open'&&invoiceAccrued(i)&&invoiceDue(i)>0)||(what==='paid'&&invoiceAccrued(i)&&invoiceDue(i)===0)||(what==='transit'&&statusCode(i)==='transit'))&&(!search||[i.number,i.tracking,i.moysklad,i.note,i.sender,i.route,supName(i.supplierId),...(i.items||[]).flatMap(it=>[it.name,it.sku])].join(' ').toLocaleLowerCase('ru').includes(search)));
+ $('invoiceTable').innerHTML=invoicesTable(records)
+}
+function renderOps(){renderDashboard();renderCash();renderSuppliers();renderInvoices()}
+function setPage(page){if(!['dashboard','cash','suppliers','invoices','proschet'].includes(page))return;currentPage=page;for(let key of ['dashboard','cash','suppliers','invoices','proschet']){$(key+'Page').hidden=key!==page}let isCalc=page==='proschet';$('nav').hidden=!isCalc;$('proschetNavLabel').hidden=!isCalc;document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));if(isCalc)render();else renderOps();closeMobile();window.scrollTo({top:0,behavior:'instant'})}
+function setSupplier(id){if(!ops.suppliers.some(s=>s.id===id))return;selectedSupplier=id;setPage('suppliers')}
+function formDate(form){form.elements.date.value=opDate()}
+function supplyOptions(selected){return ops.suppliers.map(s=>`<option value="${esc(s.id)}" ${s.id===selected?'selected':''}>${esc(s.name)}</option>`).join('')}
+function parseItems(text){let out=[];for(let [idx,line] of String(text||'').split(/\r?\n/).entries()){line=line.trim();if(!line)continue;let parts=line.includes('\t')?line.split('\t'):line.split(';');if(parts.length<3)throw Error(`Товар в строке ${idx+1}: формат «Название; количество; цена; артикул»`);let name=parts[0].trim(),qty=amountInput(parts[1]),price=amountInput(parts[2],false);if(!name)throw Error(`Строка ${idx+1}: укажите название`);if(price<0)throw Error(`Строка ${idx+1}: цена не может быть отрицательной`);let sum=Math.round(qty*price/100);if(sum>1e13)throw Error('Слишком большая сумма товара');out.push({name,qty:fromCents(qty),price:fromCents(price),sku:(parts[3]||'').trim().slice(0,100)})}return out}
+function invoiceTotalFromForm(form){
+ let items=parseItems(form.elements.items.value);
+ let listed=fromCents(items.reduce((s,i)=>s+Math.round(moneyCents(i.qty)*moneyCents(i.price)/100),0));
+ let raw=form.elements.amount.value.trim();
+ let goodsCost=raw?fromCents(amountInput(raw,false)):listed;
+ let deliveryCost=form.elements.deliveryCost.value.trim()?fromCents(amountInput(form.elements.deliveryCost.value,false)):0;
+ if(goodsCost<0||deliveryCost<0)throw Error('Стоимость товара и доставки не может быть отрицательной');
+ let includeDelivery=form.elements.includeDelivery.checked;
+ let total=roundCents(goodsCost+(includeDelivery?deliveryCost:0));
+ if(moneyCents(total)<=0)throw Error('Укажите стоимость товара (или доставки, оплачиваемой поставщику) больше 0 $');
+ return {items,goodsCost,deliveryCost,includeDelivery,total,listed};
+}
+function previewInvoice(){let t=$('invoicePreview'),f=$('invoiceForm');try{let v=invoiceTotalFromForm(f);t.textContent=`Товары: ${cashFmt(v.goodsCost,'USD')} · доставка: ${cashFmt(v.deliveryCost,'USD')} · долг после начисления: ${cashFmt(v.total,'USD')}. ${v.items.length?'Товарных строк: '+v.items.length+'.':''}${v.items.length&&Math.abs(v.listed-v.goodsCost)>0.009?' Сумма вручную отличается от суммы позиций.':''}`}catch(e){t.textContent=e.message}}
+function openInvoice(id=null){
+ editingInvoiceId=id;let existing=ops.invoices.find(i=>i.id===id),f=$('invoiceForm');f.reset();
+ $('invoiceDialogTitle').textContent=existing?'Редактировать накладную':'Новая накладная';
+ f.elements.supplierId.innerHTML=supplyOptions(existing?.supplierId||selectedSupplier);f.elements.date.value=existing?.date||opDate();f.elements.number.value=existing?.number||'';
+ f.elements.tracking.value=existing?.tracking||'';f.elements.status.value=existing?statusCode(existing):'created';f.elements.moysklad.value=existing?.moysklad||'';
+ f.elements.amount.value=existing?(Number.isFinite(existing.goodsCost)?existing.goodsCost:existing.total):'';
+ f.elements.deliveryCost.value=existing?.deliveryCost||'';f.elements.includeDelivery.checked=!!existing?.includeDelivery;
+ f.elements.sender.value=existing?.sender||'';f.elements.route.value=existing?.route||'';
+ f.elements.note.value=existing?.note||'';f.elements.items.value=(existing?.items||[]).map(it=>[it.name,it.qty,it.price,it.sku||''].join('; ')).join('\n');
+ f.elements.applyAdvance.checked=false;previewInvoice();$('invoiceDialog').showModal()
+}
+function openCash(){let f=$('cashForm');f.reset();formDate(f);updateCashCategory();$('cashDialog').showModal()}
+function updateCashCategory(){let f=$('cashForm'),account=f.elements.currency.value,kind=f.elements.kind.value;$('usdRateField').classList.toggle('op-hide',!(account==='USD'&&kind==='income'));f.elements.category.value=kind==='expense'?'Выдача / расход':account==='CARD'?'Перевод клиента на карту':account==='AVITO'?'Продажа через Авито Доставку':'Выручка / поступление'}
+function openTransfer(){let f=$('transferForm');f.reset();formDate(f);updateTransferTarget();previewTransfer();$('transferDialog').showModal()}
+function updateTransferTarget(){let f=$('transferForm'),from=f.elements.from.value,to=f.elements.to.value,available=from==='AVITO'?['CARD']:from==='CARD'?['RUB']:['CARD'];f.elements.to.innerHTML=available.map(account=>`<option value="${account}">${esc(cashLabel(account))}</option>`).join('');if(available.includes(to))f.elements.to.value=to;previewTransfer()}
+function previewTransfer(){let f=$('transferForm');try{let from=f.elements.from.value,to=f.elements.to.value,cents=amountInput(f.elements.amount.value);if(from===to||!isRubAccount(from)||!isRubAccount(to)||from==='AVITO'&&to!=='CARD'||to==='AVITO')throw Error('Недопустимое направление перевода');let after=moneyCents(balanceCash(from))-cents;$('transferPreview').textContent=`−${cashFmt(fromCents(cents),'RUB')} со счёта «${cashLabel(from)}»; +${cashFmt(fromCents(cents),'RUB')} на «${cashLabel(to)}». После перевода на исходном счёте: ${cashFmt(fromCents(after),'RUB')}${after<0?' (отрицательный баланс; проверьте остатки)':''}.`;}catch(e){$('transferPreview').textContent='Выберите счета и укажите положительную сумму.'}}
+
+function openExchange(){let f=$('exchangeForm');f.reset();formDate(f);$('exchangePreview').textContent='Укажите количество долларов и курс.';$('exchangeDialog').showModal()}
+function previewExchange(){let f=$('exchangeForm');try{let d=amountInput(f.elements.usd.value),rate=amountInput(f.elements.rate.value),source=f.elements.sourceRub.value;$('exchangePreview').textContent=`Со счёта «${cashLabel(source)}»: −${cashFmt(fromCents(Math.round(d*rate/100)),'RUB')}. В наличные доллары: +${cashFmt(fromCents(d),'USD')}. Курс: ${cashFmt(fromCents(rate),'RUB')} за доллар.`}catch(e){$('exchangePreview').textContent='Укажите количество долларов и курс.'}}
+function openPayment(){let f=$('paymentForm');f.reset();f.elements.supplierId.innerHTML=supplyOptions(selectedSupplier);formDate(f);f.elements.fromCash.checked=true;updatePaymentInvoice();$('paymentDialog').showModal()}
+function updatePaymentInvoice(){let f=$('paymentForm'),supplierId=f.elements.supplierId.value,prev=f.elements.invoiceId.value;let due=ops.invoices.filter(i=>i.supplierId===supplierId&&invoiceDue(i)>0).sort(sortAsc);f.elements.invoiceId.innerHTML='<option value="">Без привязки — свободный аванс</option>'+due.map(i=>`<option value="${esc(i.id)}">${esc(i.number)} · долг ${cashFmt(invoiceDue(i),'USD')}</option>`).join('');if(prev&&due.some(i=>i.id===prev))f.elements.invoiceId.value=prev;else if(due.length)f.elements.invoiceId.value=due[0].id;else f.elements.invoiceId.value='';previewPayment()}
+function previewPayment(){let f=$('paymentForm'),text=$('paymentPreview');try{let cents=amountInput(f.elements.amount.value),due=ops.invoices.find(i=>i.id===f.elements.invoiceId.value);let allocated=due?Math.min(cents,moneyCents(invoiceDue(due))):0,free=cents-allocated,bal=supplierTotals(f.elements.supplierId.value).balance;let pieces=[`Баланс поставщика станет ${cashFmt(fromCents(moneyCents(bal)+cents),'USD')}.`,`В накладную: ${cashFmt(fromCents(allocated),'USD')}.`,`В аванс: ${cashFmt(fromCents(free),'USD')}.`];if(f.elements.fromCash.checked){let after=moneyCents(balanceCash('USD'))-cents;pieces.push('В долларовой кассе останется '+cashFmt(fromCents(after),'USD')+(after<0?' (ниже нуля; проверьте остатки)':''))}text.textContent=pieces.join(' ')}catch(e){text.textContent='Укажите сумму перевода.'}}
+function openSupplierOpening(){let f=$('supplierOpeningForm');f.reset();f.elements.supplierId.innerHTML=supplyOptions(selectedSupplier);formDate(f);$('supplierOpeningDialog').showModal()}
+function cashOpening(){let f=$('openingForm');for(let k of Object.keys(CASH_ACCOUNTS))f.elements[k].value=String(ops.openings[k]||0);f.elements.USD_rate.value=ops.openingUsdRate?String(ops.openingUsdRate):'';$('openingDialog').showModal()}
+$('supplierOpeningForm').addEventListener('submit',async e=>{e.preventDefault();let f=e.currentTarget;try{let id=f.elements.supplierId.value,amount=evaluated(f.elements.amount.value);if(amount===null||!amount)throw Error('Нужно указать баланс со знаком');if(!ops.suppliers.some(s=>s.id===id))throw Error('Выберите поставщика');let cents=moneyCents(amount);if(ops.invoices.some(i=>i.isOpening&&i.supplierId===id)||ops.payments.some(p=>p.isOpening&&p.supplierId===id)){if(!await askConfirmAsync('Для этого поставщика уже есть начальная позиция. Добавить ещё одну? Баланс может задвоиться.'))return}if(cents>0){ops.payments.push({id:opId('opening-credit'),seq:nextSeq(),supplierId:id,date:f.elements.date.value,amount:fromCents(cents),fromCash:false,isOpening:true,note:'Начальный аванс'})}else{ops.invoices.push({id:opId('opening-debt'),seq:nextSeq(),supplierId:id,date:f.elements.date.value,number:'НАЧАЛЬНЫЙ-ДОЛГ-'+opId('entry'),tracking:'',moysklad:'',status:'received',items:[],total:fromCents(-cents),isOpening:true,note:'Учетный начальный долг, без детализации по товарам'})}selectedSupplier=id;$('supplierOpeningDialog').close();opCommit('Начальный баланс поставщика учтён')}catch(err){toast('Начальный баланс: '+err.message)}});
+$('cashForm').addEventListener('submit',e=>{e.preventDefault();let f=e.currentTarget;try{let cents=amountInput(f.elements.amount.value),curr=f.elements.currency.value,kind=f.elements.kind.value;if(!Object.prototype.hasOwnProperty.call(CASH_ACCOUNTS,curr)||!['income','expense'].includes(kind))throw Error('Неверный тип операции');let rate=null;if(curr==='USD'&&kind==='income'&&f.elements.rate.value.trim())rate=fromCents(amountInput(f.elements.rate.value));ops.cash.push({id:opId('cash'),seq:nextSeq(),date:f.elements.date.value,currency:curr,amount:fromCents(cents*(kind==='income'?1:-1)),kind,rate,category:f.elements.category.value,note:f.elements.note.value.trim()});$('cashDialog').close();opCommit('Операция в кассе добавлена')}catch(err){toast('Проверьте данные: '+err.message)}});
+$('transferForm').addEventListener('submit',e=>{e.preventDefault();let f=e.currentTarget;try{let cents=amountInput(f.elements.amount.value),from=f.elements.from.value,to=f.elements.to.value;if(!isRubAccount(from)||!isRubAccount(to)||from===to||from==='AVITO'&&to!=='CARD'||to==='AVITO')throw Error('Недопустимые счета перевода');let id=opId('move'),base={date:f.elements.date.value,transferId:id,kind:'transfer',category:'Между своими счетами',note:f.elements.note.value.trim()};ops.cash.push({...base,id:opId('cash'),seq:nextSeq(),currency:from,amount:fromCents(-cents)},{...base,id:opId('cash'),seq:nextSeq(),currency:to,amount:fromCents(cents)});$('transferDialog').close();opCommit('Перевод проведён без двойного учёта поступления')}catch(err){toast('Перевод: '+err.message)}});
+$('exchangeForm').addEventListener('submit',e=>{e.preventDefault();let f=e.currentTarget;try{let dollars=amountInput(f.elements.usd.value),rate=amountInput(f.elements.rate.value),source=f.elements.sourceRub.value,rub=Math.round(dollars*rate/100);if(!['RUB','CARD'].includes(source))throw Error('Укажите рублёвый источник');if(rub<=0||rub>1e15)throw Error('Некорректная сумма покупки');let id=opId('fx'),base={date:f.elements.date.value,exchangeId:id,rate:fromCents(rate),category:'Покупка долларов',note:f.elements.note.value.trim()};ops.cash.push({...base,id:opId('rub'),seq:nextSeq(),currency:source,amount:fromCents(-rub),kind:'exchangeRUB'},{...base,id:opId('usd'),seq:nextSeq(),currency:'USD',amount:fromCents(dollars),kind:'exchangeUSD'});$('exchangeDialog').close();opCommit('Покупка долларов записана в обе кассы')}catch(err){toast('Проверьте обмен: '+err.message)}});
+$('openingForm').addEventListener('submit',async e=>{e.preventDefault();let f=e.currentTarget;try{let values={};for(let k of Object.keys(CASH_ACCOUNTS))values[k]=amountInput(f.elements[k].value,false);if(Object.values(values).some(n=>n<0))throw Error('Начальный остаток не может быть отрицательным');const openingRate=f.elements.USD_rate.value.trim()?fromCents(amountInput(f.elements.USD_rate.value)):null;if(ops.cash.length&&!await askConfirmAsync('В журнале уже есть операции. Изменение начальных остатков пересчитает всю кассу. Продолжить?'))return;ops.openingUsdRate=openingRate;ops.openings=Object.fromEntries(Object.entries(values).map(([k,v])=>[k,fromCents(v)]));$('openingDialog').close();opCommit('Начальные остатки обновлены')}catch(err){toast(err.message)}});
+$('invoiceForm').addEventListener('submit',e=>{e.preventDefault();let f=e.currentTarget;try{
+ const v=invoiceTotalFromForm(f),supplierId=f.elements.supplierId.value,number=f.elements.number.value.trim(),existing=ops.invoices.find(i=>i.id===editingInvoiceId);
+ if(!number)throw Error('Укажите номер накладной');if(!ops.suppliers.some(s=>s.id===supplierId))throw Error('Не выбран поставщик');
+ if(ops.invoices.some(i=>i.id!==editingInvoiceId&&!i.isOpening&&i.supplierId===supplierId&&i.number.trim().toLowerCase()===number.toLowerCase()))throw Error('У этого поставщика уже есть накладная с таким номером');
+ if(existing){if(supplierId!==existing.supplierId&&invoicePaid(existing.id)>0)throw Error('Нельзя изменить поставщика после зачёта оплаты');if(moneyCents(v.total)<moneyCents(invoicePaid(existing.id)))throw Error('Новая сумма меньше уже зачтённых платежей');}
+ const inv={id:existing?.id||opId('invoice'),seq:existing?.seq||nextSeq(),supplierId,date:f.elements.date.value,number,tracking:f.elements.tracking.value.trim(),moysklad:f.elements.moysklad.value.trim(),status:f.elements.status.value,items:v.items,total:v.total,goodsCost:v.goodsCost,deliveryCost:v.deliveryCost,includeDelivery:v.includeDelivery,sender:f.elements.sender.value.trim(),route:f.elements.route.value.trim(),note:f.elements.note.value.trim(),accrued:existing?invoiceAccrued(existing):false};
+ if(existing)Object.assign(existing,inv);else ops.invoices.push(inv);
+ let applied=inv.accrued&&f.elements.applyAdvance.checked?applyAdvance(inv.id):0;
+ $('invoiceDialog').close();opCommit('Накладная сохранена'+(inv.accrued?' · долг поставщика обновлён':' · долг ещё не начислен')+(applied?' · аванс зачтён: '+cashFmt(applied,'USD'):''));
+ }catch(err){toast('Накладная: '+err.message)}});
+
+$('paymentForm').addEventListener('submit',e=>{e.preventDefault();let f=e.currentTarget;try{let cents=amountInput(f.elements.amount.value),id=f.elements.supplierId.value,invoiceId=f.elements.invoiceId.value,invoice=ops.invoices.find(i=>i.id===invoiceId);if(!ops.suppliers.some(s=>s.id===id))throw Error('Неизвестный поставщик');if(invoiceId&&(!invoice||invoice.supplierId!==id))throw Error('Накладная не принадлежит поставщику');let payment={id:opId('pay'),seq:nextSeq(),date:f.elements.date.value,supplierId:id,amount:fromCents(cents),fromCash:f.elements.fromCash.checked,note:f.elements.note.value.trim()};ops.payments.push(payment);if(invoiceId)addAllocation(payment.id,invoiceId,payment.amount);if(payment.fromCash)ops.cash.push({id:opId('cash'),seq:nextSeq(),date:payment.date,currency:'USD',amount:fromCents(-cents),kind:'supplier',paymentId:payment.id,category:'Оплата поставщику: '+supName(id),note:payment.note||'Оплата поставщику'});selectedSupplier=id;$('paymentDialog').close();opCommit('Перевод сохранён; баланс поставщика обновлён')}catch(err){toast('Перевод: '+err.message)}});
+let editingUsdRateId=null;
+function openUsdRateEditor(id){
+ const rec=ops.cash.find(r=>r.id===id);
+ if(!rec||rec.currency!=='USD'||rec.kind!=='income')return;
+ editingUsdRateId=id;
+ $('usdRateInfo').textContent='Поступление '+cashFmt(rec.amount,'USD')+' от '+dateText(rec.date)+'. Введите фактический курс получения этих долларов.';
+ $('usdRateForm').elements.rate.value=rec.rate?String(rec.rate):'';
+ $('usdRateDialog').showModal();
+}
+$('usdRateForm').addEventListener('submit',e=>{
+ e.preventDefault();
+ try{
+   const rec=ops.cash.find(r=>r.id===editingUsdRateId);
+   if(!rec||rec.currency!=='USD'||rec.kind!=='income')throw Error('Не удалось найти поступление долларов');
+   rec.rate=fromCents(amountInput(e.currentTarget.elements.rate.value));
+   $('usdRateDialog').close();opCommit('Курс поступления долларов сохранён, рублёвая стоимость пересчитана');
+ }catch(err){toast('Проверьте курс: '+err.message)}
+});
+function removeInvoice(id){
+ let inv=ops.invoices.find(i=>i.id===id);if(!inv){toast('Накладная не найдена');return}
+ let amt=invoicePaid(id),warning=amt?'Зачтённые платежи ('+cashFmt(amt,'USD')+') станут свободным авансом. ':'';
+ askConfirm(`Удалить накладную «${inv.number}» (${cashFmt(inv.total,'USD')})? ${warning}Восстановление возможно из резервной копии.`,()=>{
+  ops.invoices=ops.invoices.filter(i=>i.id!==id);ops.allocations=ops.allocations.filter(a=>a.invoiceId!==id);opCommit('Накладная удалена, расчеты обновлены')
+ });
+}
+function removePayment(id){
+ let p=ops.payments.find(x=>x.id===id);if(!p){toast('Перевод не найден');return}
+ askConfirm(`Удалить перевод ${cashFmt(p.amount,'USD')} поставщику ${supName(p.supplierId)}? Привязки к накладным и связанное списание из долларовой кассы также будут удалены.`,()=>{
+  ops.payments=ops.payments.filter(x=>x.id!==id);ops.allocations=ops.allocations.filter(a=>a.paymentId!==id);ops.cash=ops.cash.filter(x=>x.paymentId!==id);opCommit('Перевод удалён из взаиморасчётов и кассы')
+ });
+}
+function removeCash(id){
+ let c=ops.cash.find(x=>x.id===id);if(!c){toast('Кассовая операция не найдена');return}
+ if(c.kind==='supplier'){toast('Удалите этот перевод в разделе «Поставщики»');return}
+ let bundle=c.exchangeId?ops.cash.filter(x=>x.exchangeId===c.exchangeId):c.transferId?ops.cash.filter(x=>x.transferId===c.transferId):[c];
+ askConfirm(`Удалить ${bundle.length===2?'обе связанные записи перевода/обмена':'кассовую операцию'} за ${dateText(c.date)}?`,()=>{
+  let ids=new Set(bundle.map(x=>x.id));ops.cash=ops.cash.filter(x=>!ids.has(x.id));opCommit('Операция кассы удалена')
+ });
+}
+function applyAdvanceClick(id){let inv=ops.invoices.find(i=>i.id===id);if(!inv)return;let applied=applyAdvance(id);if(!applied){toast('Нет свободного аванса для зачёта');return}opCommit(`Зачтено в накладную ${inv.number}: ${cashFmt(applied,'USD')}`)}
+// --- CDEK CSV import with a preview. Never silently charge suppliers. ---
+function cdekSimplify(s){return String(s||'').toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ').trim()}
+function cdekSupplier(sender){const s=cdekSimplify(sender);
+ if(['малагин вадим','малагина елена','малинина алина'].some(n=>s.includes(n)))return 'alina';
+ if(s.includes('нестер дмитрий'))return 'anna';
+ if(/(^|\W)анатолий($|\W)/u.test(s))return 'anatoly';
+ return null;
+}
+function cdekStatus(s){let v=cdekSimplify(s);if(/вручен|вручена|доставлен|получен/.test(v))return 'delivered';if(/готов.*выдач|прибыл.*пункт|ожидает выдач/.test(v))return 'ready';if(/создан|зарегистрирован|оформлен/.test(v))return 'created';return v?'transit':'created'}
+function parseCdekCSV(text){
+ text=String(text).replace(/^\uFEFF/,'');if(text.length>8e6)throw Error('CSV слишком большой');
+ let first=text.split(/\r?\n/).find(s=>s.trim())||'',counts={';':(first.match(/;/g)||[]).length,',':(first.match(/,/g)||[]).length,'\t':(first.match(/\t/g)||[]).length};
+ let delimiter=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];if(!counts[delimiter])throw Error('Не найден разделитель CSV (;, запятая или табуляция)');
+ let rows=[],row=[],field='',quote=false;
+ for(let i=0;i<text.length;i++){const ch=text[i];if(ch==='"'){if(quote&&text[i+1]==='"'){field+='"';i++}else quote=!quote}
+ else if(ch===delimiter&&!quote){row.push(field);field=''}else if((ch==='\n'||ch==='\r')&&!quote){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(field);if(row.some(x=>x.trim()))rows.push(row);row=[];field=''}else field+=ch;}
+ if(quote)throw Error('В CSV незакрытая кавычка');row.push(field);if(row.some(x=>x.trim()))rows.push(row);
+ if(rows.length>20000)throw Error('Больше 20 000 строк: разделите CSV');return rows;
+}
+function cdekHeaderIndex(h,terms){return h.findIndex(s=>terms.some(t=>s.includes(t)))}
+function cdekDate(x){let t=String(x||'').trim();let match=t.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})/);if(match){let dt=match[3]+'-'+match[2].padStart(2,'0')+'-'+match[1].padStart(2,'0');return /^\d{4}-\d{2}-\d{2}$/.test(dt)?dt:opDate()};return /^\d{4}-\d{2}-\d{2}/.test(t)?t.slice(0,10):opDate()}
+function cdekImportRead(rows){
+ if(!rows.length)throw Error('CSV пустой');let headerAt=rows.findIndex((r,i)=>i<15&&r.some(x=>/отправител|накладн|трек|получател|сдэк|номер заказа|номер отправл/i.test(x)));
+ if(headerAt<0)throw Error('Не найдена строка заголовков CSV. Нужны колонки «Отправитель» и «Номер накладной» или «Трек»');
+ let headers=rows[headerAt].map(cdekSimplify);
+ let sender=cdekHeaderIndex(headers,['отправител','от кого','фио отправителя']);
+ let number=cdekHeaderIndex(headers,['номер накладной','№ накладной','номер отправления','номер заказа','номер отправки','номер заявки','накладная','трек','номер сдэк','номера накладных','сдэк']);
+ let tracking=cdekHeaderIndex(headers,['трек','трек номер','номер сдэк','сдэк']);if(tracking<0)tracking=cdekHeaderIndex(headers,['номер накладной','номер отправления']);
+ let status=cdekHeaderIndex(headers,['статус','состояние']);
+ let date=cdekHeaderIndex(headers,['дата создания','дата отправки','дата накладной','создан','дата']);
+ let city=cdekHeaderIndex(headers,['город получателя','город назначения','населенный пункт получателя','город доставки','город отправителя','маршрут']);
+ if(sender<0||number<0)throw Error('В CSV не обнаружены отдельные колонки «Отправитель» и «Номер накладной/трек». Заголовки: '+headers.slice(0,12).join(', '));
+ const existing=new Set(ops.invoices.flatMap(i=>[i.number,i.tracking].filter(Boolean).map(cdekSimplify))),seen=new Set();
+ let valid=[],excluded=[],all=rows.slice(headerAt+1);
+ for(let [idx,row] of all.entries()){
+  if(!row.some(c=>String(c).trim()))continue;
+  const cityText=row.join(' '),isBrest=/(^|[^а-яёa-z])брест([^а-яёa-z]|$)/i.test(cityText);
+  const send=String(row[sender]||'').trim(),sup=cdekSupplier(send),num=String(row[number]||'').trim(),track=String(row[tracking]||'').trim()||num;
+  const reason=!isBrest?'Нет «Брест»':!sup?'Неизвестный отправитель':!num?'Нет номера накладной':existing.has(cdekSimplify(num))||existing.has(cdekSimplify(track))||seen.has(cdekSimplify(num))||seen.has(cdekSimplify(track))?'Дубликат':'';
+  let rec={line:headerAt+idx+2,number:num,tracking:track,sender:send,supplierId:sup,status:cdekStatus(row[status]||''),date:cdekDate(row[date]||''),route:String(row[city]||'Брест').trim()||'Брест',reason};
+  if(reason)excluded.push(rec);else {seen.add(cdekSimplify(num));seen.add(cdekSimplify(track));valid.push(rec)}
+ }
+ return {valid,excluded,allCount:all.length};
+}
+let cdekCandidates=[];
+function openCdekImport(){cdekCandidates=[];$('cdekCsvFile').value='';$('cdekCsvCommit').disabled=true;$('cdekCsvPreview').innerHTML='';$('cdekCsvReport').textContent='Выберите CSV-файл СДЭК.';$('cdekImportDialog').showModal()}
+$('cdekCsvFile').addEventListener('change',async e=>{
+ cdekCandidates=[];$('cdekCsvCommit').disabled=true;
+ try{const file=e.currentTarget.files[0];if(!file)return;if(file.size>8e6)throw Error('Максимальный размер 8 МБ');
+ const bytes=await file.arrayBuffer();let text;
+ try{text=new TextDecoder('utf-8',{fatal:true}).decode(bytes)}catch(err){text=new TextDecoder('windows-1251').decode(bytes)}
+ const r=cdekImportRead(parseCdekCSV(text));cdekCandidates=r.valid;
+ $('cdekCsvReport').textContent=`Строк с данными: ${r.allCount}. К добавлению: ${r.valid.length}. Пропущено: ${r.excluded.length} (без Бреста, неизвестный отправитель, дубликаты или без номера). Стоимости товара и доставки после импорта заполняются вручную.`;
+ const preview=r.valid.map(i=>({...i,result:'Добавить'})).concat(r.excluded.map(i=>({...i,result:i.reason})));
+ $('cdekCsvPreview').innerHTML=opTable(['Строка','Номер','Отправитель','Поставщик','Статус','Результат'],preview.slice(0,100).map(i=>`<tr><td>${i.line}</td><td>${esc(i.number)}</td><td>${esc(i.sender)}</td><td>${esc(i.supplierId?supName(i.supplierId):'—')}</td><td>${esc(CDEK_STATUS[i.status])}</td><td>${esc(i.result)}</td></tr>`),'Подходящих накладных нет');
+ $('cdekCsvCommit').disabled=!r.valid.length;
+ }catch(err){$('cdekCsvReport').textContent='Ошибка CSV: '+err.message;$('cdekCsvPreview').innerHTML='';toast('Ошибка импорта: '+err.message)}
+});
+$('cdekCsvCommit').addEventListener('click',()=>{
+ if(!cdekCandidates.length)return;let count=0;
+ const known=new Set(ops.invoices.flatMap(i=>[i.number,i.tracking].filter(Boolean).map(cdekSimplify)));
+ for(const row of cdekCandidates){if(known.has(cdekSimplify(row.number))||known.has(cdekSimplify(row.tracking)))continue;
+  ops.invoices.push({id:opId('invoice'),seq:nextSeq(),supplierId:row.supplierId,date:row.date,number:row.number,tracking:row.tracking,moysklad:'',status:row.status,items:[],goodsCost:0,deliveryCost:0,includeDelivery:false,total:0,accrued:false,sender:row.sender,route:row.route,note:'Импорт СДЭК из CSV; укажите стоимость товара и доставки в $'});count++;
+  known.add(cdekSimplify(row.number));known.add(cdekSimplify(row.tracking));
+ }
+ cdekCandidates=[];$('cdekImportDialog').close();setPage('invoices');opCommit('Импортировано '+count+' накладных. Укажите суммы в $, отметьте «Вручен» и начислите долг поставщикам.')
+});function updateCdekStatus(id,status){
+ const i=ops.invoices.find(x=>x.id===id);if(!i||i.isOpening||!CDEK_STATUS[status])return;
+ i.status=status;opCommit('Статус '+i.number+': '+CDEK_STATUS[status]+(invoiceAccrued(i)?' · ранее начисленный долг сохранён':' · долг пока не начислен'));
+}
+function chargeCdek(id){const i=ops.invoices.find(x=>x.id===id);if(!i||invoiceAccrued(i))return;
+ if(statusCode(i)!=='delivered'){toast('Начисление доступно только для статуса «Вручен»');return}
+ if(moneyCents(i.total)<=0){toast('Сначала нажмите «Изменить» и укажите стоимость товара/доставки в долларах');return}
+ askConfirm(`Начислить ${cashFmt(i.total,'USD')} в долг поставщику ${supName(i.supplierId)} по накладной ${i.number}? Товары: ${cashFmt(i.goodsCost||0,'USD')}, доставка: ${cashFmt(i.deliveryCost||0,'USD')} ${i.includeDelivery?'(включена в долг)':'(отдельно)'}.`,()=>{
+  if(invoiceAccrued(i))return;i.accrued=true;opCommit('Долг по накладной '+i.number+' начислен поставщику: '+cashFmt(i.total,'USD'));
+ });
+}
+function unchargeCdek(id){const i=ops.invoices.find(x=>x.id===id);if(!i||!invoiceAccrued(i)||i.isOpening)return;
+ if(invoicePaid(i.id)>0){toast('Сначала отмените зачёты по накладной, иначе долг нельзя снять');return}
+ askConfirm('Отменить начисление по накладной '+i.number+'? Баланс поставщика увеличится на '+cashFmt(i.total,'USD')+'. Статус доставки не изменится.',()=>{i.accrued=false;opCommit('Начисление по накладной отменено')});
+}
+$('invoiceTable').addEventListener('change',e=>{let select=e.target.closest('[data-invoice-status]');if(select)updateCdekStatus(select.dataset.invoiceStatus,select.value)});
+$('supplierInvoices').addEventListener('change',e=>{let select=e.target.closest('[data-invoice-status]');if(select)updateCdekStatus(select.dataset.invoiceStatus,select.value)});
+$('dashboardInvoices').addEventListener('change',e=>{let select=e.target.closest('[data-invoice-status]');if(select)updateCdekStatus(select.dataset.invoiceStatus,select.value)});
+document.addEventListener('click',e=>{let ch=e.target.closest('[data-charge]');if(ch){chargeCdek(ch.dataset.charge);return}let undo=e.target.closest('[data-uncharge]');if(undo){unchargeCdek(undo.dataset.uncharge);return}});
+
+function csvQuote(s){let str=String(s??'');if(/^[=+@\-\t\r]/.test(str)&&typeof s==='string')str="'"+str;return '"'+str.replace(/"/g,'""')+'"'}
+function exportOps(kind){let rows=[],name='';if(kind==='cash'){name='касса';rows=[['Дата','Счёт','Тип','Статья','Сумма','Курс ₽/$','После операции','Примечание']];for(let c of cashRows())rows.push([dateText(c.date),cashLabel(c.currency),cashKinds[c.kind],c.category,c.amount,c.rate||'',c.running,c.note||''])}
+else if(kind==='suppliers'){name='поставщики';rows=[['Тип','Дата','Поставщик','Номер накладной','Сумма $','Зачтено $','Долг по накладной $','Свободный аванс платежа $','Источник оплаты','Товары','СДЭК']];for(let i of ops.invoices)rows.push([i.isOpening?'Начальный долг':'Накладная',dateText(i.date),supName(i.supplierId),i.number,i.total,invoicePaid(i.id),invoiceDue(i),'','',i.items.map(t=>`${t.name} × ${t.qty}`).join(' / '),i.tracking]);for(let p of ops.payments)rows.push([p.isOpening?'Начальный аванс':'Перевод',dateText(p.date),supName(p.supplierId),'',p.amount,paymentAllocated(p.id),'',paymentFree(p),p.fromCash?'Касса $':'Вне кассы','',''])}
+else {name='накладные';rows=[['Дата','Поставщик','Накладная','СДЭК','Отправитель','Маршрут','МойСклад','Статус','Товар','Артикул','Кол-во','Цена за ед. $','Сумма товара $','Доставка $','Включить доставку в долг','Начислено поставщику','Сумма к оплате поставщику $','Зачтено $','Осталось $','Примечание']];for(let i of ops.invoices.filter(i=>!i.isOpening)){let items=i.items.length?i.items:[{name:'Без детализации',sku:'',qty:'',price:''}];for(let it of items)rows.push([dateText(i.date),supName(i.supplierId),i.number,i.tracking,i.sender||'',i.route||'',i.moysklad,CDEK_STATUS[statusCode(i)],it.name,it.sku,it.qty,it.price,it.qty&&it.price?roundCents(it.qty*it.price):'',i.deliveryCost||0,i.includeDelivery?'Да':'Нет',invoiceAccrued(i)?'Да':'Нет',i.total,invoicePaid(i.id),invoiceDue(i),i.note])}}
+download('\ufeff'+rows.map(r=>r.map(csvQuote).join(';')).join('\r\n'),'LANDA-'+name+'-'+opDate()+'.csv','text/csv;charset=utf-8');toast('CSV «'+name+'» скачан')}
+// Backup v2 includes BOTH ledgers. Legacy v1 backups remain importable.
+downloadBackup=function(){download(JSON.stringify({app:'LANDA-suite',backupVersion:3,createdAt:new Date().toISOString(),proschet:state,operations:ops},null,2),'LANDA-полная-копия-'+opDate()+'.json','application/json;charset=utf-8');toast('Полная копия просчёта, кассы и поставщиков скачана')};
+// Older click listeners kept the old function reference: intercept these clicks before them.
+for(const id of ['backupSide','downloadJson'])$(id).addEventListener('click',e=>{e.stopImmediatePropagation();downloadBackup()},true);
+// Capture before the legacy v1 handler: this handler accepts either v1 or v2 data.
+$('fileInput').addEventListener('change',async function(e){e.stopImmediatePropagation();let file=e.target.files?.[0];if(!file)return;try{if(file.size>15e6)throw Error('Файл больше 15 МБ');let data=JSON.parse(await file.text());if(data.app==='LANDA-suite'&&[2,3].includes(data.backupVersion)&&validate(data.proschet)&&isOps(data.operations)){if(!await askConfirmAsync('Заменить просчёт, кассу и поставщиков из полной резервной копии? Текущие данные будут заменены.'))return;state=data.proschet;ops=normalizeOps(data.operations);snap=state.snapshots[state.snapshots.length-1].id;undo=[];save();saveOps();render();renderOps();toast('Полная копия восстановлена')}else if(validate(data)){if(!await askConfirmAsync('Это старая копия просчёта. Восстановить только просчёт? Касса и поставщики останутся без изменений.'))return;state=data;snap=state.snapshots[state.snapshots.length-1].id;undo=[];save();render();toast('Просчёт восстановлен, касса и поставщики не изменены')}else throw Error('Неподдерживаемый формат резервной копии')}catch(err){toast('Импорт: '+err.message)}finally{e.target.value=''}},true);
+const exportDialogText=$('exportDialog').querySelector('.modal-body p');if(exportDialogText)exportDialogText.textContent='Полная JSON-копия сохраняет просчёт, движения всех четырёх счетов, накладные, оплаты и распределение авансов. CSV здесь выгружает старый просчёт; журналы кассы и накладных можно выгрузить в соответствующих разделах.';
+$('downloadJson').textContent='⇩ JSON — полная копия всех разделов';
+$('invoiceSearch').addEventListener('input',renderInvoices);$('invoiceSupplierFilter').addEventListener('change',renderInvoices);$('invoiceStateFilter').addEventListener('change',renderInvoices);
+$('cashForm').elements.kind.addEventListener('change',updateCashCategory);$('cashForm').elements.currency.addEventListener('change',updateCashCategory);$('transferForm').elements.from.addEventListener('change',updateTransferTarget);$('transferForm').addEventListener('input',previewTransfer);
+$('exchangeForm').addEventListener('input',previewExchange);$('paymentForm').addEventListener('input',previewPayment);$('paymentSupplier').addEventListener('change',updatePaymentInvoice);$('invoiceForm').addEventListener('input',previewInvoice);
+$('cashFilters').addEventListener('click',e=>{let b=e.target.closest('[data-cash-filter]');if(!b)return;cashFilter=b.dataset.cashFilter;renderCash()});
+document.addEventListener('click',e=>{let nav=e.target.closest('[data-page]');if(nav){setPage(nav.dataset.page);return}let go=e.target.closest('[data-go]');if(go){setPage(go.dataset.go);return}let sup=e.target.closest('[data-supplier-card]');if(sup){setSupplier(sup.dataset.supplierCard);return}let act=e.target.closest('[data-action]');if(act){let kind=act.dataset.action;if(kind==='newInvoice')openInvoice();else if(kind==='importInvoices')openCdekImport();else if(kind==='newPayment')openPayment();else if(kind==='newCash')openCash();else if(kind==='newTransfer')openTransfer();else if(kind==='newExchange')openExchange();else if(kind==='openings')cashOpening();else if(kind==='supplierOpening')openSupplierOpening();else if(kind==='exportCash')exportOps('cash');else if(kind==='exportSuppliers')exportOps('suppliers');else if(kind==='exportInvoices')exportOps('invoices');return}let close=e.target.closest('[data-close]');if(close){$(close.dataset.close).close();return}let apply=e.target.closest('[data-apply]');if(apply){applyAdvanceClick(apply.dataset.apply);return}let edit=e.target.closest('[data-edit-invoice]');if(edit){openInvoice(edit.dataset.editInvoice);return}let del=e.target.closest('[data-delete-invoice]');if(del){removeInvoice(del.dataset.deleteInvoice);return}let delPay=e.target.closest('[data-delete-payment]');if(delPay){removePayment(delPay.dataset.deletePayment);return}let rateCash=e.target.closest('[data-rate-cash]');if(rateCash){openUsdRateEditor(rateCash.dataset.rateCash);return}let delCash=e.target.closest('[data-delete-cash]');if(delCash){removeCash(delCash.dataset.deleteCash);return}});
+document.addEventListener('keydown',e=>{let sup=e.target.closest('[data-supplier-card]');if(sup&&(e.key==='Enter'||e.key===' ')){e.preventDefault();setSupplier(sup.dataset.supplierCard)}});
+$('nav').addEventListener('click',e=>{if(e.target.closest('[data-nav]'))setPage('proschet')});
+setPage('dashboard');
+
+// Improved modal validation. Native HTML checks otherwise suppress submit without showing a message in file previews.
+for(const form of document.querySelectorAll('dialog form'))form.noValidate=true;
+document.addEventListener('submit',e=>{
+ const form=e.target;if(!form.closest('dialog')||form.id==='actionConfirmDialog')return;
+ clearDialogWarnings(form.closest('dialog'));
+ if(form.checkValidity())return;
+ e.preventDefault();e.stopImmediatePropagation();
+ const invalid=form.querySelector(':invalid');if(!invalid)return;
+ const label=invalid.closest('label')?.querySelector('span')?.textContent?.trim()||invalid.getAttribute('aria-label')||'обязательное поле';
+ const reason=invalid.validity.valueMissing?'Заполните поле «'+label+'».':'Проверьте поле «'+label+'»: неверное значение.';
+ let msg=document.createElement('div');msg.className='input-feedback';msg.setAttribute('role','alert');msg.textContent=reason;
+ const field=invalid.closest('label.field')||invalid.parentElement;field.appendChild(msg);invalid.setAttribute('aria-invalid','true');invalid.focus();
+},true);
+document.addEventListener('input',e=>{const field=e.target.closest('label.field');if(field){field.querySelector('.input-feedback')?.remove();e.target.removeAttribute('aria-invalid')}e.target.closest('dialog')?.querySelector('.form-feedback')?.remove()},true);
+document.addEventListener('click',e=>{if(e.target.closest('dialog')&&!e.target.closest('#actionConfirmDialog')&&e.target.closest('button[data-close]'))clearDialogWarnings(e.target.closest('dialog'))},true);
+// Detect browser previews/private-mode contexts where local file storage cannot persist data.
+try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.getItem(k)!=='ok')throw Error('Read failed');localStorage.removeItem(k)}catch(e){showStorageWarning()}
+
+// V6: direct form submission with visible error reporting and no hanging progress.
+(function(){
+ const status=document.getElementById('launchStatus');
+ if(status){
+   if(typeof document.getElementById('cashDialog').showModal!=='function'){
+     window.__landaReportError('Браузер не поддерживает окна программы. Откройте скачанный файл напрямую в обновлённом Chrome или Edge.');
+   } else {
+     status.dataset.state='ok';status.innerHTML='<strong>LANDA v11 работает.</strong> Если запись не выполнена, появится конкретная ошибка. Перед повтором операции проверьте журнал.';
+   }
+ }
+ // The click is the actual submission trigger, not merely a "working" badge.
+ // Some mobile/file preview engines cancel the native form default action.
+ // Calling the registered submit listeners ourselves handles those browsers too.
+ for(const form of document.querySelectorAll('dialog form')){
+   form.addEventListener('click', function(event){
+     const target=event.target;
+     const btn=target&&target.closest?target.closest('button[type="submit"],input[type="submit"]'):null;
+     if(!btn || !form.contains(btn))return;
+     event.preventDefault(); // No native second submit and no accidental page navigation.
+     try {
+       const submitEvent=new Event('submit',{bubbles:true,cancelable:true});
+       form.dispatchEvent(submitEvent);
+     } catch(error){
+       window.__landaReportError('Ошибка отправки формы '+form.id+': '+(error&&error.message||String(error)));
+       const dlg=form.closest('dialog');
+       let box=dlg&&dlg.querySelector('.form-feedback');
+       if(dlg&&!box){box=document.createElement('div');box.className='form-feedback';
+          box.setAttribute('role','alert');const footer=dlg.querySelector('.modal-ft');
+          if(footer)footer.before(box);else dlg.appendChild(box)}
+       if(box)box.textContent='Не удалось выполнить операцию: '+(error&&error.message||error);
+     }
+   },true);
+ }
+})();
+</script>
+
+
+
+
+
+<script>
+'use strict';
+// v8: import full backups by direct paste, without needing a file picker.
+(function(){
+  const modal=document.getElementById('pasteBackupDialog');
+  const area=document.getElementById('pasteBackupText');
+  const feedback=document.getElementById('pasteBackupFeedback');
+  const maxSize=15*1024*1024;
+  function note(message,isError){feedback.textContent=message;feedback.style.color=isError?'#9d2334':'#365a78';}
+  function openPaste(){
+    note('');area.value='';modal.showModal();area.focus();
+  }
+  function closePaste(){modal.close();}
+  document.getElementById('pasteBackupSide').addEventListener('click',openPaste);
+  document.getElementById('pasteBackupToolbar').addEventListener('click',openPaste);
+  document.getElementById('pasteBackupFromExport').addEventListener('click',function(){document.getElementById('exportDialog').close();openPaste();});
+  document.getElementById('pasteBackupCancel').addEventListener('click',closePaste);
+  document.getElementById('pasteBackupClipboard').addEventListener('click',async function(){
+    try{
+      if(!navigator.clipboard||!navigator.clipboard.readText)throw Error('Браузер не даёт доступ к буферу обмена');
+      const text=await navigator.clipboard.readText();
+      if(!text)throw Error('Буфер пустой');
+      if(text.length>maxSize)throw Error('Размер текста превышает 15 МБ');
+      area.value=text;note('Текст из буфера вставлен. Нажми «Проверить копию».');
+    }catch(err){note('Автоматическая вставка недоступна: '+err.message+'. Нажми на поле и используй Ctrl+V или ⌘+V.',true);area.focus();}
+  });
+  function decodePayload(text){
+    const raw=String(text||'').replace(/^\uFEFF/,'').trim();
+    if(!raw)throw Error('Вставь текст JSON-копии в поле.');
+    if(raw.length>maxSize)throw Error('Копия больше 15 МБ. Используй восстановление из файла.');
+    let data;
+    try{data=JSON.parse(raw);}catch(err){throw Error('Некорректный JSON: '+err.message+'. Скопируй весь текст файла от первой до последней фигурной скобки.');}
+    if(data&&data.app==='LANDA-suite'&&[2,3].includes(data.backupVersion)&&validate(data.proschet)&&isOps(data.operations)){
+      return {full:true,data:data,caption:'Полная копия: '+data.proschet.snapshots.length+' периодов, '+data.proschet.rows.length+' строк; '+data.operations.cash.length+' кассовых записей; '+data.operations.invoices.length+' накладных; '+data.operations.payments.length+' оплат.'};
+    }
+    if(validate(data)){
+      return {full:false,data:data,caption:'Копия просчёта: '+data.snapshots.length+' периодов, '+data.rows.length+' строк. Касса и поставщики не затронутся.'};
+    }
+    throw Error('Формат не распознан. Нужна полная JSON-копия LANDA или JSON-копия финансового просчёта.');
+  }
+  function checkPaste(){
+    try{let r=decodePayload(area.value);note('✓ '+r.caption);return r;}
+    catch(err){note('Ошибка: '+err.message,true);return null;}
+  }
+  document.getElementById('pasteBackupCheck').addEventListener('click',checkPaste);
+  area.addEventListener('input',function(){note('');});
+  function restoreValidated(parsed){
+    const data=parsed.data;
+    const nextState=parsed.full?data.proschet:data;
+    const nextOps=parsed.full?normalizeOps(deep(data.operations)):ops;
+    // Commit to browser storage before replacing the working state. A failed write
+    // should not display a fake success nor replace the on-screen data.
+    let beforeS,beforeO;
+    try{
+      beforeS=localStorage.getItem(KEY);
+      if(parsed.full)beforeO=localStorage.getItem(OPS_KEY);
+      const rawS=JSON.stringify(nextState);
+      const rawO=parsed.full?JSON.stringify(nextOps):null;
+      localStorage.setItem(KEY,rawS);
+      if(parsed.full)localStorage.setItem(OPS_KEY,rawO);
+      if(localStorage.getItem(KEY)!==rawS||(parsed.full&&localStorage.getItem(OPS_KEY)!==rawO))throw Error('Браузер не подтвердил сохранение');
+    }catch(err){
+      try{if(beforeS===null)localStorage.removeItem(KEY);else if(beforeS!==undefined)localStorage.setItem(KEY,beforeS);
+        if(parsed.full){if(beforeO===null)localStorage.removeItem(OPS_KEY);else if(beforeO!==undefined)localStorage.setItem(OPS_KEY,beforeO);}}catch(_e){}
+      showStorageWarning();throw Error('Не удалось сохранить данные: '+err.message+'. Ничего не импортировано.');
+    }
+    state=deep(nextState);
+    if(parsed.full)ops=deep(nextOps);
+    snap=state.snapshots[state.snapshots.length-1].id;
+    undo=[];
+    document.getElementById('undoBtn').disabled=true;
+    savedMsg('Резервная копия восстановлена');
+    closePaste();
+    try{render();renderOps();toast(parsed.full?'Восстановлены все разделы из JSON-копии':'Просчёт восстановлен; касса и поставщики не изменены');}
+    catch(err){window.__landaReportError('Данные сохранены, но возникла ошибка обновления интерфейса: '+err.message+'. Перезагрузи страницу.');}
+  }
+  async function confirmRestore(parsed){
+    const message=parsed.full?
+      'Восстановить все разделы из этой полной копии? Просчёт, касса, поставщики, накладные и оплаты будут заменены. Сначала рекомендуем выгрузить текущую полную копию.':
+      'Восстановить только просчёт? Текущий финансовый просчёт будет заменён; касса и поставщики сохранятся.';
+    if(!(await askConfirmAsync(message)))return;
+    try{restoreValidated(parsed);}catch(err){note('Ошибка: '+err.message,true);}
+  }
+  document.getElementById('pasteBackupApply').addEventListener('click',async function(){
+    const parsed=checkPaste();if(parsed)await confirmRestore(parsed);
+  });
+  async function restoreEmbedded(){
+    try{
+      if(!(EMBEDDED_BACKUP&&EMBEDDED_BACKUP.app==='LANDA-suite'&&validate(EMBEDDED_BACKUP.proschet)&&isOps(EMBEDDED_BACKUP.operations)))throw Error('Встроенная копия повреждена');
+      await confirmRestore({full:true,data:EMBEDDED_BACKUP});
+    }catch(err){note('Ошибка: '+err.message,true);}
+  }
+  document.getElementById('pasteBackupEmbedded').addEventListener('click',restoreEmbedded);
+  document.getElementById('restoreEmbeddedFromExport').addEventListener('click',async function(){document.getElementById('exportDialog').close();openPaste();await restoreEmbedded();});
+})();
+</script>
+
+
+<dialog id="githubDialog" aria-labelledby="ghTitle">
+ <div class="modal-hd" id="ghTitle">☁ Синхронизация с GitHub <button type="button" class="btn" id="ghClose" style="float:right" aria-label="Закрыть">✕</button></div> <div class="gh-body">
+ <div class="gh-warning"><b>iPhone:</b> для синхронизации открой сайт LANDA по HTTPS в Safari. Встроенный просмотрщик HTML (в ChatGPT, «Файлах» и мессенджерах) может блокировать запросы GitHub и показывать «Load failed».</div>
+ <div class="gh-note">После подключения LANDA будет <strong>хранить данные и локально, и в приватном репозитории GitHub</strong>. При каждом новом запуске проверяется облачная версия. После изменения программы запись отправляется автоматически с небольшой задержкой. Нужен интернет.</div>
+ <div class="gh-grid">
+  <label class="gh-label">Репозиторий GitHub (владелец/имя)<input class="gh-input" id="ghRepo" placeholder="GabozaGagara/Landa-financenot" autocapitalize="off" spellcheck="false" autocomplete="off"></label>
+  <label class="gh-label">Путь резервной копии<input class="gh-input" id="ghPath" value="landa-data/backup.json" spellcheck="false" autocapitalize="off"></label>
+ </div>
+ <label class="gh-label">Fine-grained Personal Access Token (Contents: Read &amp; write только для этого репозитория)<input type="password" class="gh-input" id="ghToken" placeholder="github_pat_…" autocomplete="off" spellcheck="false"></label>
+ <label style="display:flex;gap:9px;align-items:flex-start;font-size:12px"><input type="checkbox" id="ghRemember"> Запомнить токен в браузере на этом устройстве (удобно, но небезопасно на общем компьютере)</label>
+ <label style="display:flex;gap:9px;align-items:flex-start;font-size:12px"><input type="checkbox" id="ghAuto" checked> Автоматически сохранять изменения в GitHub после подключения</label>
+ <div class="gh-actions"><button class="btn btn-primary" type="button" id="ghConnect">Подключить и проверить</button><button class="btn" type="button" id="ghUpload">Сохранить на GitHub</button><button class="btn" type="button" id="ghRefresh">Проверить облако</button></div>
+ <div class="gh-message" id="ghMessage" role="status" aria-live="polite">GitHub не подключён.</div>
+ <div id="ghConflict"><strong style="font-size:13px">Локальные и облачные данные различаются</strong><p id="ghConflictText">Для защиты учёта автоматическая замена отключена. Выбери нужную версию.</p><div class="gh-actions"><button type="button" class="btn" id="ghLoad">Загрузить с GitHub</button><button type="button" class="btn" id="ghForceUpload">Заменить данные GitHub текущими</button></div></div>
+ <div class="gh-actions"><button class="btn" type="button" id="ghDownloadLocal">⇩ Скачать локальную JSON-копию</button><button class="btn" type="button" id="ghDisconnect">Отключить GitHub</button></div>
+ <div class="gh-warning"><b>Безопасность:</b> используй только приватный репозиторий. Данные в нём хранятся обычным JSON, без шифрования. Токен не входит в резервные копии и не записывается внутрь HTML. Не отправляй токен в чат. Для постоянной работы после закрытия браузера потребуется включить «Запомнить токен».</div>
+ <div class="gh-note">Настройка: <a href="https://github.com/new" target="_blank" rel="noopener noreferrer">создать приватный репозиторий</a> → <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">создать ограниченный токен</a> → выбрать <strong>Only select repositories</strong> и <strong>Contents: Read and write</strong> → вставить его здесь. Репозиторий должен существовать и быть private.</div>
+ </div>
+</dialog>
+
+<script>
+'use strict';
+/* LANDA GitHub sync: never put GitHub access tokens in HTML or exported financial JSON. */
+(function(){
+ const CONFKEY='landa_github_sync_v1', METAKEY='landa_github_meta_v1', LOCAL_TOKEN='landa_github_token_v1';
+ const el=id=>document.getElementById(id);
+ let conf={repo:'GabozaGagara/Landa-financenot',path:'landa-data/backup.json',remember:false,auto:true};
+ let meta={repo:'',path:'',sha:null,hash:null}, token='', remote=null, ready=false, busy=false, queued=false, timer=0, inFlight=false;
+ let paused=false;
+ function readStore(storage,key){try{return storage.getItem(key)}catch(_){return null}}
+ function writeStore(storage,key,value){try{storage.setItem(key,value);return true}catch(_){return false}}
+ function delStore(storage,key){try{storage.removeItem(key)}catch(_){}}
+ function getSnapshot(){return {app:'LANDA-suite',backupVersion:3,createdAt:new Date().toISOString(),proschet:JSON.parse(JSON.stringify(state)),operations:JSON.parse(JSON.stringify(ops))}}
+ function snapshotData(d){return JSON.stringify([d.proschet,d.operations])}
+ function fingerprint(d){let s=snapshotData(d), a=2166136261,b=0x811c9dc5;for(let i=0;i<s.length;i++){let x=s.charCodeAt(i);a=Math.imul(a^x,16777619);b=Math.imul(b^(x+257),2246822519)}return s.length.toString(16)+'-'+(a>>>0).toString(16)+'-'+(b>>>0).toString(16)}
+ function snapshotValid(d){return !!(d&&d.app==='LANDA-suite'&&[2,3].indexOf(d.backupVersion)>-1&&d.proschet&&Array.isArray(d.proschet.rows)&&Array.isArray(d.proschet.groups)&&Array.isArray(d.proschet.snapshots)&&d.operations&&typeof validate==='function'&&validate(d.proschet)&&typeof isOps==='function'&&isOps(d.operations))}
+ function msg(txt,kind){el('ghMessage').textContent=txt;el('ghMessage').className='gh-message'+(kind?' '+kind:'');el('githubStatusSide').textContent=txt.length>75?txt.slice(0,72)+'…':txt;el('githubStatusSide').title=txt}
+ function conflict(txt){el('ghConflict').classList.add('show');el('ghConflictText').textContent=txt||'Данные отличаются.';ready=false}
+ function clearConflict(){el('ghConflict').classList.remove('show')}
+ function saveConf(){let copy={repo:conf.repo,path:conf.path,remember:conf.remember,auto:conf.auto};writeStore(localStorage,CONFKEY,JSON.stringify(copy));if(conf.remember){writeStore(localStorage,LOCAL_TOKEN,token);delStore(sessionStorage,LOCAL_TOKEN)}else{delStore(localStorage,LOCAL_TOKEN);writeStore(sessionStorage,LOCAL_TOKEN,token)}}
+ function saveMeta(){writeStore(localStorage,METAKEY,JSON.stringify(meta))}
+ function setMeta(sha,hash){meta={repo:conf.repo,path:conf.path,sha:sha,hash:hash};saveMeta()}
+ function configReady(){return !!(token&&/^[\w.-]+\/[\w.-]+$/.test(conf.repo)&&/^[\w./-]+\.json$/i.test(conf.path)&&!conf.path.includes('..'))}
+ function storeForm(){let r=el('ghRepo').value.trim(),p=el('ghPath').value.trim();if(!/^[\w.-]+\/[\w.-]+$/.test(r))throw Error('Укажи репозиторий как владелец/название.');if(!/^[\w./-]+\.json$/i.test(p)||p.includes('..')||p.startsWith('/'))throw Error('Путь должен быть относительным и оканчиваться на .json');const same=r===conf.repo&&p===conf.path;conf={repo:r,path:p,remember:el('ghRemember').checked,auto:el('ghAuto').checked};token=el('ghToken').value.trim()||token;if(!token)throw Error('Нужен токен GitHub с разрешением Contents: Read and write.');if(!same){ready=false;remote=null;clearConflict();meta={repo:r,path:p,sha:null,hash:null}}saveConf();if(!same)saveMeta()}
+ function base(){return 'https://api.github.com/repos/'+conf.repo.split('/').map(encodeURIComponent).join('/')}
+ function apiHeaders(){return {Accept:'application/vnd.github+json',Authorization:'Bearer '+token,'X-GitHub-Api-Version':'2022-11-28'}}
+ function apiError(status,detail){if(status===401)return 'Токен недействителен или срок действия истёк.';if(status===403)return 'Нет прав или превышен лимит GitHub. Проверь доступ Contents: Read and write.';if(status===404)return 'Репозиторий не найден или токен не имеет к нему доступа.';if(status===409)return 'Файл на GitHub уже изменился. Сначала проверь облачную версию.';return 'GitHub ответил '+status+(detail?': '+detail:'')}
+ async function fetchAPI(url,opts){
+   let response;
+   try{response=await fetch(url,Object.assign({headers:apiHeaders(),cache:'no-store'},opts||{}));}
+   catch(err){
+     let isFile=['file:','blob:','about:'].indexOf(location.protocol)>-1;
+     let note='Нет сетевого доступа к GitHub из этого окна. '+(isFile?'Файл открыт локально или через предпросмотр. ':'')+'Открой LANDA по HTTPS-адресу сайта в Safari (не в просмотрщике файла). Проверь интернет и повтори подключение.';
+     throw Error(note+' Техническая ошибка: '+(err&&err.message||'network'));
+   }
+   let data={};try{data=await response.json()}catch(_){}if(!response.ok&&response.status!==404)throw Error(apiError(response.status,data.message));return {status:response.status,data:data}}
+ 
+ function enc(s){let bytes=new TextEncoder().encode(s),out='';for(let i=0;i<bytes.length;i+=0x8000)out+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(out)}
+ function dec(b){let str=atob(b.replace(/\s/g,''));let arr=new Uint8Array(str.length);for(let i=0;i<str.length;i++)arr[i]=str.charCodeAt(i);return new TextDecoder().decode(arr)}
+ function fileUrl(){return base()+'/contents/'+conf.path.split('/').map(encodeURIComponent).join('/')}
+ async function getCloud(){const r=await fetchAPI(fileUrl());if(r.status===404)return null;let x=r.data;if(!x.sha||!x.content)throw Error('GitHub не прислал содержимое JSON (файл больше 1 МБ?).');let d;try{d=JSON.parse(dec(x.content))}catch(e){throw Error('Не удалось разобрать облачный JSON: '+e.message)}if(!snapshotValid(d))throw Error('JSON на GitHub не соответствует резервной копии LANDA.');return {sha:x.sha,data:d,hash:fingerprint(d)}}
+ async function checkRepoPrivate(){const r=await fetchAPI(base());if(r.status===404)throw Error('Репозиторий не найден или для токена нет доступа.');if(!r.data.private)throw Error('Репозиторий публичный. Создай private-репозиторий для финансовых данных.');return r.data}
+ function synced(r){ready=true;remote=r;setMeta(r?r.sha:null,fingerprint(getSnapshot()));clearConflict();msg('✓ GitHub подключён · данные синхронизированы', 'ok')}
+ async function checkRemote(bootstrap){if(!configReady())throw Error('Сначала укажи репозиторий и токен.');if(busy)return;busy=true;msg('Проверяем приватный GitHub и облачную копию…');try{
+   await checkRepoPrivate();let found=await getCloud(),local=fingerprint(getSnapshot());remote=found;
+   if(!found){if(meta.sha){conflict('Облачная копия была удалена или перемещена. Можно загрузить сюда локальные данные, но сначала проверь адрес и путь.');msg('В GitHub нет ранее синхронизированной копии.', 'error')}else{ready=false;clearConflict();msg('✓ Приватный репозиторий доступен. Нажми «Сохранить на GitHub» для первой загрузки.')}}
+   else if(found.hash===local){synced(found)}
+   else if(!meta.sha && !readStore(localStorage,'landa_proschet_offline_v1') && !readStore(localStorage,'landa_finance_operations_v1') && state.rows.length===0 && state.snapshots.length===1 && !ops.cash.length && !ops.invoices.length && !ops.payments.length){
+     msg('Новый браузер: первая загрузка финансовых данных из приватного GitHub…');restoreRemote(found,true);
+   }
+   else if(meta.repo===conf.repo&&meta.path===conf.path&&meta.sha===found.sha){
+      ready=true;clearConflict();msg('Есть локальные изменения. Отправляем их в GitHub…');if(conf.auto)queued=true;
+   }else if(meta.repo===conf.repo&&meta.path===conf.path&&meta.hash===local){
+      ready=false;clearConflict();msg('В GitHub есть более новые изменения. Загружаем их…');restoreRemote(found,true);
+   }else{
+      conflict('Облачная и локальная версии не совпадают. Автоматическая замена остановлена. Для проверки сначала скачай локальную копию, затем выбери, какую оставить.');msg('⚠ Обнаружены разные версии данных. Выбери одну.', 'error');
+   }
+ }catch(e){ready=false;msg('Ошибка подключения: '+e.message,'error')}finally{busy=false;if(queued&&ready){queued=false;queueUpload()}}}
+ async function upload(force){if(inFlight){queued=true;return}if(!configReady()){msg('Сначала подключи GitHub.', 'error');return}if(!force&&!ready)return;
+   inFlight=true;try{
+     await checkRepoPrivate();
+     const latest=await getCloud();const now=getSnapshot(),localHash=fingerprint(now);
+     if(!force){if(latest&&meta.sha!==latest.sha){remote=latest;conflict('Файл изменён с другого устройства. Чтобы не затереть чужие изменения, автоматическая запись остановлена.');msg('⚠ Конфликт: GitHub изменился. Проверь версии.','error');return}if(!latest&&meta.sha){ready=false;conflict('Облачный файл исчез. Проверь репозиторий перед повторной записью.');msg('⚠ Облачная копия удалена.','error');return}}
+     if(latest&&latest.hash===localHash){synced(latest);return}
+     const body=JSON.stringify(now);if(new TextEncoder().encode(body).length>900000)throw Error('Размер данных близок к лимиту GitHub Contents API (1 МБ). Скачай JSON-копию для сохранности.');
+     msg('☁ Сохраняем изменения на GitHub…');
+     const payload={message:'LANDA: обновление финансовых данных '+new Date().toISOString(),content:enc(body)};
+     if(latest)payload.sha=latest.sha;
+     const response=await fetchAPI(fileUrl(),{method:'PUT',headers:Object.assign({'Content-Type':'application/json'},apiHeaders()),body:JSON.stringify(payload)});
+     if(response.status!==200&&response.status!==201)throw Error(apiError(response.status,response.data.message));
+     const newSha=response.data.content&&response.data.content.sha;if(!newSha)throw Error('GitHub не подтвердил SHA сохранённого файла.');
+     setMeta(newSha,localHash);remote={sha:newSha,data:now,hash:localHash};ready=true;clearConflict();
+     let changed=fingerprint(getSnapshot())!==localHash;
+     msg(changed?'✓ Копия сохранена; появились новые изменения — сохраняем их следом.':'✓ GitHub: все изменения сохранены', 'ok');
+     if(changed)queued=true;
+   }catch(e){ready=false;msg('Ошибка сохранения в GitHub: '+e.message+' Локальная копия не затронута.','error')}
+   finally{inFlight=false;if(queued&&ready){queued=false;queueUpload()}}
+ }
+ function queueUpload(){if(!ready||!conf.auto||!token)return;clearTimeout(timer);timer=setTimeout(()=>upload(false),3200)}
+ function restoreRemote(found,automatic){if(!found)return;try{
+    if(!snapshotValid(found.data))throw Error('Неподдерживаемая копия');
+    const localHash=fingerprint(getSnapshot());
+    const rawS=JSON.stringify(found.data.proschet),rawO=JSON.stringify(found.data.operations);
+    const prevS=readStore(localStorage,'landa_proschet_offline_v1'),prevO=readStore(localStorage,'landa_finance_operations_v1');
+    if(!writeStore(localStorage,'landa_proschet_offline_v1',rawS)||!writeStore(localStorage,'landa_finance_operations_v1',rawO)){
+       if(prevS===null)delStore(localStorage,'landa_proschet_offline_v1');else writeStore(localStorage,'landa_proschet_offline_v1',prevS);
+       if(prevO===null)delStore(localStorage,'landa_finance_operations_v1');else writeStore(localStorage,'landa_finance_operations_v1',prevO);
+       throw Error('Браузер запретил запись в локальное хранилище.');
+    }
+    setMeta(found.sha,found.hash);msg('✓ Данные загружены с GitHub. Перезапускаем приложение…','ok');
+    window.location.reload();
+   }catch(e){ready=false;msg('Не удалось применить облачную копию: '+e.message,'error')}
+ }
+ function showDialog(){el('githubDialog').showModal();el('ghRepo').value=conf.repo;el('ghPath').value=conf.path;el('ghRemember').checked=conf.remember;el('ghAuto').checked=conf.auto;el('ghToken').value=token}
+ function action(button,fn){el(button).addEventListener('click',async()=>{el(button).disabled=true;try{await fn()}catch(e){msg('Ошибка: '+e.message,'error')}finally{el(button).disabled=false}})}
+ el('githubSyncSide').addEventListener('click',showDialog);
+ el('ghClose').addEventListener('click',()=>el('githubDialog').close());
+ action('ghConnect',async()=>{storeForm();await checkRemote(false)});
+ action('ghRefresh',async()=>{storeForm();await checkRemote(false)});
+ action('ghUpload',async()=>{storeForm();await checkRepoPrivate();if(!ready){let existing=await getCloud();if(existing){remote=existing;conflict('На GitHub уже есть данные. Перед перезаписью выбери версию.');msg('⚠ Облачный файл существует. Требуется явное подтверждение.','error');return}if(!confirm('Создать в GitHub первую копию текущих данных?'))return;}await upload(true)});
+ action('ghLoad',async()=>{await checkRepoPrivate();remote=await getCloud();if(!remote)throw Error('В GitHub пока нет данных.');if(!confirm('Заменить ВСЕ локальные финансовые данные данными из GitHub? Рекомендуется сначала скачать локальную копию.'))return;restoreRemote(remote,false)});
+ action('ghForceUpload',async()=>{if(!confirm('Перезаписать облачный файл данными ЭТОГО устройства? Облачная версия сохранится только в истории GitHub.'))return;storeForm();await upload(true)});
+ action('ghDownloadLocal',()=>{if(typeof downloadBackup==='function')downloadBackup();else throw Error('Выгрузка недоступна')});
+ action('ghDisconnect',()=>{if(!confirm('Отключить синхронизацию GitHub на этом устройстве? Локальные финансовые данные останутся.'))return;clearTimeout(timer);ready=false;remote=null;token='';delStore(localStorage,CONFKEY);delStore(localStorage,METAKEY);delStore(localStorage,LOCAL_TOKEN);delStore(sessionStorage,LOCAL_TOKEN);conf={repo:'',path:'landa-data/backup.json',remember:false,auto:true};meta={repo:'',path:'',sha:null,hash:null};el('ghToken').value='';el('ghRepo').value='';el('ghPath').value=conf.path;clearConflict();msg('☁ GitHub отключён. Локальные данные сохранены.')});
+ window.addEventListener('landa:data-changed',()=>{if(ready){msg('● Локально сохранено · ожидает GitHub');queueUpload()}else if(conf.repo){msg('● Локальные изменения. GitHub сейчас не синхронизирован.') }});
+ try{const v=JSON.parse(readStore(localStorage,CONFKEY)||'null');if(v&&v.repo){conf=Object.assign(conf,v);meta=JSON.parse(readStore(localStorage,METAKEY)||'null')||meta;token=readStore(conf.remember?localStorage:sessionStorage,LOCAL_TOKEN)||'';if(meta.repo!==conf.repo||meta.path!==conf.path)meta={repo:conf.repo,path:conf.path,sha:null,hash:null}}}catch(e){}
+ if(conf.repo){msg(token?'☁ GitHub: проверяем облачную копию…':'☁ GitHub настроен, нужен токен');if(token)checkRemote(true)}else msg('☁ GitHub не настроен');
+})();
+
+</script>
+</body></html>
