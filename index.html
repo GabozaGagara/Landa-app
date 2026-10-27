@@ -809,6 +809,7 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  <div id="ghConflict"><strong style="font-size:13px">Локальные и облачные данные различаются</strong><p id="ghConflictText">Для защиты учёта автоматическая замена отключена. Выбери нужную версию.</p><div class="gh-actions"><button type="button" class="btn" id="ghLoad">Загрузить с GitHub</button><button type="button" class="btn" id="ghForceUpload">Заменить данные GitHub текущими</button></div></div>
  <div class="gh-actions"><button class="btn" type="button" id="ghDownloadLocal">⇩ Скачать локальную JSON-копию</button><button class="btn" type="button" id="ghDisconnect">Отключить GitHub</button></div>
  <div class="gh-warning"><b>Безопасность:</b> используй только приватный репозиторий. Данные в нём хранятся обычным JSON, без шифрования. Токен не входит в резервные копии и не записывается внутрь HTML. Не отправляй токен в чат. Для постоянной работы после закрытия браузера потребуется включить «Запомнить токен».</div>
+ <div class="gh-note"><b>Если видишь ошибку 404:</b> название репозитория может быть правильным, но сохранённый токен не имеет к нему доступа. Проверка LANDA покажет, действителен ли токен. Токен вводится только сюда и никогда не публикуется в репозитории.</div>
  <div class="gh-note">Настройка: <a href="https://github.com/new" target="_blank" rel="noopener noreferrer">создать приватный репозиторий</a> → <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">создать ограниченный токен</a> → выбрать <strong>Only select repositories</strong> и <strong>Contents: Read and write</strong> → вставить его здесь. Репозиторий должен существовать и быть private.</div>
  </div>
 </dialog>
@@ -839,7 +840,7 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  function storeForm(){let r=el('ghRepo').value.trim(),p=el('ghPath').value.trim();if(!/^[\w.-]+\/[\w.-]+$/.test(r))throw Error('Укажи репозиторий как владелец/название.');if(!/^[\w./-]+\.json$/i.test(p)||p.includes('..')||p.startsWith('/'))throw Error('Путь должен быть относительным и оканчиваться на .json');const same=r===conf.repo&&p===conf.path;conf={repo:r,path:p,remember:el('ghRemember').checked,auto:el('ghAuto').checked};token=el('ghToken').value.trim()||token;if(!token)throw Error('Нужен токен GitHub с разрешением Contents: Read and write.');if(!same){ready=false;remote=null;clearConflict();meta={repo:r,path:p,sha:null,hash:null}}saveConf();if(!same)saveMeta()}
  function base(){return 'https://api.github.com/repos/'+conf.repo.split('/').map(encodeURIComponent).join('/')}
  function apiHeaders(){return {Accept:'application/vnd.github+json',Authorization:'Bearer '+token,'X-GitHub-Api-Version':'2022-11-28'}}
- function apiError(status,detail){if(status===401)return 'Токен недействителен или срок действия истёк.';if(status===403)return 'Нет прав или превышен лимит GitHub. Проверь доступ Contents: Read and write.';if(status===404)return 'Репозиторий не найден или токен не имеет к нему доступа.';if(status===409)return 'Файл на GitHub уже изменился. Сначала проверь облачную версию.';return 'GitHub ответил '+status+(detail?': '+detail:'')}
+ function apiError(status,detail){if(status===401)return 'Токен GitHub недействителен, отозван или просрочен (HTTP 401).';if(status===403)return 'GitHub отказал в доступе (HTTP 403). Проверь разрешение Contents: Read and write и лимиты GitHub.';if(status===404)return 'GitHub не видит ресурс (HTTP 404). Проверь доступ токена к приватному репозиторию.';if(status===409)return 'Файл на GitHub уже изменился. Сначала проверь облачную версию.';return 'GitHub ответил '+status+(detail?': '+detail:'')}
  async function fetchAPI(url,opts){
    let response;
    try{response=await fetch(url,Object.assign({headers:apiHeaders(),cache:'no-store'},opts||{}));}
@@ -854,7 +855,22 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  function dec(b){let str=atob(b.replace(/\s/g,''));let arr=new Uint8Array(str.length);for(let i=0;i<str.length;i++)arr[i]=str.charCodeAt(i);return new TextDecoder().decode(arr)}
  function fileUrl(){return base()+'/contents/'+conf.path.split('/').map(encodeURIComponent).join('/')}
  async function getCloud(){const r=await fetchAPI(fileUrl());if(r.status===404)return null;let x=r.data;if(!x.sha||!x.content)throw Error('GitHub не прислал содержимое JSON (файл больше 1 МБ?).');let d;try{d=JSON.parse(dec(x.content))}catch(e){throw Error('Не удалось разобрать облачный JSON: '+e.message)}if(!snapshotValid(d))throw Error('JSON на GitHub не соответствует резервной копии LANDA.');return {sha:x.sha,data:d,hash:fingerprint(d)}}
- async function checkRepoPrivate(){const r=await fetchAPI(base());if(r.status===404)throw Error('Репозиторий не найден или для токена нет доступа.');if(!r.data.private)throw Error('Репозиторий публичный. Создай private-репозиторий для финансовых данных.');return r.data}
+ async function checkRepoPrivate(){
+  const r=await fetchAPI(base());
+  if(r.status===404){
+    // A private repo deliberately returns 404 both when it doesn't exist and when this exact PAT lacks access.
+    // /user is supported by fine-grained PATs without any extra user permissions.
+    let identity;
+    try{identity=await fetchAPI('https://api.github.com/user')}catch(e){throw Error('GitHub не открыл приватный репозиторий (HTTP 404). Дополнительная проверка токена не прошла: '+e.message)}
+    if(identity.status===200&&identity.data&&identity.data.login){
+      const login=identity.data.login;
+      throw Error('Токен действителен (GitHub: '+login+'), но не видит приватный '+conf.repo+' (HTTP 404). Открой настройки ИМЕННО ЭТОГО токена → Repository access → Only select repositories → '+conf.repo.split('/')[1]+'; в Repository permissions поставь Contents: Read and write. Если недавно менял токен, вставь его новое СЕКРЕТНОЕ ЗНАЧЕНИЕ в LANDA, а не название токена.');
+    }
+    throw Error('GitHub не видит приватный репозиторий '+conf.repo+' (HTTP 404). Проверка личности токена вернула HTTP '+identity.status+'. Укажи правильный токен и репозиторий.');
+  }
+  if(!r.data.private)throw Error('Репозиторий публичный. Для финансовых данных требуется private-репозиторий.');
+  return r.data;
+}
  function synced(r){ready=true;remote=r;setMeta(r?r.sha:null,fingerprint(getSnapshot()));clearConflict();msg('✓ GitHub подключён · данные синхронизированы', 'ok')}
  async function checkRemote(bootstrap){if(!configReady())throw Error('Сначала укажи репозиторий и токен.');if(busy)return;busy=true;msg('Проверяем приватный GitHub и облачную копию…');try{
    await checkRepoPrivate();let found=await getCloud(),local=fingerprint(getSnapshot());remote=found;
