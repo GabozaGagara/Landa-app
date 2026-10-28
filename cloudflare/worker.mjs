@@ -13,7 +13,7 @@ function normalizeInvoice(i){
  if(clean(i.origin).toLocaleLowerCase('ru')!=='брест')fail('Принимаются только отправления из Бреста');
  const destination=clean(i.destination,80);if(!destination)fail('Не указан город назначения');
  const tracking=clean(i.tracking,35).replace(/\s/g,'');if(!/^[A-Za-z0-9-]{8,35}$/.test(tracking))fail('Некорректный номер СДЭК');
- if(!/^\d{4}-\d{2}-\d{2}$/.test(i.date||'')||!Number.isFinite(Date.parse(i.date+'T00:00:00Z')))fail('Некорректная дата');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(i.date||'')||!Number.isFinite(Date.parse(i.date+'T00:00:00Z'))||new Date(i.date+'T00:00:00Z').toISOString().slice(0,10)!==i.date)fail('Некорректная дата');
  if(!Array.isArray(i.items)||i.items.length<1||i.items.length>100)fail('Нужно от 1 до 100 товарных позиций');
  let totalCents=0,unknownPrices=0;
  const items=i.items.map(row=>{
