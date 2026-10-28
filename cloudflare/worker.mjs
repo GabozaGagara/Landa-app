@@ -45,13 +45,35 @@ async function github(env,method='GET',sha='',data=null){
  return {sha:d.content?.sha};
 }
 function constantEquals(a,b){let mismatch=a.length^b.length;for(let i=0;i<Math.max(a.length,b.length);i++)mismatch|=(a.charCodeAt(i)||0)^(b.charCodeAt(i)||0);return mismatch===0}
+// Verifies access without writing to GitHub or exposing credentials or financial records.
+function validateSupplierAccess(supplierId,code,env){
+ if(!Object.hasOwn(suppliers,supplierId))fail('Неизвестный поставщик',400);
+ let codes;try{codes=JSON.parse(env.SUPPLIER_CODES||'{}')}catch{fail('Коды доступа не настроены',503)}
+ const candidate=String(code||''),expected=codes[supplierId];
+ if(typeof expected!=='string'||expected.length<24||candidate.length<24||candidate.length>200||!constantEquals(candidate,expected))fail('Неверный код доступа поставщика',403);
+}
+async function diagnose(request,env){
+ const raw=await request.text();if(te.encode(raw).length>2000)fail('Слишком большой запрос',413);
+ let d;try{d=JSON.parse(raw)}catch{fail('Неверный JSON')}
+ validateSupplierAccess(d.supplierId,d.code,env);
+ if(!env.GH_TOKEN)return {ok:false,step:'configuration',message:'GH_TOKEN отсутствует в рабочем окружении Cloudflare.'};
+ const headers={'Authorization':'Bearer '+String(env.GH_TOKEN).trim(),'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'LANDA-Diagnostics'};
+ const opts={method:'GET',headers,cache:'no-store'};
+ const who=await fetch('https://api.github.com/user',opts);
+ if(who.status!==200)return {ok:false,step:'token',http:who.status,message:who.status===401?'Токен GH_TOKEN недействителен или отозван.':'GitHub не подтвердил токен (HTTP '+who.status+').' };
+ const identity=await who.json().catch(()=>({}));
+ if(typeof identity.login==='string'&&identity.login.toLowerCase()!=='gabozagagara')return {ok:false,step:'owner',message:'Токен действителен, но относится не к аккаунту GabozaGagara.'};
+ const repository=await fetch('https://api.github.com/repos/'+REPO,opts);
+ if(repository.status!==200)return {ok:false,step:'repository',http:repository.status,message:repository.status===404?'Токен действителен, но не видит приватный Landa-financenot. Выбери этот репозиторий в Repository access токена.':'GitHub не открыл приватный репозиторий (HTTP '+repository.status+').' };
+ const file=await fetch('https://api.github.com/repos/'+REPO+'/contents/'+PATH,opts);
+ if(file.status!==200)return {ok:false,step:'file',http:file.status,message:file.status===404?'Репозиторий доступен, но Contents API не видит backup.json. Проверь право Contents: Read and write.':'Ошибка доступа к файлу (HTTP '+file.status+').' };
+ return {ok:true,step:'read',message:'Токен действителен. Приватный репозиторий и JSON доступны для чтения. Возможность записи проверяется при отправке накладной.'};
+}
 async function submit(request,env){
  const raw=await request.text();if(te.encode(raw).length>50000)fail('Слишком большой запрос',413);
  let data;try{data=JSON.parse(raw)}catch{fail('Неверный JSON')}
  const i=normalizeInvoice(data.invoice);
- let codes;try{codes=JSON.parse(env.SUPPLIER_CODES||'{}')}catch{fail('Коды доступа не настроены',503)}
- const candidate=String(data.code||''),expected=codes[i.supplierId];
- if(typeof expected!=='string'||expected.length<24||candidate.length<24||candidate.length>200||!constantEquals(candidate,expected))fail('Неверный код доступа поставщика',403);
+ validateSupplierAccess(i.supplierId,data.code,env);
  for(let attempt=0;attempt<4;attempt++){
   const {sha,backup}=await github(env),ops=backup.operations;
   if(ops.invoices.some(x=>[x.number,x.tracking].some(z=>String(z||'').trim().toLowerCase()===i.tracking.toLowerCase())))return {duplicate:true,tracking:i.tracking};
@@ -68,6 +90,11 @@ export default {async fetch(request,env){
  try{
   const u=new URL(request.url);
   if(u.pathname==='/health'&&request.method==='GET')return response({app:'LANDA-supplier-bridge',github:!!env.GH_TOKEN},200,origin);
+  if(u.pathname==='/diagnose'&&request.method==='POST'){
+   if(origin!==ORIGIN)fail('Недопустимый источник',403);
+   if((request.headers.get('Content-Type')||'').split(';')[0]!=='application/json')fail('Ожидается application/json');
+   return response(await diagnose(request,env),200,origin);
+  }
   if(u.pathname==='/submit'&&request.method==='POST'){
    if(origin!==ORIGIN)fail('Этот сервер принимает накладные только с сайта LANDA',403);
    if((request.headers.get('Content-Type')||'').split(';')[0]!=='application/json')fail('Ожидается application/json');
