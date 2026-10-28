@@ -49,7 +49,7 @@ center.innerHTML=[
 '<details class="lc-panel"><summary><b>Акт сверки с поставщиком</b> — скачать CSV или печатать в PDF</summary>',
 '<div class="lc-inline"><label>Поставщик<select id="lcStatementSupplier"></select></label><label>С<input type="date" id="lcFrom"></label><label>По<input type="date" id="lcTo"></label></div>',
 '<div class="lc-actions"><button type="button" class="lc-btn primary" id="lcStatementBuild">Рассчитать</button><button type="button" class="lc-btn" id="lcStatementCSV">Скачать CSV</button><button type="button" class="lc-btn" id="lcStatementPrint">Печать / PDF</button></div>',
-'<div id="lcStatementPreview" class="lc-muted">Выберите период и нажмите «Рассчитать».</div></details>',
+'<div id="lcStatementPreview" class="lc-muted">Выберите период и нажмите «Рассчитать». Старые начисления без даты подтверждения учитываются по дате накладной.</div></details>',
 '<details class="lc-panel"><summary><b>Продажи и прибыль по товарам</b> — справочный журнал</summary>',
 '<p class="lc-desc">Продажи не записываются в кассу автоматически. Для прибыли цена продажи и расходы в ₽; закупка в $ пересчитывается по указанному фактическому курсу.</p>',
 '<form id="lcSaleForm"><div class="lc-inline">',
@@ -170,15 +170,16 @@ function statement(){
  if(!id||!from||!to||from>to)throw Error('Укажи правильный период и поставщика');
  const inv=ops.invoices.filter(i=>i.supplierId===id&&charged(i));
  const pays=ops.payments.filter(i=>i.supplierId===id);
- const toDate=x=>String(x.date||'');
- const oldInv=inv.filter(i=>toDate(i)<from).reduce((s,i)=>s+cents(i.total),0);
- const oldPays=pays.filter(p=>toDate(p)<from).reduce((s,p)=>s+cents(p.amount),0);
- const invoices=inv.filter(i=>toDate(i)>=from&&toDate(i)<=to);
- const payments=pays.filter(p=>toDate(p)>=from&&toDate(p)<=to);
+ const invDate=i=>String(i.accruedAt||i.date||'').slice(0,10);
+ const payDate=p=>String(p.date||'').slice(0,10);
+ const oldInv=inv.filter(i=>invDate(i)<from).reduce((s,i)=>s+cents(i.total),0);
+ const oldPays=pays.filter(p=>payDate(p)<from).reduce((s,p)=>s+cents(p.amount),0);
+ const invoices=inv.filter(i=>invDate(i)>=from&&invDate(i)<=to);
+ const payments=pays.filter(p=>payDate(p)>=from&&payDate(p)<=to);
  const billed=invoices.reduce((s,i)=>s+cents(i.total),0);
  const paid=payments.reduce((s,p)=>s+cents(p.amount),0);
  const opening=oldPays-oldInv,ending=opening+paid-billed;
- const rows=[...invoices.map(i=>({date:i.date,type:'Начисленная накладная',number:i.number||'',delta:-cents(i.total)})),...payments.map(p=>({date:p.date,type:p.isOpening?'Начальный аванс':'Перевод поставщику',number:p.note||'',delta:cents(p.amount)}))].sort((a,b)=>a.date.localeCompare(b.date));
+ const rows=[...invoices.map(i=>({date:invDate(i),type:'Начисленная накладная',number:i.number||'',delta:-cents(i.total)})),...payments.map(p=>({date:payDate(p),type:p.isOpening?'Начальный аванс':'Перевод поставщику',number:p.note||'',delta:cents(p.amount)}))].sort((a,b)=>a.date.localeCompare(b.date));
  return {id,from,to,opening,ending,billed,paid,rows};
 }
 function renderStatement(){
