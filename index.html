@@ -1140,6 +1140,17 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
    inFlight=true;try{
      await checkRepoPrivate();
      const latest=await getCloud();const now=getSnapshot(),localHash=fingerprint(now);
+     // Force cannot erase a newer cloud version, including new supplier invoices.
+     // Compare against the current SHA just before PUT; this also closes the click-to-write race.
+     if(force&&latest&&meta.sha!==latest.sha){
+       remote=latest;
+       const localIds=new Set((now.operations.invoices||[]).map(i=>i.id));
+       const incoming=(latest.data.operations.invoices||[]).filter(i=>!localIds.has(i.id));
+       const note=incoming.length?' В GitHub есть '+incoming.length+' новых накладных, которых нет на этом устройстве.':'';
+       conflict('Защита от потери данных: облачный JSON изменился после последней синхронизации.'+note+' Сначала скачай локальную копию и загрузи облачную версию.');
+       msg('⚠ Новая облачная версия защищена от принудительной перезаписи.','error');
+       return;
+     }
      if(!force){if(latest&&meta.sha!==latest.sha){remote=latest;conflict('Файл изменён с другого устройства. Чтобы не затереть чужие изменения, автоматическая запись остановлена.');msg('⚠ Конфликт: GitHub изменился. Проверь версии.','error');return}if(!latest&&meta.sha){ready=false;conflict('Облачный файл исчез. Проверь репозиторий перед повторной записью.');msg('⚠ Облачная копия удалена.','error');return}}
      if(latest&&latest.hash===localHash){synced(latest);return}
      const body=JSON.stringify(now);if(new TextEncoder().encode(body).length>900000)throw Error('Размер данных близок к лимиту GitHub Contents API (1 МБ). Скачай JSON-копию для сохранности.');
