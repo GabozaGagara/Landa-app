@@ -1,4 +1,5 @@
 // LANDA: supplier-only API. Deployed to Cloudflare Worker, NEVER as GitHub Pages JS.
+import {supplierOverview} from './supplier-view.mjs';
 // Required secrets: GH_TOKEN (fine-grained PAT to private repo contents only),
 // SUPPLIER_CODES (JSON of three 24+ character random passwords for each supplier).
 const REPO='GabozaGagara/Landa-financenot',PATH='landa-data/backup.json',ORIGIN='https://gabozagagara.github.io';
@@ -94,6 +95,17 @@ export default {async fetch(request,env){
    if(origin!==ORIGIN)fail('Недопустимый источник',403);
    if((request.headers.get('Content-Type')||'').split(';')[0]!=='application/json')fail('Ожидается application/json');
    return response(await diagnose(request,env),200,origin);
+  }
+  if(u.pathname==='/supplier-overview'&&request.method==='POST'){
+   if(origin!==ORIGIN)fail('Недопустимый источник',403);
+   if((request.headers.get('Content-Type')||'').split(';')[0]!=='application/json')fail('Ожидается application/json');
+   const raw=await request.text();if(te.encode(raw).length>2000)fail('Слишком большой запрос',413);
+   let data;try{data=JSON.parse(raw)}catch{fail('Неверный JSON')}
+   validateSupplierAccess(data.supplierId,data.code,env);
+   const page=data.page===undefined?1:Number(data.page);
+   if(!Number.isSafeInteger(page)||page<1||page>10000)fail('Неверная страница',400);
+   const {backup}=await github(env);
+   return response(supplierOverview(backup,data.supplierId,page),200,origin);
   }
   if(u.pathname==='/submit'&&request.method==='POST'){
    if(origin!==ORIGIN)fail('Этот сервер принимает накладные только с сайта LANDA',403);
