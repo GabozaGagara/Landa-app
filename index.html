@@ -124,11 +124,18 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
  <div class="panel" id="supplierPortalPanel" style="padding:18px;margin:10px 0 16px;border:1px solid #d7e3f2;border-radius:14px;background:#f8fbff">
  <div class="ops-section" style="margin:0 0 8px"><div><h2 style="font-size:17px">Кабинеты поставщиков</h2><p>Каждый поставщик заполняет накладную на своей странице — без доступа к вашей базе.</p></div><button type="button" class="btn btn-primary" id="supplierImportOpen">↓ Принять накладную</button></div>
  <div class="gh-actions" style="display:flex;flex-wrap:wrap;gap:9px">
- <a class="btn" href="./supplier.html?supplier=anna" target="_blank" rel="noopener noreferrer">↗ Форма Анны</a>
- <a class="btn" href="./supplier.html?supplier=alina" target="_blank" rel="noopener noreferrer">↗ Форма Алины</a>
- <a class="btn" href="./supplier.html?supplier=anatoly" target="_blank" rel="noopener noreferrer">↗ Форма Анатолия</a>
+ <a class="btn" id="supplierLinkAnna" href="./supplier.html?supplier=anna" target="_blank" rel="noopener noreferrer">↗ Форма Анны</a>
+ <a class="btn" id="supplierLinkAlina" href="./supplier.html?supplier=alina" target="_blank" rel="noopener noreferrer">↗ Форма Алины</a>
+ <a class="btn" id="supplierLinkAnatoly" href="./supplier.html?supplier=anatoly" target="_blank" rel="noopener noreferrer">↗ Форма Анатолия</a>
  </div>
- <small>Отправьте поставщикам эти ссылки. Они передают вам JSON через «Поделиться» или мессенджер. Накладная появляется в LANDA только после вашего подтверждения через «Принять накладную». Прямой автоматической отправки с сайта пока нет.</small>
+ <div style="border-top:1px solid #dde8f5;margin-top:13px;padding-top:12px">
+ <strong style="font-size:14px">☁ Прямая передача накладных в закрытую базу</strong>
+ <p class="ops-smallnote">Нужен отдельно установленный защищённый Cloudflare Worker. Пока он не подключён, остаётся прежняя передача JSON через «Поделиться».</p>
+ <label class="gh-label">Адрес защищённого сервера (https://…workers.dev)<input id="supplierWorkerUrl" class="gh-input" type="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://landa-supplier-bridge.…workers.dev"></label>
+ <div class="gh-actions" style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="btn" id="supplierWorkerSave">Сохранить адрес</button><button type="button" class="btn" id="supplierWorkerCheck">Проверить связь</button><button type="button" class="btn btn-primary" id="supplierWorkerLinks">Скопировать три ссылки</button></div>
+ <div id="supplierWorkerStatus" class="ops-smallnote" role="status" aria-live="polite">Автоматическая передача не настроена.</div>
+ </div>
+ <small>Если сервер запущен, каждая ссылка откроет форму с кнопкой «Отправить прямо в LANDA». Для записи нужен личный код поставщика. Коды, GitHub-токены и финансовую базу поставщикам не передавать.</small>
  </div>
  <div class="ops-grid" id="invoiceKpis"></div>
  <div class="ops-notice" id="cdekPersonalPanel" style="margin-top:12px">
@@ -1158,5 +1165,28 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  if(conf.repo){msg(token?'☁ GitHub: проверяем облачную копию…':'☁ GitHub настроен, нужен токен');if(token)checkRemote(true)}else msg('☁ GitHub не настроен');
 })();
 
+</script>
+
+<script>
+'use strict';
+// Public worker ADDRESS only. Never store supplier access codes or GitHub secrets here.
+(()=>{
+ const $=id=>document.getElementById(id), storageKey='landa_supplier_worker_origin_v1';
+ function valid(s){try{const u=new URL(String(s).trim());return u.protocol==='https:'&&u.hostname.endsWith('.workers.dev')&&!u.username&&!u.password&&u.pathname==='/'?u.origin:''}catch(_){return ''}}
+ function worker(){return valid($('supplierWorkerUrl').value)}
+ function links(){const endpoint=worker();for(const [id,supplier] of [['supplierLinkAnna','anna'],['supplierLinkAlina','alina'],['supplierLinkAnatoly','anatoly']]){
+  $(id).href='./supplier.html?supplier='+supplier+(endpoint?'&api='+encodeURIComponent(endpoint+'/'):'')
+ }}
+ function status(t){$('supplierWorkerStatus').textContent=t}
+ try{$('supplierWorkerUrl').value=localStorage.getItem(storageKey)||''}catch(_){}
+ links();$('supplierWorkerUrl').addEventListener('input',links);
+ $('supplierWorkerSave').addEventListener('click',()=>{const v=worker();if(!v){status('Укажи HTTPS-адрес Cloudflare Worker с доменом .workers.dev.');return}try{localStorage.setItem(storageKey,v+'/')}catch(_){}$('supplierWorkerUrl').value=v+'/';links();status('Адрес сохранён. Проверь сервер. Каждому поставщику нужен индивидуальный секретный код.')});
+ $('supplierWorkerCheck').addEventListener('click',async()=>{const v=worker();if(!v){status('Сначала укажи адрес сервера.');return}status('Проверяем соединение…');try{const r=await fetch(v+'/health',{cache:'no-store'}),d=await r.json();if(!r.ok||d.app!=='LANDA-supplier-bridge')throw Error('нет подтверждения от сервера LANDA');status(d.github?'✓ Сервер работает, доступ к GitHub настроен. Можно отправлять накладные.':'Сервер работает, но токен GitHub ещё не настроен.')}catch(e){status('Не удалось соединиться с сервером: '+e.message)}});
+ $('supplierWorkerLinks').addEventListener('click',async()=>{
+  links();const msg=[['Анна','supplierLinkAnna'],['Алина','supplierLinkAlina'],['Анатолий','supplierLinkAnatoly']].map(([n,id])=>n+': '+$(id).href).join('\n');
+  try{await navigator.clipboard.writeText(msg);status('Три ссылки скопированы. Коды доступа передай каждому поставщику отдельно.')}
+  catch(_){status('Скопируй каждую ссылку из адресной строки браузера, открыв форму.')}
+ });
+})();
 </script>
 </body></html>
