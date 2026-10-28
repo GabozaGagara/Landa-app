@@ -229,10 +229,12 @@ function saveSale(e){
  if(!Array.isArray(ops.sales))ops.sales=[];
  ops.sales.push(record);
  if(!saveOps()){ops.sales.pop();return alert('Не удалось сохранить продажу. Проверь доступность браузерного хранилища.')}
- f.reset();f.elements.date.value=today();renderSales();
+ f.reset();f.elements.namedItem('date').value=today();renderSales();
 }
 function render(){
+ const choice=$('lcStatementSupplier').value;
  $('lcStatementSupplier').innerHTML=ops.suppliers.map(s=>'<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>').join('');
+ if(ops.suppliers.some(s=>s.id===choice))$('lcStatementSupplier').value=choice;
  renderMetrics();renderAudit();updateSaleSources();renderSales();
 }
 $('lcRefresh').addEventListener('click',render);
@@ -256,7 +258,7 @@ $('lcSaleSource').addEventListener('change',()=>{
  const f=$('lcSaleForm'),v=$('lcSaleSource').value;if(!v)return;
  const cut=v.lastIndexOf(':'),id=decodeURIComponent(v.slice(0,cut)),n=Number(v.slice(cut+1));
  const invoice=ops.invoices.find(i=>i.id===id),item=invoice?.items?.[n];
- if(item){f.elements.item.value=item.name;f.elements.costUsd.value=item.price;}
+ if(item){f.elements.namedItem('item').value=item.name;f.elements.namedItem('costUsd').value=item.price;}
 });
 $('lcSaleForm').addEventListener('submit',saveSale);
 $('lcStatementBuild').addEventListener('click',()=>{try{renderStatement()}catch(e){alert(e.message)}});
@@ -270,7 +272,7 @@ $('lcStatementPrint').addEventListener('click',()=>{
   window.print();setTimeout(()=>paper.remove(),3000);
  }catch(e){alert(e.message)}
 });
-$('lcSaleForm').elements.date.value=today();
+$('lcSaleForm').elements.namedItem('date').value=today();
 const month=today().slice(0,7);
 $('lcFrom').value=month+'-01';$('lcTo').value=today();
 window.addEventListener('landa:data-changed',()=>setTimeout(render,0));
