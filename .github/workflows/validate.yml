@@ -1,0 +1,22 @@
+name: Validate LANDA
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check scripts
+        run: |
+          node --check js/landa-control-center.js
+          node --check js/landa-local-backups.js
+          node --check cloudflare/worker.mjs
+          node --check cloudflare/supplier-view.mjs
+          node scripts/check-inline.mjs
+      - name: Unit tests
+        run: node --test tests/*.test.mjs
