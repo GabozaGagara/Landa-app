@@ -120,7 +120,7 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
  <div class="ops-section"><div><h2>История переводов</h2><p>После удаления платежа отменяется и связанное списание из кассы.</p></div></div><div class="ops-list" id="supplierPayments"></div>
 </section>
 <section id="invoicesPage" class="page" hidden>
- <div class="heading ops-head"><div><div class="eyebrow">РАЗДЕЛ 03 / ПОСТАВКИ</div><h1>Накладные и товары</h1><p>Поставщик, товары, сумма в долларах, СДЭК и статус доставки в одном месте.</p></div><div class="actions"><button class="btn btn-primary" type="button" data-action="newInvoice">＋ Добавить накладную</button><button class="btn" type="button" data-action="importInvoices">↑ Загрузить CSV СДЭК</button><button class="btn" type="button" data-action="exportInvoices">↓ CSV накладных</button></div></div>
+ <div class="heading ops-head"><div><div class="eyebrow">РАЗДЕЛ 03 / ПОСТАВКИ</div><h1>Накладные и товары</h1><p>Поставщик, товары, сумма в долларах, СДЭК и статус доставки в одном месте.</p></div><div class="actions"><button class="btn btn-primary" type="button" data-action="newInvoice">＋ Добавить накладную</button><button class="btn" type="button" data-action="importInvoices">↑ Загрузить CSV СДЭК</button><button class="btn" type="button" id="cdekBatchOpen">↻ Обновить статусы</button><button class="btn" type="button" data-action="exportInvoices">↓ CSV накладных</button></div></div>
  <div class="panel" id="supplierPortalPanel" style="padding:18px;margin:10px 0 16px;border:1px solid #d7e3f2;border-radius:14px;background:#f8fbff">
  <div class="ops-section" style="margin:0 0 8px"><div><h2 style="font-size:17px">Кабинеты поставщиков</h2><p>Каждый поставщик заполняет накладную на своей странице — без доступа к вашей базе.</p></div><button type="button" class="btn btn-primary" id="supplierImportOpen">↓ Принять накладную</button></div>
  <div class="gh-actions" style="display:flex;flex-wrap:wrap;gap:9px">
@@ -133,7 +133,7 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
  <div class="ops-grid" id="invoiceKpis"></div>
  <div class="ops-notice" id="cdekPersonalPanel" style="margin-top:12px">
  <strong>СДЭК · личный кабинет физлица</strong>
- <p style="margin:8px 0">Открывай отслеживание на официальном сайте СДЭК, проверяй движение накладных и загружай CSV в LANDA. Вход по номеру телефона и SMS остаётся только на стороне СДЭК.</p>
+ <p style="margin:8px 0">Кнопка «Обновить статусы» собирает все невручённые отправления из Бреста. Проверь статусы на сайте СДЭК или через ChatGPT Work, затем подтверди пакетное обновление в LANDA. Вход по номеру телефона и SMS остаётся только на стороне СДЭК.</p>
  <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
   <a class="btn" href="https://www.cdek.ru/ru/tracking/" target="_blank" rel="noopener noreferrer">↗ Мои посылки / отслеживание</a>
   <button class="btn btn-primary" type="button" data-action="importInvoices">↑ Импортировать CSV</button>
@@ -173,6 +173,19 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
  <div id="supplierImportPreview" class="op-preview" role="status" aria-live="polite">Выберите файл или вставьте JSON для проверки.</div>
  <div class="modal-ft"><button type="button" class="btn" data-close="supplierImportDialog">Отмена</button><button type="button" class="btn btn-primary" id="supplierImportApply" disabled>Принять в LANDA</button></div>
  </div></dialog>
+<dialog id="cdekBatchDialog" class="op-modal" style="width:min(820px,95vw);max-width:820px">
+ <div class="modal-hd">↻ Статусы СДЭК · только из Бреста</div>
+ <div class="modal-body">
+  <div class="modal-info">В список входят только накладные с маршрутом <strong>из Бреста</strong>, у которых статус ещё не «Вручен». СДЭК показывает статус по номеру без входа, но LANDA не может автоматически читать закрытые для стороннего сайта ответы. Сверяйте данные на официальном сайте либо через браузер ChatGPT Work. Изменения сохранятся после вашего подтверждения.</div>
+  <div class="ops-section" style="margin:10px 0 6px"><div><h2 style="font-size:15px">Накладные для проверки</h2><p id="cdekBatchCount">Список формируется…</p></div><button class="btn" type="button" id="cdekBatchCopyWork">Скопировать задание для Work</button></div>
+  <div id="cdekBatchRows" class="ops-list" style="max-height:360px;overflow:auto"></div>
+  <label class="field" style="margin-top:14px"><span>Результаты проверки из Work (необязательно)</span><textarea id="cdekBatchText" class="textinput" rows="4" placeholder="10337904109 | В пути | Брест → Москва
+10339282651 | Вручен | Брест → Москва" spellcheck="false"></textarea><small class="op-formnote">Одна строка: номер СДЭК | текущий статус | подтверждённое отправление из Бреста. Статусы: Создан, В пути, Готов к выдаче, Вручен. Если проверка не удалась — не включайте строку.</small></label>
+  <div class="gh-actions" style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn" id="cdekBatchParse">Предпросмотр результатов</button><a class="btn" href="https://www.cdek.ru/ru/tracking/" target="_blank" rel="noopener noreferrer">↗ Отслеживание СДЭК</a></div>
+  <div class="op-preview" id="cdekBatchReport" aria-live="polite">Статусы можно выбрать вручную напротив каждой накладной.</div>
+  <div class="modal-ft"><button class="btn" type="button" id="cdekBatchClose">Закрыть</button><button class="btn btn-primary" id="cdekBatchApply" type="button">Применить проверенные статусы</button></div>
+ </div>
+</dialog>
 <dialog id="cdekImportDialog" class="op-modal"><div class="modal-hd">Импорт накладных СДЭК из CSV</div><div class="modal-body">
 <div class="op-help"><strong>Условие:</strong> загружаются только строки с отдельным словом «Брест» (регистр не важен).<br><strong>Алина:</strong> Малагин Вадим, Малагина Елена, Малинина Алина.<br><strong>Анна:</strong> Нестер Дмитрий.<br><strong>Анатолий:</strong> Анатолий.<br>Нераспознанные отправители и дубли пропускаются. В импортированных накладных стоимости по умолчанию 0 $ — укажите их самостоятельно. Долг не начисляется автоматически.</div>
 <label class="field"><span>Выберите CSV-файл СДЭК (UTF-8 или Windows-1251)</span><input id="cdekCsvFile" class="textinput" type="file" accept=".csv,text/csv,text/plain"></label>
@@ -685,6 +698,100 @@ $('cdekCsvCommit').addEventListener('click',()=>{
  }
  cdekCandidates=[];$('cdekImportDialog').close();setPage('invoices');opCommit('Импортировано '+count+' накладных. Укажите суммы в $, отметьте «Вручен» и начислите долг поставщикам.')
 });
+
+// Batch CDEK verification. This module NEVER claims a live tracking API:
+// the public CDEK tracking page requires an interactive browser check.
+// Only the owner can approve updates, and accounting entries stay untouched.
+const CDEK_BATCH_RANK={created:0,transit:1,ready:2,delivered:3};
+function cdekFromBrest(invoice){
+ const route=String(invoice.route||'').trim();
+ return /^брест(?=$|[\s,;/—→-])/i.test(route);
+}
+function cdekPending(){
+ return ops.invoices.filter(i=>!i.isOpening&&cdekFromBrest(i)&&statusCode(i)!=='delivered'&&String(i.tracking||'').trim()).slice().sort(sortDesc);
+}
+function cdekTrackKey(s){return String(s||'').replace(/\s/g,'').toLowerCase()}
+function cdekBatchView(){
+ const pending=cdekPending();
+ $('cdekBatchCount').textContent=pending.length+' накладных без статуса «Вручен» · из Бреста';
+ $('cdekBatchRows').innerHTML=pending.length?pending.map(i=>{
+  const tracking=esc(i.tracking),id=esc(i.id),status=statusCode(i);
+  return `<div class="ops-section" style="align-items:center;gap:9px;flex-wrap:wrap;margin:8px 0;padding:10px;border:1px solid #dae4f2;border-radius:10px">
+   <div style="flex:1;min-width:145px"><strong>${tracking}</strong><small style="display:block;color:#697a94">${esc(supName(i.supplierId))} · ${esc(CDEK_STATUS[status])}</small></div>
+   <button class="btn" type="button" data-cdek-visit="${id}">↗ Проверить</button>
+   <select class="invoice-status-select" data-cdek-stage="${id}" aria-label="Новый статус ${tracking}"><option value="">Без изменений</option>${Object.entries(CDEK_STATUS).filter(([s])=>CDEK_BATCH_RANK[s]>=CDEK_BATCH_RANK[status]).map(([s,l])=>`<option value="${s}">${l}</option>`).join('')}</select>
+  </div>`}).join(''):'<div class="ops-empty">Накладных из Бреста, ожидающих проверки, пока нет.</div>';
+ $('cdekBatchReport').textContent='Выбери статус вручную после проверки на сайте СДЭК или вставь проверенный список из Work.';
+}
+function cdekOpenBatch(){
+ $('cdekBatchText').value='';cdekBatchView();$('cdekBatchDialog').showModal();
+}
+function cdekWorkPrompt(){
+ const items=cdekPending().map(i=>`${i.tracking} (поставщик: ${supName(i.supplierId)}, текущий: ${CDEK_STATUS[statusCode(i)]}, маршрут в LANDA: ${i.route})`);
+ return `Проверь через официальный сайт https://www.cdek.ru/ru/tracking/ все перечисленные накладные СДЭК в браузере. Вход в личный кабинет НЕ нужен. Проверяй только отправления ИЗ Бреста; направление в другую сторону исключай. Нужен именно ТЕКУЩИЙ статус, а не упоминания предыдущих этапов в истории.\n\n${items.join('\n')}\n\nДля каждой накладной открой реальный результат поиска и проверь её номер и город отправления. Не выдумывай результаты, не используй старые статусы из LANDA как новые, не указывай неподтверждённые данные. Если результат не открывается, номер не найден или отправление НЕ из Бреста — исключи его и отдельно поясни.\n\nВерни только подтверждённые данные в формате ОДНА строка на накладную:\nНОМЕР | Создан/В пути/Готов к выдаче/Вручен | Брест → [город назначения]\n\nНе меняй финансовый JSON, кассу, начисления или платежи. Я сам вставлю строки в LANDA и подтвержу обновления.`;
+}
+function cdekBatchParseLine(line){
+ const cols=line.split('|').map(x=>x.trim());if(cols.length<3)return null;
+ const track=cdekTrackKey(cols[0]);const s=cols[1].toLocaleLowerCase('ru').replace(/ё/g,'е');
+ const route=cols[2].toLocaleLowerCase('ru').replace(/ё/g,'е');
+ if(!/^брест(?=$|[\s,;/—→-])/i.test(route))return {track,error:'Не подтверждено отправление из Бреста'};
+ let status=s==='создан'?'created':s==='в пути'?'transit':s==='готов к выдаче'?'ready':s==='вручен'?'delivered':null;
+ if(!status)return {track,error:'Неизвестный статус'};
+ return {track,status};
+}
+function cdekBatchParseText(){
+ const raw=$('cdekBatchText').value.trim();if(raw.length>30000){$('cdekBatchReport').textContent='Слишком длинный текст: максимум 30 000 символов.';return}
+ const pending=cdekPending(),byTrack=new Map(pending.map(i=>[cdekTrackKey(i.tracking),i]));
+ let selected=0,ignored=[],seen=new Set();
+ for(const [idx,line] of raw.split(/\r?\n/).entries()){
+  if(!line.trim())continue;const rec=cdekBatchParseLine(line);
+  if(!rec){ignored.push('Строка '+(idx+1)+': неправильный формат');continue}
+  const i=byTrack.get(rec.track);
+  if(!i){ignored.push('Строка '+(idx+1)+': накладной нет в списке проверки');continue}
+  if(seen.has(rec.track)){ignored.push('Строка '+(idx+1)+': повтор номера');continue}seen.add(rec.track);
+  if(rec.error){ignored.push('Строка '+(idx+1)+': '+rec.error);continue}
+  if(CDEK_BATCH_RANK[rec.status]<CDEK_BATCH_RANK[statusCode(i)]){ignored.push('Строка '+(idx+1)+': статус не может быть понижен');continue}
+  const node=Array.from($('cdekBatchRows').querySelectorAll('[data-cdek-stage]')).find(x=>x.dataset.cdekStage===i.id);
+  if(node){node.value=rec.status;selected++}
+ }
+ $('cdekBatchReport').textContent=`Подготовлено статусов: ${selected}. ${ignored.length?'Пропущено: '+ignored.length+'. '+ignored.slice(0,3).join('; '):'Проверь значения в списке и подтверди применение.'}`;
+}
+function cdekBatchApply(){
+ let updates=[];for(const select of $('cdekBatchRows').querySelectorAll('[data-cdek-stage]')){
+  const status=select.value;if(!status||!Object.hasOwn(CDEK_STATUS,status))continue;
+  const inv=ops.invoices.find(x=>x.id===select.dataset.cdekStage);
+  if(!inv||!cdekFromBrest(inv)||inv.isOpening||statusCode(inv)==='delivered')continue;
+  if(CDEK_BATCH_RANK[status]<CDEK_BATCH_RANK[statusCode(inv)])continue;
+  if(status===statusCode(inv))continue;
+  updates.push({inv,status});
+ }
+ if(!updates.length){$('cdekBatchReport').textContent='Новых статусов нет. Проверь выбранные значения.';return}
+ const delivered=updates.filter(v=>v.status==='delivered').length;
+ askConfirm('Обновить '+updates.length+' статусов СДЭК? '+(delivered?'Отметка «Вручен»: '+delivered+'. ':'')+'Долги поставщикам НЕ начисляются, суммы и касса не меняются.',()=>{
+  for(const u of updates)u.inv.status=u.status;
+  $('cdekBatchDialog').close();opCommit('Обновлено '+updates.length+' статусов СДЭК (без начисления долгов)');
+ });
+}
+$('cdekBatchOpen').addEventListener('click',cdekOpenBatch);
+$('cdekBatchClose').addEventListener('click',()=>$('cdekBatchDialog').close());
+$('cdekBatchRows').addEventListener('click',async e=>{
+ const btn=e.target.closest('[data-cdek-visit]');if(!btn)return;
+ const inv=ops.invoices.find(x=>x.id===btn.dataset.cdekVisit);
+ if(!inv)return;
+ // Open synchronously in the user gesture, avoiding browser popup blockers.
+ window.open('https://www.cdek.ru/ru/tracking/','_blank','noopener,noreferrer');
+ try{await navigator.clipboard.writeText(inv.tracking);$('cdekBatchReport').textContent='Номер '+inv.tracking+' скопирован. Вставь его на сайте СДЭК и выбери показанный статус в LANDA.'}
+ catch(_){$('cdekBatchReport').textContent='Открылось отслеживание СДЭК. Введи номер '+inv.tracking+' в поиске, затем выбери проверенный статус.'}
+});
+$('cdekBatchCopyWork').addEventListener('click',async()=>{
+ const pending=cdekPending();if(!pending.length){$('cdekBatchReport').textContent='Нет накладных для проверки.';return}
+ const promptText=cdekWorkPrompt();
+ try{await navigator.clipboard.writeText(promptText);$('cdekBatchReport').textContent='✓ Задание со всеми '+pending.length+' номерами скопировано. Открой ChatGPT Work, вставь задание, затем скопируй подтверждённые строки ответа обратно сюда.'}
+ catch(_){$('cdekBatchText').value=promptText;$('cdekBatchReport').textContent='Браузер не разрешил копирование. Текст задания помещён в поле ниже — скопируй его вручную в ChatGPT Work.'}
+});
+$('cdekBatchParse').addEventListener('click',cdekBatchParseText);
+$('cdekBatchApply').addEventListener('click',cdekBatchApply);
+
 function updateCdekStatus(id,status){
  const i=ops.invoices.find(x=>x.id===id);if(!i||i.isOpening||!CDEK_STATUS[status])return;
  i.status=status;opCommit('Статус '+i.number+': '+CDEK_STATUS[status]+(invoiceAccrued(i)?' · ранее начисленный долг сохранён':' · долг пока не начислен'));
