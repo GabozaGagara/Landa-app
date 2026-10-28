@@ -18,7 +18,7 @@
 @media(max-width:520px){.overview-stats{grid-template-columns:1fr}.overview-tile b{font-size:18px}}
 </style></head><body><header><strong>≋ LANDA</strong><p>Кабинет поставщика · заполнение накладных</p></header>
 <main class="wrap"><section class="panel"><h1>Новая накладная СДЭК</h1><div class="notice">Заполните накладную и отправьте её напрямую в LANDA по личному коду. Если прямая отправка не сработает, появится резервная кнопка «Поделиться накладной». Доступ к финансовой базе и GitHub не требуется. Если форма открыта без подключённого сервера, доступна ручная отправка.</div></section>
-<section class="panel" id="supplierOverview" style="display:none">
+<section class="panel" id="supplierOverview">
  <h2>Мои накладные и баланс</h2>
  <p class="hint">Здесь только ваши накладные и взаиморасчёты из LANDA. Статусы обновляет владелец LANDA; это не проверка сайта СДЭК в реальном времени.</p>
  <button class="btn primary" type="button" id="supplierOverviewRefresh">↻ Обновить мои накладные</button>
@@ -43,7 +43,7 @@ function data(){const d=makePayload();return {d,raw:JSON.stringify(d,null,2),nam
 function blobUrl(raw){return URL.createObjectURL(new Blob([raw],{type:'application/json;charset=utf-8'}))}
 function downloadFile(raw,name){const url=blobUrl(raw),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 async function share(){const {d,raw,name}=data(),f=new File([raw],name,{type:'application/json'});if(navigator.share){try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Накладная СДЭК '+d.tracking});setStatus('Накладная передана в окно отправки. Проверьте, что вы отправили файл владельцу LANDA.');return}await navigator.share({title:'Накладная СДЭК '+d.tracking,text:raw});setStatus('Открыто меню отправки. Проверьте отправку владельцу LANDA.');return}catch(e){if(e.name==='AbortError'){setStatus('Отправка отменена.');return}}}downloadFile(raw,name);setStatus('Файл скачан: отправьте его владельцу LANDA.')}
-const workerAddress=new URLSearchParams(location.search).get('api')||'';
+const workerAddress=new URLSearchParams(location.search).get('api')||'https://landa-app.kamily1997.workers.dev/';
 let workerURL='';
 // Each supplier has its own local code. Never include it in URLs, backups or GitHub.
 const codeKey=id=>'landa_supplier_code_v1_'+id;
