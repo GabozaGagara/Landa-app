@@ -787,7 +787,7 @@ function cdekBatchApply(){
  if(!updates.length){$('cdekBatchReport').textContent='Новых статусов нет. Проверь выбранные значения.';return}
  const delivered=updates.filter(v=>v.status==='delivered').length;
  askConfirm('Обновить '+updates.length+' статусов СДЭК? '+(delivered?'Отметка «Вручен»: '+delivered+'. ':'')+'Долги поставщикам НЕ начисляются, суммы и касса не меняются.',()=>{
-  for(const u of updates)u.inv.status=u.status;
+  for(const u of updates){u.inv.status=u.status;u.inv.statusCheckedAt=new Date().toISOString();u.inv.statusSource='admin-batch';u.inv.trackingVerified=false;}
   $('cdekBatchDialog').close();opCommit('Обновлено '+updates.length+' статусов СДЭК (без начисления долгов)');
  });
 }
@@ -813,9 +813,10 @@ $('cdekBatchApply').addEventListener('click',cdekBatchApply);
 
 function updateCdekStatus(id,status){
  const i=ops.invoices.find(x=>x.id===id);if(!i||i.isOpening||!CDEK_STATUS[status])return;
- i.status=status;opCommit('Статус '+i.number+': '+CDEK_STATUS[status]+(invoiceAccrued(i)?' · ранее начисленный долг сохранён':' · долг пока не начислен'));
+ i.status=status;i.statusCheckedAt=new Date().toISOString();i.statusSource='admin-manual';i.trackingVerified=false;opCommit('Статус '+i.number+': '+CDEK_STATUS[status]+(invoiceAccrued(i)?' · ранее начисленный долг сохранён':' · долг пока не начислен'));
 }
 function chargeCdek(id){const i=ops.invoices.find(x=>x.id===id);if(!i||invoiceAccrued(i))return;
+ if(i.submittedAt&&i.reviewStatus!=='approved'){toast('Сначала проверь и подтверди накладную поставщика в Центре контроля.');return}
  if(statusCode(i)!=='delivered'){toast('Начисление доступно только для статуса «Вручен»');return}
  if(moneyCents(i.total)<=0){toast('Сначала нажмите «Изменить» и укажите стоимость товара/доставки в долларах');return}
  askConfirm(`Начислить ${cashFmt(i.total,'USD')} в долг поставщику ${supName(i.supplierId)} по накладной ${i.number}? Товары: ${cashFmt(i.goodsCost||0,'USD')}, доставка: ${cashFmt(i.deliveryCost||0,'USD')} ${i.includeDelivery?'(включена в долг)':'(отдельно)'}.`,()=>{
@@ -1180,7 +1181,7 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  async function userLoadCloud(){
    storeForm();await checkRepoPrivate();const found=await getCloud();if(!found)throw Error('В GitHub нет файла '+conf.path+'.');
    const local=getSnapshot();
-   const same=fingerprint(found)===fingerprint(local);
+   const same=found.hash===fingerprint(local);
    if(same){synced(found);msg('✓ Облачная база уже открыта: '+found.data.proschet.rows.length+' строк, '+found.data.proschet.snapshots.length+' периодов.','ok');return}
    let prompt='В GitHub найдена финансовая база: '+found.data.proschet.rows.length+' строк и '+found.data.proschet.snapshots.length+' периодов.\n\nЗагрузить её в LANDA на этом устройстве?';
    if(!isEmptyInstallation())prompt+='\n\nВНИМАНИЕ: локальные записи будут заменены. Сначала можно скачать локальную JSON-копию.';
