@@ -85,7 +85,7 @@ test('authorized overview reads private backup but returns only personal project
  }finally{globalThis.fetch=original}
 });
 
-const incoming=(supplierId='anna',tracking='10339544154')=>({
+const incoming=(supplierId='anna',tracking='90000000003')=>({
  app:'LANDA-supplier-invoice',schemaVersion:1,supplierId,origin:'Брест',destination:'Москва',tracking,date:'2026-10-28',
  items:[{name:'Тестовый товар',qty:2,price:10.25}],deliveryCost:5,note:'Тест без реальных данных'
 });
@@ -94,7 +94,7 @@ test('invoice normalization requires Brest and correct totals',()=>{
  const n=bridge.normalizeInvoice(incoming());
  assert.equal(n.goodsCost,20.5);
  assert.equal(n.deliveryCost,5);
- assert.equal(n.tracking,'10339544154');
+ assert.equal(n.tracking,'90000000003');
  assert.throws(()=>bridge.normalizeInvoice({...incoming(),origin:'Минск'}));
  assert.throws(()=>bridge.normalizeInvoice({...incoming(),items:[]}));
 });
@@ -114,7 +114,7 @@ test('supplier submit is unaccrued, review-pending, auditable and deduplicated',
  try{
   const first=await worker.fetch(post('/submit',{invoice:incoming(),code:codes.anna}),env);
   assert.equal(first.status,201);
-  const added=saved.operations.invoices.find(i=>i.tracking==='10339544154');
+  const added=saved.operations.invoices.find(i=>i.tracking==='90000000003');
   assert.equal(added.accrued,false);
   assert.equal(added.reviewStatus,'pending');
   assert.equal(added.status,'created');
@@ -123,7 +123,7 @@ test('supplier submit is unaccrued, review-pending, auditable and deduplicated',
   assert.ok(saved.operations.auditTrail.some(e=>e.recordId===added.id&&e.source==='supplier:anna'));
   const duplicate=await worker.fetch(post('/submit',{invoice:incoming(),code:codes.anna}),env);
   assert.equal(duplicate.status,409);
-  assert.equal(saved.operations.invoices.filter(i=>i.tracking==='10339544154').length,1);
+  assert.equal(saved.operations.invoices.filter(i=>i.tracking==='90000000003').length,1);
  }finally{globalThis.fetch=original}
 });
 
@@ -175,7 +175,7 @@ test('GitHub SHA conflicts retry with fresh state and preserve concurrent invoic
   assert.equal(reads,2);
   assert.equal(writes,2);
   assert.ok(saved.operations.invoices.some(i=>i.id==='concurrent'));
-  assert.ok(saved.operations.invoices.some(i=>i.tracking==='10339544154'));
+  assert.ok(saved.operations.invoices.some(i=>i.tracking==='90000000003'));
  }finally{globalThis.fetch=original}
 });
 
