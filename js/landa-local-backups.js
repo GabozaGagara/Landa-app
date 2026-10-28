@@ -48,8 +48,10 @@ async function createBackup(manual){
   const snapshot=capture();
   if(!manual&&!snapshot.proschet.rows.length&&!snapshot.operations.invoices.length&&!snapshot.operations.payments.length&&!snapshot.operations.cash.length)return;
   const data=JSON.stringify(snapshot);
-  let h=2166136261;for(let i=0;i<data.length;i++)h=Math.imul(h^data.charCodeAt(i),16777619);
-  const signature=data.length+'-'+(h>>>0).toString(16);
+  // The capture timestamp changes on every save; compare financial content only.
+  const payload=JSON.stringify([snapshot.proschet,snapshot.operations]);
+  let h=2166136261;for(let i=0;i<payload.length;i++)h=Math.imul(h^payload.charCodeAt(i),16777619);
+  const signature=payload.length+'-'+(h>>>0).toString(16);
   if(!manual&&lastSignature===signature)return;
   db=await openDatabase();
   const last=await readAll(db);
