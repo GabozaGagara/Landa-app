@@ -48,7 +48,8 @@ async function createBackup(manual){
   const snapshot=capture();
   if(!manual&&!snapshot.proschet.rows.length&&!snapshot.operations.invoices.length)return;
   const data=JSON.stringify(snapshot);
-  const signature=data.length+'-'+snapshot.proschet.rows.length+'-'+snapshot.operations.invoices.length+'-'+snapshot.operations.payments.length+'-'+snapshot.operations.cash.length;
+  let h=2166136261;for(let i=0;i<data.length;i++)h=Math.imul(h^data.charCodeAt(i),16777619);
+  const signature=data.length+'-'+(h>>>0).toString(16);
   if(!manual&&lastSignature===signature)return;
   db=await openDatabase();
   const last=await readAll(db);
