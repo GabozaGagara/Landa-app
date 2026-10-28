@@ -137,4 +137,27 @@ function showOverview(data){
  $('supplierOverviewPrev').disabled=data.pagination.page<=1;
  $('supplierOverviewNext').disabled=data.pagination.page>=pages;
  $('supplierOverviewStatus').textContent=`Получено ${total} накладных · обновлено ${new Date().toLocaleString('ru-RU')}.`;
+}async function loadSupplierOverview(page=1){
+ if(!workerURL){$('supplierOverviewStatus').textContent='Не указан адрес сервера LANDA.';return}
+ const supplierId=currentSupplier(),code=$('supplierCode').value.trim();
+ if(!supplierId){$('supplierOverviewStatus').textContent='Сначала выберите поставщика в форме ниже.';return}
+ if(code.length<24){$('supplierOverviewStatus').textContent='Введите личный код поставщика в форме ниже. Если он сохранён на этом устройстве, он подставится автоматически.';return}
+ $('supplierOverviewRefresh').disabled=true;
+ $('supplierOverviewStatus').textContent='Загружаем ваши накладные и баланс…';
+ try{
+  const resp=await fetch(workerURL+'/supplier-overview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({supplierId,code,page}),cache:'no-store'});
+  const data=await resp.json().catch(()=>({}));
+  if(!resp.ok)throw Error(resp.status===404?'Сервер LANDA ещё не обновлён: раздел просмотра накладных пока недоступен.':(data.error||'HTTP '+resp.status));
+  if(supplierId!==currentSupplier())return; // The supplier may have been changed during loading.
+  overviewPage=page;showOverview(data);
+ }catch(e){if(supplierId===currentSupplier())$('supplierOverviewStatus').textContent='Не удалось загрузить данные: '+e.message}
+ finally{$('supplierOverviewRefresh').disabled=false}
 }
+$('supplierOverviewRefresh').onclick=()=>loadSupplierOverview(1);
+$('supplierOverviewPrev').onclick=()=>loadSupplierOverview(overviewPage-1);
+$('supplierOverviewNext').onclick=()=>loadSupplierOverview(overviewPage+1);
+$('supplier').addEventListener('change',clearOverview);
+
+$('addItem').onclick=()=>{itemRow();calculate()};$('invoice').addEventListener('input',calculate);itemRow();calculate();
+})();
+</script></body></html>
