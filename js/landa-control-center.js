@@ -74,6 +74,7 @@ center.innerHTML=[
 dashboard.insertAdjacentElement('afterend',center);
 const cs={};
 let previousOps=JSON.parse(JSON.stringify(ops));
+let previousState=JSON.parse(JSON.stringify(state));
 const auditRecord=(type,id,label,source='owner')=>({id:'evt-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,9),at:iso(),type,recordId:String(id||''),summary:String(label||'').slice(0,250),source});
 function diffOps(before,after){
  const events=[],types={invoices:'Накладная',payments:'Оплата',allocations:'Зачёт',cash:'Касса',sales:'Продажа'};
@@ -108,6 +109,40 @@ saveOps=function(){
  if(ok)previousOps=JSON.parse(JSON.stringify(ops));
  else if(entries.length)ops.auditTrail=previousAudit;
  return ok;
+};
+// Separate audit trail for changes in historical financial estimates.
+function diffProschet(before,after){
+ const changes=[],priorRows=new Map((before.rows||[]).map(r=>[r.id,r]));
+ const afterRows=new Map((after.rows||[]).map(r=>[r.id,r]));
+ const oldSnapshots=new Set((before.snapshots||[]).map(v=>v.id));
+ const newSnapshots=(after.snapshots||[]).filter(v=>!oldSnapshots.has(v.id));
+ for(const snap of newSnapshots)changes.push(auditRecord('snapshot',snap.id,'Создан расчёт: '+(snap.label||snap.date||snap.id),'admin:proschet'));
+ for(const [id,now] of afterRows){
+  const prior=priorRows.get(id);
+  if(!prior){changes.push(auditRecord('row-created',id,'Добавлена строка просчёта: '+now.name,'admin:proschet'));continue}
+  if(now.name!==prior.name||now.group!==prior.group||now.subgroup!==prior.subgroup)changes.push(auditRecord('row-edited',id,'Изменена строка просчёта: '+now.name,'admin:proschet'));
+  const values=now.values||{},oldValues=prior.values||{};
+  for(const period of new Set([...Object.keys(values),...Object.keys(oldValues)])){
+   if(!oldSnapshots.has(period))continue; // New snapshot is already logged as one action.
+   if(values[period]!==oldValues[period]){
+    changes.push(auditRecord('estimate',id,'Просчёт: '+now.name+' · '+period+' · '+(oldValues[period]??'—')+' → '+(values[period]??'—'),'admin:proschet'));
+   }
+  }
+ }
+ for(const [id,old] of priorRows)if(!afterRows.has(id))changes.push(auditRecord('row-deleted',id,'Удалена строка из всех периодов: '+old.name,'admin:proschet'));
+ const oldSnapshotIds=new Set((after.snapshots||[]).map(v=>v.id));
+ for(const old of before.snapshots||[])if(!oldSnapshotIds.has(old.id))changes.push(auditRecord('snapshot-deleted',old.id,'Удалён период просчёта: '+old.label,'admin:proschet'));
+ return changes.length>80?[auditRecord('bulk-estimate','all','Массовое изменение просчёта: '+changes.length+' операций','admin:proschet')]:changes;
+}
+const originalSaveProschet=save;
+save=function(){
+ const previousTrail=state.auditTrail;
+ const extra=diffProschet(previousState,state);
+ if(extra.length)state.auditTrail=(Array.isArray(previousTrail)?previousTrail:[]).concat(extra).slice(-900);
+ const success=originalSaveProschet();
+ if(success)previousState=JSON.parse(JSON.stringify(state));
+ else if(extra.length)state.auditTrail=previousTrail;
+ return success;
 };
 function getIssues(){
  const errors=[],invIds=new Set(ops.invoices.map(x=>x.id)),payIds=new Set(ops.payments.map(x=>x.id));
@@ -156,7 +191,8 @@ function renderMetrics(){
  ).join(''):'<p class="lc-muted lc-good">✓ Накладных, ожидающих проверки, нет.</p>';
 }
 function renderAudit(){
- $('lcAudit').innerHTML=(ops.auditTrail||[]).slice(-65).reverse().map(x=>
+ const entries=[...(ops.auditTrail||[]),...(state.auditTrail||[])].sort((a,b)=>String(b.at||'').localeCompare(String(a.at||''))).slice(0,65);
+ $('lcAudit').innerHTML=entries.map(x=>
  '<div class="lc-row"><div><b>'+esc(x.summary)+'</b><p>'+esc(String(x.at||'').replace('T',' ').slice(0,19))+' · '+esc(x.source||'LANDA')+'</p></div></div>'
  ).join('')||'<p class="lc-muted">Журнал заполняется для новых действий после подключения обновления.</p>';
 }
@@ -165,7 +201,7 @@ function download(data,name,mime){
  const a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1200);
 }
 const safeCSV=x=>{
- let v=String(x??'');if(/^[\s]*[=+\-@]/.test(v))v="'"+v;
+ let v=String(x??'');if(typeof x==='string'&&/^[\s]*[=+\-@]/.test(v))v="'"+v;
  return '"'+v.replace(/"/g,'""')+'"';
 };
 function statement(){
