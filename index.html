@@ -79,7 +79,7 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
 <div class="layout">
 <aside id="sidebar"><div class="brand"><div class="mark">≋</div><div><div class="brandname">LANDA</div><div class="branddesc">Деньги, поставки, расчёты</div></div></div><div class="sidelabel">Управление</div><nav class="op-nav"><button type="button" class="nav-btn core" data-page="dashboard"><span class="nav-icon">▦</span><span class="nav-text">Сводка</span></button><button type="button" class="nav-btn core" data-page="cash"><span class="nav-icon">₽</span><span class="nav-text">Деньги · касса / карты / Авито</span></button><button type="button" class="nav-btn core" data-page="suppliers"><span class="nav-icon">⇄</span><span class="nav-text">Поставщики · оплаты</span></button><button type="button" class="nav-btn core" data-page="invoices"><span class="nav-icon">▤</span><span class="nav-text">Накладные · СДЭК</span></button><button type="button" class="nav-btn core" data-page="proschet"><span class="nav-icon">∑</span><span class="nav-text">Финансовый просчёт</span></button></nav><hr class="op-divider"><div class="sidelabel" id="proschetNavLabel" hidden>Группы просчёта</div><nav id="nav" hidden></nav><div class="sidebar-bottom"><div class="offline"><span class="dot"></span> Локальное сохранение</div><p>Изменения хранятся в браузере. Можно включить автоматическую синхронизацию с приватным GitHub.</p><button class="btn" id="githubSyncSide" style="width:100%;color:#d1e1ff;background:#213b5b;border-color:#31506f;margin-bottom:8px" type="button">☁ Синхронизация GitHub</button><div id="githubStatusSide" style="padding:0 4px 10px;color:#b4c6e0;font-size:11px">☁ GitHub не настроен</div><button class="btn" id="pasteBackupSide" style="width:100%;color:#d1e1ff;background:#213b5b;border-color:#31506f;margin-bottom:8px" type="button">↑ Вставить JSON-копию</button><button class="btn" id="backupSide" style="width:100%;color:#d1e1ff;background:#213b5b;border-color:#31506f" type="button">⇩ Полная копия</button></div></aside>
 <main>
-<div id="launchStatus" data-state="pending" role="status"><strong>LANDA v11: проверка запуска…</strong> Если сообщение не исчезает, JavaScript не выполняется. Не вводите данные в этом просмотрщике: скачайте файл и откройте в Chrome или Edge.</div>
+<div id="launchStatus" data-state="pending" role="status"><strong>LANDA: проверка запуска…</strong> Если сообщение не исчезает, JavaScript не выполняется. Не вводите данные в этом просмотрщике: скачайте файл и откройте в Chrome или Edge.</div>
 <div id="runtimeErrorPanel" hidden role="alert"><strong>Ошибка выполнения программы:</strong> <span id="runtimeErrorText"></span><div>Сохраните полную резервную копию, не повторяйте ввод, пока не проверите журнал.</div></div>
 <div id="persistenceWarning" hidden role="alert"><strong>⚠ Сохранение недоступно в этом режиме браузера.</strong> Откройте HTML-файл напрямую в Chrome / Edge (не во встроенном просмотрщике мессенджера), разрешите хранение данных и скачайте полную JSON-копию. Пока это сообщение видно, после закрытия страницы изменения могут пропасть.</div>
 <section id="proschetPage" class="page" hidden>
@@ -121,6 +121,15 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
 </section>
 <section id="invoicesPage" class="page" hidden>
  <div class="heading ops-head"><div><div class="eyebrow">РАЗДЕЛ 03 / ПОСТАВКИ</div><h1>Накладные и товары</h1><p>Поставщик, товары, сумма в долларах, СДЭК и статус доставки в одном месте.</p></div><div class="actions"><button class="btn btn-primary" type="button" data-action="newInvoice">＋ Добавить накладную</button><button class="btn" type="button" data-action="importInvoices">↑ Загрузить CSV СДЭК</button><button class="btn" type="button" data-action="exportInvoices">↓ CSV накладных</button></div></div>
+ <div class="panel" id="supplierPortalPanel" style="padding:18px;margin:10px 0 16px;border:1px solid #d7e3f2;border-radius:14px;background:#f8fbff">
+ <div class="ops-section" style="margin:0 0 8px"><div><h2 style="font-size:17px">Кабинеты поставщиков</h2><p>Каждый поставщик заполняет накладную на своей странице — без доступа к вашей базе.</p></div><button type="button" class="btn btn-primary" id="supplierImportOpen">↓ Принять накладную</button></div>
+ <div class="gh-actions" style="display:flex;flex-wrap:wrap;gap:9px">
+ <a class="btn" href="./supplier.html?supplier=anna" target="_blank" rel="noopener noreferrer">↗ Форма Анны</a>
+ <a class="btn" href="./supplier.html?supplier=alina" target="_blank" rel="noopener noreferrer">↗ Форма Алины</a>
+ <a class="btn" href="./supplier.html?supplier=anatoly" target="_blank" rel="noopener noreferrer">↗ Форма Анатолия</a>
+ </div>
+ <small>Отправьте поставщикам эти ссылки. Они передают вам JSON через «Поделиться» или мессенджер. Накладная появляется в LANDA только после вашего подтверждения через «Принять накладную». Прямой автоматической отправки с сайта пока нет.</small>
+ </div>
  <div class="ops-grid" id="invoiceKpis"></div>
  <div class="ops-notice" id="cdekPersonalPanel" style="margin-top:12px">
  <strong>СДЭК · личный кабинет физлица</strong>
@@ -157,6 +166,13 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
 <dialog id="invoiceDialog" class="op-modal"><div class="modal-hd" id="invoiceDialogTitle">Новая накладная</div><form id="invoiceForm" class="modal-body" novalidate><div class="op-fieldrow"><label class="field"><span>Поставщик</span><select name="supplierId" required></select></label><label class="field"><span>Дата отправки / накладной</span><input class="textinput" name="date" type="date" required></label></div><div class="op-fieldrow"><label class="field"><span>Номер накладной / заказа</span><input class="textinput" name="number" maxlength="100" placeholder="Например, AN-1234" required></label><label class="field"><span>Трек / накладная СДЭК</span><input class="textinput" name="tracking" maxlength="100" placeholder="Номер СДЭК (необязательно)"></label></div><div class="op-fieldrow"><label class="field"><span>Статус доставки</span><select name="status"><option value="created">Создан</option><option value="transit">В пути</option><option value="ready">Готов к выдаче</option><option value="delivered">Вручен</option></select></label><label class="field"><span>Номер документа в «МойСклад»</span><input class="textinput" name="moysklad" maxlength="100" placeholder="Необязательно"></label></div><label class="field"><span>Список товаров</span><textarea class="textinput" name="items" rows="5" placeholder="Название товара; Количество; Цена за 1 шт. в $; Артикул&#10;Робот-пылесос А; 2; 300; SKU-123&#10;Фильтр; 5; 20; F-456"></textarea><div class="field-hint">Каждый товар — с новой строки. Разделитель — точка с запятой. Количество × цена = стоимость. Можно оставить пустым и указать только общую сумму.</div></label><div class="op-fieldrow"><label class="field"><span>Стоимость товара, $</span><input class="textinput" name="amount" type="text" inputmode="decimal" placeholder="2000.00"><small class="op-formnote">Можно указать вручную, даже если есть список товаров. Если пусто — сумма товаров автоматически.</small></label><label class="field"><span>Стоимость доставки, $</span><input class="textinput" name="deliveryCost" type="text" inputmode="decimal" placeholder="0.00"><small class="op-formnote">Учитывается отдельно от товаров.</small></label></div>
 <label class="op-checkbox"><input type="checkbox" name="includeDelivery"> <span>Доставку оплачиваю <strong>этому поставщику</strong> — включить её в долг перед ним</span></label>
 <div class="op-fieldrow"><label class="field"><span>Отправитель СДЭК</span><input class="textinput" name="sender" placeholder="ФИО отправителя (необязательно)"></label><label class="field"><span>Маршрут / город</span><input class="textinput" name="route" placeholder="Брест (необязательно)"></label></div><div class="op-preview" id="invoicePreview">Укажите товары или сумму.</div><label class="field"><span>Комментарий</span><textarea class="textinput" name="note" rows="2" maxlength="500" placeholder="Особенности доставки / заказа"></textarea></label><label class="op-checkbox"><input type="checkbox" name="applyAdvance"> <span>После сохранения <strong>зачесть свободный аванс</strong> поставщика в эту накладную (если он есть)</span></label><div class="modal-info">Сохранение новой накладной само по себе не создаёт долг. После статуса «Вручен» нажмите «Начислить поставщику». Для старых накладных уже начисленный долг сохраняется. Доставка включается в долг только при установленной галочке.</div><div class="modal-ft"><button type="button" class="btn" data-close="invoiceDialog">Отмена</button><button class="btn btn-primary" type="submit">Сохранить накладную</button></div></form></dialog>
+<dialog id="supplierImportDialog" class="op-modal"><div class="modal-hd">Принять накладную от поставщика</div><div class="modal-body">
+ <div class="op-help"><strong>Безопасный импорт:</strong> вставьте JSON, присланный поставщиком, или выберите файл LANDA-*.json. Программа проверит маршрут из Бреста, поставщика, товары, суммы и дубликаты. Приём не начисляет долг и не подтверждает вручение.</div>
+ <label class="field"><span>JSON-файл поставщика</span><input id="supplierImportFile" class="textinput" type="file" accept=".json,application/json"></label>
+ <label class="field"><span>Или вставьте текст накладной</span><textarea id="supplierImportText" class="textinput" rows="6" placeholder="Вставьте данные, полученные от поставщика"></textarea></label>
+ <div id="supplierImportPreview" class="op-preview" role="status" aria-live="polite">Выберите файл или вставьте JSON для проверки.</div>
+ <div class="modal-ft"><button type="button" class="btn" data-close="supplierImportDialog">Отмена</button><button type="button" class="btn btn-primary" id="supplierImportApply" disabled>Принять в LANDA</button></div>
+ </div></dialog>
 <dialog id="cdekImportDialog" class="op-modal"><div class="modal-hd">Импорт накладных СДЭК из CSV</div><div class="modal-body">
 <div class="op-help"><strong>Условие:</strong> загружаются только строки с отдельным словом «Брест» (регистр не важен).<br><strong>Алина:</strong> Малагин Вадим, Малагина Елена, Малинина Алина.<br><strong>Анна:</strong> Нестер Дмитрий.<br><strong>Анатолий:</strong> Анатолий.<br>Нераспознанные отправители и дубли пропускаются. В импортированных накладных стоимости по умолчанию 0 $ — укажите их самостоятельно. Долг не начисляется автоматически.</div>
 <label class="field"><span>Выберите CSV-файл СДЭК (UTF-8 или Windows-1251)</span><input id="cdekCsvFile" class="textinput" type="file" accept=".csv,text/csv,text/plain"></label>
@@ -197,7 +213,8 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
    if(detail)detail.textContent=String(text||'Неизвестная ошибка').slice(0,600);
    if(panel)panel.hidden=false;
    var state=document.getElementById('launchStatus');
-   if(state){state.dataset.state='error';state.innerHTML='<strong>LANDA v11: есть ошибка в работе.</strong> Подробности показаны ниже. Не дублируйте уже записанные операции.';} }
+   if(state){state.dataset.state='error';state.innerHTML='<strong>LANDA v11: есть ошибка в работе.</strong> Подробности показаны ниже. Не дублируйте уже записанные операции.';}
+ }
  window.addEventListener('error',function(e){if(e.target===window)report(e.message||'Ошибка JavaScript')},true);
  window.addEventListener('unhandledrejection',function(e){report((e.reason&&e.reason.message)||String(e.reason))});
  window.__landaReportError=report;
@@ -396,7 +413,8 @@ function usdCostMarkup(){
  return `<div class="ops-usd-cost">По курсам покупки: ${cashFmt(v.costRub,'RUB')}<span class="rate-note">Средний курс остатка: ${fmt.format(v.costRub/v.knownUSD)} ₽/$ · FIFO</span></div>`;
 }
 function supplierTotals(id){let inv=ops.invoices.filter(i=>i.supplierId===id),payments=ops.payments.filter(p=>p.supplierId===id),allInvoiceCents=inv.reduce((s,i)=>s+invoiceAmount(i),0),paidCents=payments.reduce((s,p)=>s+moneyCents(p.amount),0),allocatedCents=ops.allocations.filter(a=>inv.some(i=>i.id===a.invoiceId)).reduce((s,a)=>s+moneyCents(a.amount),0),open=allInvoiceCents-allocatedCents,advance=paidCents-allocatedCents;return {invoices:inv.length,payments:payments.length,total:fromCents(allInvoiceCents),paid:fromCents(paidCents),allocated:fromCents(allocatedCents),open:fromCents(open),advance:fromCents(advance),balance:fromCents(paidCents-allInvoiceCents)}}
-function invoicePaid(id){return fromCents(ops.allocations.filter(a=>a.invoiceId===id).reduce((s,a)=>s+moneyCents(a.amount),0))}function invoiceDue(i){return fromCents(Math.max(0,invoiceAmount(i)-moneyCents(invoicePaid(i.id))))}
+function invoicePaid(id){return fromCents(ops.allocations.filter(a=>a.invoiceId===id).reduce((s,a)=>s+moneyCents(a.amount),0))}
+function invoiceDue(i){return fromCents(Math.max(0,invoiceAmount(i)-moneyCents(invoicePaid(i.id))))}
 function paymentAllocated(id){return fromCents(ops.allocations.filter(a=>a.paymentId===id).reduce((s,a)=>s+moneyCents(a.amount),0))}
 function paymentFree(p){return fromCents(Math.max(0,moneyCents(p.amount)-moneyCents(paymentAllocated(p.id))))}
 function addAllocation(paymentId,invoiceId,amount){let p=ops.payments.find(x=>x.id===paymentId),i=ops.invoices.find(x=>x.id===invoiceId);if(!p||!i||p.supplierId!==i.supplierId)throw Error('Платёж и накладная должны иметь одного поставщика');let take=Math.min(moneyCents(paymentFree(p)),moneyCents(invoiceDue(i)),moneyCents(amount));if(take>0){ops.allocations.push({id:opId('alloc'),paymentId,invoiceId,amount:fromCents(take)});return fromCents(take)}return 0}
@@ -588,6 +606,62 @@ function cdekImportRead(rows){
  }
  return {valid,excluded,allCount:all.length};
 }
+
+// --- Supplier portal: admin-reviewed import only; suppliers have no GitHub credentials. ---
+let supplierImportCandidate=null;
+function supplierDataCheck(raw){
+ if(typeof raw!=='string'||raw.length>500000)throw Error('Файл поставщика должен быть JSON не больше 500 КБ.');
+ let d;try{d=JSON.parse(raw)}catch(e){throw Error('Не удалось разобрать JSON поставщика.')}
+ if(!d||d.app!=='LANDA-supplier-invoice'||d.schemaVersion!==1)throw Error('Это не накладная из кабинета поставщика LANDA.');
+ if(!['anna','alina','anatoly'].includes(d.supplierId))throw Error('Поставщик не распознан.');
+ if(cdekSimplify(d.origin)!=='брест')throw Error('Принимаются только отправления из Бреста.');
+ const tracking=String(d.tracking||'').trim().replace(/\s+/g,'');
+ if(!/^[a-z0-9-]{8,35}$/i.test(tracking))throw Error('Укажите корректный трек-номер СДЭК (8–35 символов).');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(String(d.date||''))||!Number.isFinite(Date.parse(d.date+'T00:00:00')))throw Error('Неверная дата отправки.');
+ const destination=String(d.destination||'').trim();if(!destination||destination.length>80)throw Error('Не указан город назначения.');
+ if(!Array.isArray(d.items)||d.items.length===0||d.items.length>100)throw Error('Должно быть от 1 до 100 товаров.');
+ const items=d.items.map((item,i)=>{
+   const name=String(item.name||'').trim(),qty=Number(item.qty);
+   if(!name||name.length>180||!Number.isFinite(qty)||qty<=0||qty>100000)throw Error('Ошибка названия или количества товара №'+(i+1));
+   if(item.price!==null&&item.price!==undefined&&(!Number.isFinite(item.price)||item.price<0||item.price>99999999))throw Error('Ошибка цены товара №'+(i+1));
+   return {name,qty,price:item.price==null?null:Math.round(item.price*100)/100,sku:String(item.sku||'').slice(0,100)};
+ });
+ if(d.deliveryCost!=null&&(!Number.isFinite(d.deliveryCost)||d.deliveryCost<0||d.deliveryCost>99999999))throw Error('Неверная стоимость доставки.');
+ if(ops.invoices.some(x=>[x.tracking,x.number].some(n=>cdekSimplify(n)===cdekSimplify(tracking))))throw Error('Накладная с таким номером уже есть в LANDA: '+tracking);
+ const goodsCost=fromCents(items.reduce((v,it)=>v+(it.price===null?0:Math.round(it.qty*moneyCents(it.price))),0));
+ if(!Number.isFinite(goodsCost)||goodsCost>1e13)throw Error('Слишком большая сумма товаров.');
+ return {supplierId:d.supplierId,tracking,date:d.date,destination,sender:String(d.sender||'').slice(0,100),items,goodsCost,deliveryCost:d.deliveryCost==null?0:Math.round(d.deliveryCost*100)/100,missingItems:items.filter(it=>it.price===null).length,deliveryUnknown:d.deliveryCost==null,note:String(d.note||'').slice(0,500)};
+}
+function supplierImportShow(){
+ try{
+  let text=$('supplierImportText').value.trim();
+  if(!text){supplierImportCandidate=null;$('supplierImportApply').disabled=true;$('supplierImportPreview').textContent='Выберите файл или вставьте JSON для проверки.';return}
+  const d=supplierDataCheck(text);supplierImportCandidate=d;
+  $('supplierImportApply').disabled=false;
+  const line=d.items.map(it=>esc(it.name)+' × '+fmt.format(it.qty)+' · '+(it.price===null?'цена не указана':cashFmt(it.price,'USD')+' за шт.')).join('<br>');
+  $('supplierImportPreview').innerHTML='<strong>'+esc(supName(d.supplierId))+' · СДЭК '+esc(d.tracking)+'</strong><br>Откуда: Брест → '+esc(d.destination)+'<br>Отправитель: '+esc(d.sender||'не указан')+'<br>Дата: '+esc(d.date)+'<br><br>'+line+'<br><br>Сумма известных цен: '+cashFmt(d.goodsCost,'USD')+' · доставка: '+(d.deliveryUnknown?'не указана':cashFmt(d.deliveryCost,'USD'))+(d.missingItems?'<br><strong>⚠ Без цены: '+d.missingItems+' товар(ов). Уточните стоимость перед начислением.</strong>':'')+'<br><strong>Статус: «Создан» (НЕ проверен по СДЭК). Долг: не начислен.</strong>';
+ }catch(e){supplierImportCandidate=null;$('supplierImportApply').disabled=true;$('supplierImportPreview').textContent='Ошибка проверки: '+e.message}
+}
+$('supplierImportOpen').addEventListener('click',()=>{supplierImportCandidate=null;$('supplierImportText').value='';$('supplierImportFile').value='';supplierImportShow();$('supplierImportDialog').showModal()});
+$('supplierImportText').addEventListener('input',supplierImportShow);
+$('supplierImportFile').addEventListener('change',async e=>{const f=e.currentTarget.files[0];if(!f)return;try{if(f.size>500000)throw Error('Файл больше 500 КБ');$('supplierImportText').value=await f.text();supplierImportShow()}catch(err){supplierImportCandidate=null;$('supplierImportApply').disabled=true;$('supplierImportPreview').textContent='Ошибка: '+err.message}});
+$('supplierImportApply').addEventListener('click',()=>{
+ if(!supplierImportCandidate)return;
+ try{
+  // Re-check immediately before writing, including duplicate protection.
+  const d=supplierDataCheck($('supplierImportText').value.trim());
+  if(!confirm('Принять накладную СДЭК '+d.tracking+' от '+supName(d.supplierId)+'? Статус «Создан», долг НЕ начисляется.'))return;
+  // Missing prices remain 0 in the operational schema; marked for manual correction.
+  let itemRows=d.items.map(it=>({name:it.name,qty:it.qty,price:it.price??0,sku:it.sku}));
+  let notes=['Создана поставщиком через форму LANDA. Данные о вручении не проверены.'];
+  if(d.missingItems)notes.push('⚠ Без цены: '+d.missingItems+' товарных позиций; уточнить перед начислением.');
+  if(d.deliveryUnknown)notes.push('Стоимость доставки ещё не указана.');
+  if(d.note)notes.push(d.note);
+  ops.invoices.push({id:opId('invoice'),seq:nextSeq(),supplierId:d.supplierId,date:d.date,number:d.tracking,tracking:d.tracking,moysklad:'',status:'created',items:itemRows,goodsCost:d.goodsCost,deliveryCost:d.deliveryCost,includeDelivery:false,total:d.goodsCost,accrued:false,sender:d.sender,route:'Брест → '+d.destination,note:notes.join(' ').slice(0,500)});
+  supplierImportCandidate=null;$('supplierImportDialog').close();setPage('invoices');opCommit('Накладная '+d.tracking+' добавлена. Проверьте статус СДЭК; долг не начислен.');
+ }catch(e){supplierImportCandidate=null;$('supplierImportApply').disabled=true;$('supplierImportPreview').textContent='Ошибка: '+e.message}
+});
+
 let cdekCandidates=[];
 function openCdekImport(){cdekCandidates=[];$('cdekCsvFile').value='';$('cdekCsvCommit').disabled=true;$('cdekCsvPreview').innerHTML='';$('cdekCsvReport').textContent='Выберите CSV-файл СДЭК.';$('cdekImportDialog').showModal()}
 $('cdekCsvFile').addEventListener('change',async e=>{
@@ -595,7 +669,8 @@ $('cdekCsvFile').addEventListener('change',async e=>{
  try{const file=e.currentTarget.files[0];if(!file)return;if(file.size>8e6)throw Error('Максимальный размер 8 МБ');
  const bytes=await file.arrayBuffer();let text;
  try{text=new TextDecoder('utf-8',{fatal:true}).decode(bytes)}catch(err){text=new TextDecoder('windows-1251').decode(bytes)}
- const r=cdekImportRead(parseCdekCSV(text));cdekCandidates=r.valid; $('cdekCsvReport').textContent=`Строк с данными: ${r.allCount}. К добавлению: ${r.valid.length}. Пропущено: ${r.excluded.length} (без Бреста, неизвестный отправитель, дубликаты или без номера). Стоимости товара и доставки после импорта заполняются вручную.`;
+ const r=cdekImportRead(parseCdekCSV(text));cdekCandidates=r.valid;
+ $('cdekCsvReport').textContent=`Строк с данными: ${r.allCount}. К добавлению: ${r.valid.length}. Пропущено: ${r.excluded.length} (без Бреста, неизвестный отправитель, дубликаты или без номера). Стоимости товара и доставки после импорта заполняются вручную.`;
  const preview=r.valid.map(i=>({...i,result:'Добавить'})).concat(r.excluded.map(i=>({...i,result:i.reason})));
  $('cdekCsvPreview').innerHTML=opTable(['Строка','Номер','Отправитель','Поставщик','Статус','Результат'],preview.slice(0,100).map(i=>`<tr><td>${i.line}</td><td>${esc(i.number)}</td><td>${esc(i.sender)}</td><td>${esc(i.supplierId?supName(i.supplierId):'—')}</td><td>${esc(CDEK_STATUS[i.status])}</td><td>${esc(i.result)}</td></tr>`),'Подходящих накладных нет');
  $('cdekCsvCommit').disabled=!r.valid.length;
@@ -677,7 +752,7 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
    if(typeof document.getElementById('cashDialog').showModal!=='function'){
      window.__landaReportError('Браузер не поддерживает окна программы. Откройте скачанный файл напрямую в обновлённом Chrome или Edge.');
    } else {
-     status.dataset.state='ok';status.innerHTML='<strong>LANDA v11 работает.</strong> Если запись не выполнена, появится конкретная ошибка. Перед повтором операции проверьте журнал.';
+     status.dataset.state='ok';status.innerHTML='<strong>LANDA работает.</strong> Если запись не выполнена, появится конкретная ошибка. Перед повтором операции проверьте журнал.';
    }
  }
  // The click is the actual submission trigger, not merely a "working" badge.
@@ -794,7 +869,8 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
     try{restoreValidated(parsed);}catch(err){note('Ошибка: '+err.message,true);}
   }
   document.getElementById('pasteBackupApply').addEventListener('click',async function(){
-    const parsed=checkPaste();if(parsed)await confirmRestore(parsed);  });
+    const parsed=checkPaste();if(parsed)await confirmRestore(parsed);
+  });
   async function restoreEmbedded(){
     try{
       if(!(EMBEDDED_BACKUP&&EMBEDDED_BACKUP.app==='LANDA-suite'&&validate(EMBEDDED_BACKUP.proschet)&&isOps(EMBEDDED_BACKUP.operations)))throw Error('Встроенная копия повреждена');
