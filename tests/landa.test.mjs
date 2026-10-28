@@ -144,3 +144,56 @@ test('public HTML and JavaScript remain parseable and include control modules',(
   assert.doesNotThrow(()=>new Function(js));
  }
 });
+
+test('calendar validation rejects impossible dates, accepts leap day',()=>{
+ assert.equal(bridge.normalizeInvoice({...incoming(),date:'2028-02-29'}).date,'2028-02-29');
+ for(const date of ['2026-02-29','2026-02-30','2026-04-31','2026-13-01'])
+  assert.throws(()=>bridge.normalizeInvoice({...incoming(),date}),date);
+});
+
+test('GitHub SHA conflicts retry with fresh state and preserve concurrent invoices',async()=>{
+ const original=globalThis.fetch;
+ let reads=0,writes=0,saved=null;
+ const concurrent=base();
+ concurrent.operations.invoices.push({id:'concurrent',supplierId:'alina',tracking:'30000000000',total:12,accrued:false});
+ globalThis.fetch=async(_url,options)=>{
+  if(options.method==='GET'){
+   reads++;
+   const data=reads===1?base():concurrent;
+   return new Response(JSON.stringify({sha:'version-'+reads,content:Buffer.from(JSON.stringify(data)).toString('base64')}),{status:200});
+  }
+  writes++;
+  const payload=JSON.parse(options.body);
+  assert.equal(payload.sha,'version-'+writes);
+  if(writes===1)return new Response(JSON.stringify({message:'conflict'}),{status:409});
+  saved=JSON.parse(Buffer.from(payload.content,'base64').toString('utf8'));
+  return new Response(JSON.stringify({content:{sha:'written'}}),{status:200});
+ };
+ try{
+  const result=await worker.fetch(post('/submit',{invoice:incoming(),code:codes.anna}),env);
+  assert.equal(result.status,201);
+  assert.equal(reads,2);
+  assert.equal(writes,2);
+  assert.ok(saved.operations.invoices.some(i=>i.id==='concurrent'));
+  assert.ok(saved.operations.invoices.some(i=>i.tracking==='10339544154'));
+ }finally{globalThis.fetch=original}
+});
+
+test('repeated SHA conflicts fail safely, without reporting a successful write',async()=>{
+ const original=globalThis.fetch;let reads=0,writes=0;
+ globalThis.fetch=async(_url,options)=>{
+  if(options.method==='GET'){
+   reads++;
+   return new Response(JSON.stringify({sha:'version-'+reads,content:Buffer.from(JSON.stringify(base())).toString('base64')}),{status:200});
+  }
+  writes++;
+  return new Response(JSON.stringify({message:'conflict'}),{status:409});
+ };
+ try{
+  const result=await worker.fetch(post('/submit',{invoice:incoming(),code:codes.anna}),env);
+  assert.equal(result.status,409);
+  assert.equal(reads,4);
+  assert.equal(writes,4);
+  assert.equal((await result.json()).created,undefined);
+ }finally{globalThis.fetch=original}
+});
