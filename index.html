@@ -121,7 +121,19 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
 </section>
 <section id="invoicesPage" class="page" hidden>
  <div class="heading ops-head"><div><div class="eyebrow">РАЗДЕЛ 03 / ПОСТАВКИ</div><h1>Накладные и товары</h1><p>Поставщик, товары, сумма в долларах, СДЭК и статус доставки в одном месте.</p></div><div class="actions"><button class="btn btn-primary" type="button" data-action="newInvoice">＋ Добавить накладную</button><button class="btn" type="button" data-action="importInvoices">↑ Загрузить CSV СДЭК</button><button class="btn" type="button" data-action="exportInvoices">↓ CSV накладных</button></div></div>
- <div class="ops-grid" id="invoiceKpis"></div><div class="ops-notice">Накладные можно импортировать из CSV (только «Брест»), а стоимость товара и доставки в $ вносится <strong>вручную</strong> (можно вставлять список товаров из выгрузки). Прямой синхронизации с «МойСклад» и СДЭК пока нет. Новые накладные не увеличивают долг автоматически. При статусе «Вручен» проверьте суммы и нажмите «Начислить поставщику».</div>
+ <div class="ops-grid" id="invoiceKpis"></div>
+ <div class="ops-notice" id="cdekPersonalPanel" style="margin-top:12px">
+ <strong>СДЭК · личный кабинет физлица</strong>
+ <p style="margin:8px 0">Открывай отслеживание на официальном сайте СДЭК, проверяй движение накладных и загружай CSV в LANDA. Вход по номеру телефона и SMS остаётся только на стороне СДЭК.</p>
+ <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+  <a class="btn" href="https://www.cdek.ru/ru/tracking/" target="_blank" rel="noopener noreferrer">↗ Мои посылки / отслеживание</a>
+  <button class="btn btn-primary" type="button" data-action="importInvoices">↑ Импортировать CSV</button>
+  <a class="btn" href="https://www.cdek.ru/ru/integration/" target="_blank" rel="noopener noreferrer">↗ Официальный API СДЭК</a>
+ </div>
+ <div id="cdekStatusSummary" role="status" style="font-size:12px;margin:8px 0"></div>
+ <small>Автоматическая загрузка накладных из обычного кабинета физлица пока не подключена: по данным СДЭК, официальный API выдаётся отдельно для договорного обслуживания. Подключение API не заменяет авторизацию физлица. Не вводи пароль или SMS-код от СДЭК в LANDA.</small>
+ </div>
+ <div class="ops-notice">Накладные можно импортировать из CSV (только «Брест»), а стоимость товара и доставки в $ вносится <strong>вручную</strong> (можно вставлять список товаров из выгрузки). Прямой синхронизации с «МойСклад» и СДЭК пока нет. Новые накладные не увеличивают долг автоматически. При статусе «Вручен» проверьте суммы и нажмите «Начислить поставщику».</div>
  <div class="filters"><div class="search-wrap"><input class="textinput" id="invoiceSearch" type="search" placeholder="Поиск по товару, артикулу, номеру, трек-номеру…" autocomplete="off" style="padding-left:13px"></div><select id="invoiceSupplierFilter" aria-label="Фильтр поставщика"></select><select id="invoiceStateFilter" aria-label="Фильтр оплаты"><option value="all">Все оплаты</option><option value="open">Не закрыты</option><option value="paid">Оплачены</option><option value="transit">В пути</option></select></div>
  <div class="ops-list" id="invoiceTable"></div>
 </section>
@@ -185,8 +197,7 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
    if(detail)detail.textContent=String(text||'Неизвестная ошибка').slice(0,600);
    if(panel)panel.hidden=false;
    var state=document.getElementById('launchStatus');
-   if(state){state.dataset.state='error';state.innerHTML='<strong>LANDA v11: есть ошибка в работе.</strong> Подробности показаны ниже. Не дублируйте уже записанные операции.';}
- }
+   if(state){state.dataset.state='error';state.innerHTML='<strong>LANDA v11: есть ошибка в работе.</strong> Подробности показаны ниже. Не дублируйте уже записанные операции.';} }
  window.addEventListener('error',function(e){if(e.target===window)report(e.message||'Ошибка JavaScript')},true);
  window.addEventListener('unhandledrejection',function(e){report((e.reason&&e.reason.message)||String(e.reason))});
  window.__landaReportError=report;
@@ -197,7 +208,8 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
 <script>
 'use strict';
 const SEED=JSON.parse(document.getElementById('seed').textContent);
-const EMBEDDED_BACKUP=JSON.parse(document.getElementById('embeddedBackup').textContent);const KEY='landa_proschet_offline_v1';
+const EMBEDDED_BACKUP=JSON.parse(document.getElementById('embeddedBackup').textContent);
+const KEY='landa_proschet_offline_v1';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const deep=o=>JSON.parse(JSON.stringify(o));
@@ -384,8 +396,7 @@ function usdCostMarkup(){
  return `<div class="ops-usd-cost">По курсам покупки: ${cashFmt(v.costRub,'RUB')}<span class="rate-note">Средний курс остатка: ${fmt.format(v.costRub/v.knownUSD)} ₽/$ · FIFO</span></div>`;
 }
 function supplierTotals(id){let inv=ops.invoices.filter(i=>i.supplierId===id),payments=ops.payments.filter(p=>p.supplierId===id),allInvoiceCents=inv.reduce((s,i)=>s+invoiceAmount(i),0),paidCents=payments.reduce((s,p)=>s+moneyCents(p.amount),0),allocatedCents=ops.allocations.filter(a=>inv.some(i=>i.id===a.invoiceId)).reduce((s,a)=>s+moneyCents(a.amount),0),open=allInvoiceCents-allocatedCents,advance=paidCents-allocatedCents;return {invoices:inv.length,payments:payments.length,total:fromCents(allInvoiceCents),paid:fromCents(paidCents),allocated:fromCents(allocatedCents),open:fromCents(open),advance:fromCents(advance),balance:fromCents(paidCents-allInvoiceCents)}}
-function invoicePaid(id){return fromCents(ops.allocations.filter(a=>a.invoiceId===id).reduce((s,a)=>s+moneyCents(a.amount),0))}
-function invoiceDue(i){return fromCents(Math.max(0,invoiceAmount(i)-moneyCents(invoicePaid(i.id))))}
+function invoicePaid(id){return fromCents(ops.allocations.filter(a=>a.invoiceId===id).reduce((s,a)=>s+moneyCents(a.amount),0))}function invoiceDue(i){return fromCents(Math.max(0,invoiceAmount(i)-moneyCents(invoicePaid(i.id))))}
 function paymentAllocated(id){return fromCents(ops.allocations.filter(a=>a.paymentId===id).reduce((s,a)=>s+moneyCents(a.amount),0))}
 function paymentFree(p){return fromCents(Math.max(0,moneyCents(p.amount)-moneyCents(paymentAllocated(p.id))))}
 function addAllocation(paymentId,invoiceId,amount){let p=ops.payments.find(x=>x.id===paymentId),i=ops.invoices.find(x=>x.id===invoiceId);if(!p||!i||p.supplierId!==i.supplierId)throw Error('Платёж и накладная должны иметь одного поставщика');let take=Math.min(moneyCents(paymentFree(p)),moneyCents(invoiceDue(i)),moneyCents(amount));if(take>0){ops.allocations.push({id:opId('alloc'),paymentId,invoiceId,amount:fromCents(take)});return fromCents(take)}return 0}
@@ -396,15 +407,17 @@ function opTable(headers,rows,empty='Записей пока нет'){if(!rows.l
 function moneyStatus(i){if(!invoiceAccrued(i))return '<span class="ops-status amber">Не начислена</span>';let due=invoiceDue(i),paid=invoicePaid(i.id);return due<=0?'<span class="ops-status green">Оплачена</span>':paid>0?'<span class="ops-status amber">Частично оплачена</span>':'<span class="ops-status red">Не оплачена</span>'}
 function supplierCard(id,clickable=false){let s=supplierTotals(id),b=s.balance;return `<div class="ops-card op-supplier-card ${selectedSupplier===id?'active':''}" ${clickable?`data-supplier-card="${esc(id)}" role="button" tabindex="0"`:' '}><h3>${esc(supName(id))}</h3><div class="ops-label">Баланс поставщика</div><div class="ops-big ${numColor(b)}">${b>0?'+':''}${cashFmt(b,'USD')}</div><div class="ops-sub">${b<0?'Мы должны поставщику':b>0?'Наш аванс у поставщика':'Взаиморасчёты закрыты'}</div><div class="ops-kv"><span>Не оплачено по накладным</span><strong class="negative">${cashFmt(s.open,'USD')}</strong></div><div class="ops-kv"><span>Свободный аванс</span><strong class="positive">${cashFmt(s.advance,'USD')}</strong></div></div>`}
 function invoiceRow(i,compact=false){
- const charged=invoiceAccrued(i),p=invoicePaid(i.id),due=invoiceDue(i),avail=supplierTotals(i.supplierId).advance; const canApply=charged&&due>0&&avail>0,items=Array.isArray(i.items)?i.items:[],status=statusCode(i),good=Number.isFinite(i.goodsCost)?i.goodsCost:i.total;
+ const charged=invoiceAccrued(i),p=invoicePaid(i.id),due=invoiceDue(i),avail=supplierTotals(i.supplierId).advance;
+ const canApply=charged&&due>0&&avail>0,items=Array.isArray(i.items)?i.items:[],status=statusCode(i),good=Number.isFinite(i.goodsCost)?i.goodsCost:i.total;
  const selectStatus=i.isOpening?'':`<select class="invoice-status-select" data-invoice-status="${esc(i.id)}" aria-label="Статус накладной ${esc(i.number)}">${Object.entries(CDEK_STATUS).map(([id,label])=>`<option value="${id}" ${status===id?'selected':''}>${label}</option>`).join('')}</select>`;
  const actions=i.isOpening?'':`${charged?`<button class="ops-mini" data-uncharge="${esc(i.id)}" type="button">Отменить начисление</button>`:status==='delivered'?`<button class="ops-mini" data-charge="${esc(i.id)}" type="button">Начислить поставщику</button>`:''}`;
+ const trackActions=(!i.isOpening&&i.tracking)?`<button type="button" class="ops-mini" data-copy-track="${esc(i.tracking)}" title="Скопировать номер отслеживания">Копировать трек</button><a class="ops-mini" href="https://www.cdek.ru/ru/tracking/" target="_blank" rel="noopener noreferrer" title="Откроется официальный сайт СДЭК. Вставь скопированный номер">СДЭК ↗</a>`:'';
  return `<tr><td class="nowrap"><strong>${esc(dateText(i.date))}</strong><small>${esc(supName(i.supplierId))}</small></td>
  <td><strong>${i.isOpening?'Начальный долг':esc(i.number)}</strong><small>${i.isOpening?'Начальный долг без накладной СДЭК':'СДЭК: '+esc(i.tracking||'не указан')+(i.sender?' · '+esc(i.sender):'')+(i.route?' · '+esc(i.route):'')+(i.moysklad?' · МойСклад: '+esc(i.moysklad):'')}</small>${i.note?`<small>${esc(i.note)}</small>`:''}<div style="margin-top:7px">${selectStatus}</div></td>
  <td>${items.length?`<details><summary class="op-linklike">${items.length} тов. · состав</summary><div class="op-help">${items.map(it=>`<div>${esc(it.name)}${it.sku?' ['+esc(it.sku)+']':''} — ${fmt.format(it.qty)} × ${cashFmt(it.price,'USD')}</div>`).join('')}</div></details>`:'<span class="ops-smallnote">Укажи товары в редакторе</span>'}</td>
  <td class="right nowrap"><strong>${cashFmt(i.total,'USD')}</strong><small>Товар: ${cashFmt(good,'USD')}</small><small>Доставка: ${cashFmt(i.deliveryCost||0,'USD')}${i.includeDelivery?' · в долге':' · отдельно'}</small><small>${charged?'Начислено':'Ожидает начисления'}</small></td>
  <td>${moneyStatus(i)}<small>${!charged?'На баланс не влияет':due>0?'Долг: '+cashFmt(due,'USD'):'Закрыта полностью'}</small>${charged?`<small>Зачтено: ${cashFmt(p,'USD')}</small>`:''}</td>
- <td class="ops-td-actions">${actions} ${canApply?`<button class="ops-mini" type="button" data-apply="${esc(i.id)}">Зачесть аванс</button>`:''} ${!compact&&!i.isOpening?`<button class="ops-mini" type="button" data-edit-invoice="${esc(i.id)}">Изменить</button>`:''} ${!compact?`<button class="ops-mini danger" type="button" data-delete-invoice="${esc(i.id)}">Удалить</button>`:''}</td></tr>`
+ <td class="ops-td-actions">${trackActions} ${actions} ${canApply?`<button class="ops-mini" type="button" data-apply="${esc(i.id)}">Зачесть аванс</button>`:''} ${!compact&&!i.isOpening?`<button class="ops-mini" type="button" data-edit-invoice="${esc(i.id)}">Изменить</button>`:''} ${!compact?`<button class="ops-mini danger" type="button" data-delete-invoice="${esc(i.id)}">Удалить</button>`:''}</td></tr>`
 }
 function invoicesTable(invoices,compact=false){return opTable(['Дата','Накладная / СДЭК','Товары',{label:'Сумма',right:true},'Оплата',{label:'Действия',right:true}],invoices.slice().sort(sortDesc).map(i=>invoiceRow(i,compact)),'Накладных пока нет. Добавьте первую накладную от поставщика.')}
 function renderDashboard(){let due=ops.suppliers.reduce((s,p)=>s+supplierTotals(p.id).open,0),adv=ops.suppliers.reduce((s,p)=>s+supplierTotals(p.id).advance,0),cR=balanceCash('RUB'),cU=balanceCash('USD'),cCard=balanceCash('CARD'),cAvito=balanceCash('AVITO');
@@ -423,6 +436,8 @@ function renderInvoices(){
  let sum=actual.reduce((s,i)=>s+moneyCents(Number.isFinite(i.goodsCost)?i.goodsCost:i.total),0);
  let billed=actual.reduce((s,i)=>s+invoiceAmount(i),0),paid=actual.reduce((s,i)=>s+moneyCents(invoicePaid(i.id)),0);
  let transit=actual.filter(i=>statusCode(i)==='transit').length;
+ const statusCounts={created:0,transit:0,ready:0,delivered:0};for(const inv of actual){const status=statusCode(inv);if(Object.prototype.hasOwnProperty.call(statusCounts,status))statusCounts[status]++}
+ $('cdekStatusSummary').textContent='В LANDA: '+Object.entries(CDEK_STATUS).map(([key,label])=>label+' — '+statusCounts[key]).join(' · ')+' (статусы, записанные в LANDA; не онлайн-данные СДЭК).';
  $('invoiceKpis').innerHTML=`<div class="ops-card"><div class="ops-label">Всего накладных</div><div class="ops-big">${actual.length}</div><div class="ops-sub">В пути: ${transit}</div></div><div class="ops-card"><div class="ops-label">Стоимость товаров</div><div class="ops-big">${cashFmt(fromCents(sum),'USD')}</div><div class="ops-sub">Доставка считается отдельно</div></div><div class="ops-card"><div class="ops-label">Начислено поставщикам</div><div class="ops-big negative">${cashFmt(fromCents(billed),'USD')}</div><div class="ops-sub">Не начислено: ${pending.length} накладных · незакрыто ${cashFmt(fromCents(billed-paid),'USD')}</div></div>`;
  let f=$('invoiceSupplierFilter').value||'all';$('invoiceSupplierFilter').innerHTML='<option value="all">Все поставщики</option>'+ops.suppliers.map(s=>`<option value="${esc(s.id)}" ${s.id===f?'selected':''}>${esc(s.name)}</option>`).join('');
  let search=$('invoiceSearch').value.toLocaleLowerCase('ru').trim(),what=$('invoiceStateFilter').value;
@@ -580,8 +595,7 @@ $('cdekCsvFile').addEventListener('change',async e=>{
  try{const file=e.currentTarget.files[0];if(!file)return;if(file.size>8e6)throw Error('Максимальный размер 8 МБ');
  const bytes=await file.arrayBuffer();let text;
  try{text=new TextDecoder('utf-8',{fatal:true}).decode(bytes)}catch(err){text=new TextDecoder('windows-1251').decode(bytes)}
- const r=cdekImportRead(parseCdekCSV(text));cdekCandidates=r.valid;
- $('cdekCsvReport').textContent=`Строк с данными: ${r.allCount}. К добавлению: ${r.valid.length}. Пропущено: ${r.excluded.length} (без Бреста, неизвестный отправитель, дубликаты или без номера). Стоимости товара и доставки после импорта заполняются вручную.`;
+ const r=cdekImportRead(parseCdekCSV(text));cdekCandidates=r.valid; $('cdekCsvReport').textContent=`Строк с данными: ${r.allCount}. К добавлению: ${r.valid.length}. Пропущено: ${r.excluded.length} (без Бреста, неизвестный отправитель, дубликаты или без номера). Стоимости товара и доставки после импорта заполняются вручную.`;
  const preview=r.valid.map(i=>({...i,result:'Добавить'})).concat(r.excluded.map(i=>({...i,result:i.reason})));
  $('cdekCsvPreview').innerHTML=opTable(['Строка','Номер','Отправитель','Поставщик','Статус','Результат'],preview.slice(0,100).map(i=>`<tr><td>${i.line}</td><td>${esc(i.number)}</td><td>${esc(i.sender)}</td><td>${esc(i.supplierId?supName(i.supplierId):'—')}</td><td>${esc(CDEK_STATUS[i.status])}</td><td>${esc(i.result)}</td></tr>`),'Подходящих накладных нет');
  $('cdekCsvCommit').disabled=!r.valid.length;
@@ -595,7 +609,8 @@ $('cdekCsvCommit').addEventListener('click',()=>{
   known.add(cdekSimplify(row.number));known.add(cdekSimplify(row.tracking));
  }
  cdekCandidates=[];$('cdekImportDialog').close();setPage('invoices');opCommit('Импортировано '+count+' накладных. Укажите суммы в $, отметьте «Вручен» и начислите долг поставщикам.')
-});function updateCdekStatus(id,status){
+});
+function updateCdekStatus(id,status){
  const i=ops.invoices.find(x=>x.id===id);if(!i||i.isOpening||!CDEK_STATUS[status])return;
  i.status=status;opCommit('Статус '+i.number+': '+CDEK_STATUS[status]+(invoiceAccrued(i)?' · ранее начисленный долг сохранён':' · долг пока не начислен'));
 }
@@ -632,7 +647,7 @@ $('invoiceSearch').addEventListener('input',renderInvoices);$('invoiceSupplierFi
 $('cashForm').elements.kind.addEventListener('change',updateCashCategory);$('cashForm').elements.currency.addEventListener('change',updateCashCategory);$('transferForm').elements.from.addEventListener('change',updateTransferTarget);$('transferForm').addEventListener('input',previewTransfer);
 $('exchangeForm').addEventListener('input',previewExchange);$('paymentForm').addEventListener('input',previewPayment);$('paymentSupplier').addEventListener('change',updatePaymentInvoice);$('invoiceForm').addEventListener('input',previewInvoice);
 $('cashFilters').addEventListener('click',e=>{let b=e.target.closest('[data-cash-filter]');if(!b)return;cashFilter=b.dataset.cashFilter;renderCash()});
-document.addEventListener('click',e=>{let nav=e.target.closest('[data-page]');if(nav){setPage(nav.dataset.page);return}let go=e.target.closest('[data-go]');if(go){setPage(go.dataset.go);return}let sup=e.target.closest('[data-supplier-card]');if(sup){setSupplier(sup.dataset.supplierCard);return}let act=e.target.closest('[data-action]');if(act){let kind=act.dataset.action;if(kind==='newInvoice')openInvoice();else if(kind==='importInvoices')openCdekImport();else if(kind==='newPayment')openPayment();else if(kind==='newCash')openCash();else if(kind==='newTransfer')openTransfer();else if(kind==='newExchange')openExchange();else if(kind==='openings')cashOpening();else if(kind==='supplierOpening')openSupplierOpening();else if(kind==='exportCash')exportOps('cash');else if(kind==='exportSuppliers')exportOps('suppliers');else if(kind==='exportInvoices')exportOps('invoices');return}let close=e.target.closest('[data-close]');if(close){$(close.dataset.close).close();return}let apply=e.target.closest('[data-apply]');if(apply){applyAdvanceClick(apply.dataset.apply);return}let edit=e.target.closest('[data-edit-invoice]');if(edit){openInvoice(edit.dataset.editInvoice);return}let del=e.target.closest('[data-delete-invoice]');if(del){removeInvoice(del.dataset.deleteInvoice);return}let delPay=e.target.closest('[data-delete-payment]');if(delPay){removePayment(delPay.dataset.deletePayment);return}let rateCash=e.target.closest('[data-rate-cash]');if(rateCash){openUsdRateEditor(rateCash.dataset.rateCash);return}let delCash=e.target.closest('[data-delete-cash]');if(delCash){removeCash(delCash.dataset.deleteCash);return}});
+document.addEventListener('click',e=>{let copyTrack=e.target.closest('[data-copy-track]');if(copyTrack){const num=copyTrack.dataset.copyTrack;if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(num).then(()=>toast('Трек СДЭК скопирован')).catch(()=>window.prompt('Скопируй трек СДЭК:',num));}else window.prompt('Скопируй трек СДЭК:',num);return}let nav=e.target.closest('[data-page]');if(nav){setPage(nav.dataset.page);return}let go=e.target.closest('[data-go]');if(go){setPage(go.dataset.go);return}let sup=e.target.closest('[data-supplier-card]');if(sup){setSupplier(sup.dataset.supplierCard);return}let act=e.target.closest('[data-action]');if(act){let kind=act.dataset.action;if(kind==='newInvoice')openInvoice();else if(kind==='importInvoices')openCdekImport();else if(kind==='newPayment')openPayment();else if(kind==='newCash')openCash();else if(kind==='newTransfer')openTransfer();else if(kind==='newExchange')openExchange();else if(kind==='openings')cashOpening();else if(kind==='supplierOpening')openSupplierOpening();else if(kind==='exportCash')exportOps('cash');else if(kind==='exportSuppliers')exportOps('suppliers');else if(kind==='exportInvoices')exportOps('invoices');return}let close=e.target.closest('[data-close]');if(close){$(close.dataset.close).close();return}let apply=e.target.closest('[data-apply]');if(apply){applyAdvanceClick(apply.dataset.apply);return}let edit=e.target.closest('[data-edit-invoice]');if(edit){openInvoice(edit.dataset.editInvoice);return}let del=e.target.closest('[data-delete-invoice]');if(del){removeInvoice(del.dataset.deleteInvoice);return}let delPay=e.target.closest('[data-delete-payment]');if(delPay){removePayment(delPay.dataset.deletePayment);return}let rateCash=e.target.closest('[data-rate-cash]');if(rateCash){openUsdRateEditor(rateCash.dataset.rateCash);return}let delCash=e.target.closest('[data-delete-cash]');if(delCash){removeCash(delCash.dataset.deleteCash);return}});
 document.addEventListener('keydown',e=>{let sup=e.target.closest('[data-supplier-card]');if(sup&&(e.key==='Enter'||e.key===' ')){e.preventDefault();setSupplier(sup.dataset.supplierCard)}});
 $('nav').addEventListener('click',e=>{if(e.target.closest('[data-nav]'))setPage('proschet')});
 setPage('dashboard');
@@ -779,8 +794,7 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
     try{restoreValidated(parsed);}catch(err){note('Ошибка: '+err.message,true);}
   }
   document.getElementById('pasteBackupApply').addEventListener('click',async function(){
-    const parsed=checkPaste();if(parsed)await confirmRestore(parsed);
-  });
+    const parsed=checkPaste();if(parsed)await confirmRestore(parsed);  });
   async function restoreEmbedded(){
     try{
       if(!(EMBEDDED_BACKUP&&EMBEDDED_BACKUP.app==='LANDA-suite'&&validate(EMBEDDED_BACKUP.proschet)&&isOps(EMBEDDED_BACKUP.operations)))throw Error('Встроенная копия повреждена');
@@ -794,7 +808,8 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
 
 
 <dialog id="githubDialog" aria-labelledby="ghTitle">
- <div class="modal-hd" id="ghTitle">☁ Синхронизация с GitHub <button type="button" class="btn" id="ghClose" style="float:right" aria-label="Закрыть">✕</button></div> <div class="gh-body">
+ <div class="modal-hd" id="ghTitle">☁ Синхронизация с GitHub <button type="button" class="btn" id="ghClose" style="float:right" aria-label="Закрыть">✕</button></div>
+ <div class="gh-body">
  <div class="gh-warning"><b>iPhone:</b> для синхронизации открой сайт LANDA по HTTPS в Safari. Встроенный просмотрщик HTML (в ChatGPT, «Файлах» и мессенджерах) может блокировать запросы GitHub и показывать «Load failed».</div>
  <div class="gh-note">После подключения LANDA будет <strong>хранить данные и локально, и в приватном репозитории GitHub</strong>. При каждом новом запуске проверяется облачная версия. После изменения программы запись отправляется автоматически с небольшой задержкой. Нужен интернет.</div>
  <div class="gh-grid">
