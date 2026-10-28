@@ -80,7 +80,10 @@ async function submit(request,env){
   if(ops.invoices.some(x=>[x.number,x.tracking].some(z=>String(z||'').trim().toLowerCase()===i.tracking.toLowerCase())))return {duplicate:true,tracking:i.tracking};
   const now=new Date().toISOString();
   ops.nextSeq=(Number(ops.nextSeq)||0)+1;
-  ops.invoices.push({id:'supplier_'+crypto.randomUUID(),seq:ops.nextSeq,supplierId:i.supplierId,date:i.date,number:i.tracking,tracking:i.tracking,moysklad:'',status:'created',items:i.items,goodsCost:i.goodsCost,deliveryCost:i.deliveryCost,includeDelivery:false,total:i.goodsCost,accrued:false,sender:i.sender,route:'Брест → '+i.destination,note:('Поставщик отправил '+now+'. Статус СДЭК не проверен. '+(i.unknownPrices?'Цены не указаны: '+i.unknownPrices+'. ':'')+(i.deliveryMissing?'Доставка не указана. ':'')+i.note).slice(0,490),submittedAt:now,trackingVerified:false});
+  ops.invoices.push({id:'supplier_'+crypto.randomUUID(),seq:ops.nextSeq,supplierId:i.supplierId,date:i.date,number:i.tracking,tracking:i.tracking,moysklad:'',status:'created',reviewStatus:'pending',items:i.items,goodsCost:i.goodsCost,deliveryCost:i.deliveryCost,includeDelivery:false,total:i.goodsCost,accrued:false,sender:i.sender,route:'Брест → '+i.destination,note:('Поставщик отправил '+now+'. Статус СДЭК не проверен. '+(i.unknownPrices?'Цены не указаны: '+i.unknownPrices+'. ':'')+(i.deliveryMissing?'Доставка не указана. ':'')+i.note).slice(0,490),submittedAt:now,trackingVerified:false});
+  if(!Array.isArray(ops.auditTrail))ops.auditTrail=[];
+  ops.auditTrail.push({id:'evt-'+crypto.randomUUID(),at:now,type:'created',recordId:ops.invoices[ops.invoices.length-1].id,summary:'Поставщик '+suppliers[i.supplierId]+' создал накладную '+i.tracking,source:'supplier:'+i.supplierId});
+  ops.auditTrail=ops.auditTrail.slice(-900);
   const saved=await github(env,'PUT',sha,backup);if(!saved.conflict)return {created:true,tracking:i.tracking};
  }
  fail('База обновилась одновременно; попробуйте ещё раз',409);
