@@ -1190,7 +1190,7 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
   $(id).href='./supplier.html?supplier='+supplier+(endpoint?'&api='+encodeURIComponent(endpoint+'/'):'')
  }}
  function status(t){$('supplierWorkerStatus').textContent=t}
- try{$('supplierWorkerUrl').value=localStorage.getItem(storageKey)||''}catch(_){}
+ try{$('supplierWorkerUrl').value=localStorage.getItem(storageKey)||'https://landa-app.kamily1997.workers.dev/'}catch(_){$('supplierWorkerUrl').value='https://landa-app.kamily1997.workers.dev/'}
  links();$('supplierWorkerUrl').addEventListener('input',links);
  $('supplierWorkerSave').addEventListener('click',()=>{const v=worker();if(!v){status('Укажи HTTPS-адрес Cloudflare Worker с доменом .workers.dev.');return}try{localStorage.setItem(storageKey,v+'/')}catch(_){}$('supplierWorkerUrl').value=v+'/';links();status('Адрес сохранён. Проверь сервер. Каждому поставщику нужен индивидуальный секретный код.')});
  $('supplierWorkerCheck').addEventListener('click',async()=>{const v=worker();if(!v){status('Сначала укажи адрес сервера.');return}status('Проверяем соединение…');try{const r=await fetch(v+'/health',{cache:'no-store'}),d=await r.json();if(!r.ok||d.app!=='LANDA-supplier-bridge')throw Error('нет подтверждения от сервера LANDA');status(d.github?'✓ Сервер отвечает, GitHub-токен задан. Доступ к базе подтвердится при первой отправке.':'Сервер отвечает, но GitHub-токен ещё не задан.')}catch(e){status('Не удалось соединиться с сервером: '+e.message)}});
