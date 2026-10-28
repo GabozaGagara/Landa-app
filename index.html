@@ -820,7 +820,7 @@ function chargeCdek(id){const i=ops.invoices.find(x=>x.id===id);if(!i||invoiceAc
  if(statusCode(i)!=='delivered'){toast('Начисление доступно только для статуса «Вручен»');return}
  if(moneyCents(i.total)<=0){toast('Сначала нажмите «Изменить» и укажите стоимость товара/доставки в долларах');return}
  askConfirm(`Начислить ${cashFmt(i.total,'USD')} в долг поставщику ${supName(i.supplierId)} по накладной ${i.number}? Товары: ${cashFmt(i.goodsCost||0,'USD')}, доставка: ${cashFmt(i.deliveryCost||0,'USD')} ${i.includeDelivery?'(включена в долг)':'(отдельно)'}.`,()=>{
-  if(invoiceAccrued(i))return;i.accrued=true;opCommit('Долг по накладной '+i.number+' начислен поставщику: '+cashFmt(i.total,'USD'));
+  if(invoiceAccrued(i))return;i.accrued=true;i.accruedAt=new Date().toISOString();opCommit('Долг по накладной '+i.number+' начислен поставщику: '+cashFmt(i.total,'USD'));
  });
 }
 function unchargeCdek(id){const i=ops.invoices.find(x=>x.id===id);if(!i||!invoiceAccrued(i)||i.isOpening)return;
@@ -1226,4 +1226,6 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  });
 })();
 </script>
+<script src="./js/landa-control-center.js" defer></script>
+<script src="./js/landa-local-backups.js" defer></script>
 </body></html>
