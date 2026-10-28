@@ -133,7 +133,19 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
  <p class="ops-smallnote">Нужен отдельно установленный защищённый Cloudflare Worker. Пока он не подключён, остаётся прежняя передача JSON через «Поделиться».</p>
  <label class="gh-label">Адрес защищённого сервера (https://…workers.dev)<input id="supplierWorkerUrl" class="gh-input" type="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://landa-supplier-bridge.…workers.dev"></label>
  <div class="gh-actions" style="display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="btn" id="supplierWorkerSave">Сохранить адрес</button><button type="button" class="btn" id="supplierWorkerCheck">Проверить связь</button><button type="button" class="btn btn-primary" id="supplierWorkerLinks">Скопировать три ссылки</button></div>
- <div id="supplierWorkerStatus" class="ops-smallnote" role="status" aria-live="polite">Автоматическая передача не настроена.</div>
+  <div id="supplierWorkerStatus" class="ops-smallnote" role="status" aria-live="polite">Автоматическая передача не настроена.</div>
+  <div style="margin-top:12px;padding-top:12px;border-top:1px solid #dde8f5">
+   <strong style="font-size:13px">🔐 Персональные коды поставщиков</strong>
+   <p class="ops-smallnote">Создай три случайных кода и вставь весь JSON в секрет Cloudflare <code>SUPPLIER_CODES</code>. Коды не сохраняются на этом сайте: сохрани их в менеджере паролей, затем передай каждому поставщику только его код.</p>
+   <div class="gh-actions" style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn" id="supplierCreateCodes">Создать три кода</button><button type="button" class="btn btn-primary" id="supplierCopyCodes" disabled>Скопировать JSON для Cloudflare</button></div>
+   <div id="supplierCodesDetails" hidden>
+    <label class="gh-label">Код Анны<input class="gh-input" id="supplierCodeAnna" type="text" readonly autocomplete="off"></label>
+    <label class="gh-label">Код Алины<input class="gh-input" id="supplierCodeAlina" type="text" readonly autocomplete="off"></label>
+    <label class="gh-label">Код Анатолия<input class="gh-input" id="supplierCodeAnatoly" type="text" readonly autocomplete="off"></label>
+    <label class="gh-label">Готовый JSON для Cloudflare<textarea class="gh-input" id="supplierCodesJson" readonly rows="4" style="width:100%;min-height:100px;font:12px/1.5 monospace;overflow-wrap:anywhere"></textarea></label>
+    <p class="ops-smallnote">Не публикуй эти коды. Если нажмёшь «Создать» ещё раз, прежние коды перестанут подходить после изменения секрета в Cloudflare.</p>
+   </div>
+  </div>
  </div>
  <small>Если сервер запущен, каждая ссылка откроет форму с кнопкой «Отправить прямо в LANDA». Для записи нужен личный код поставщика. Коды, GitHub-токены и финансовую базу поставщикам не передавать.</small>
  </div>
@@ -1181,7 +1193,11 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  try{$('supplierWorkerUrl').value=localStorage.getItem(storageKey)||''}catch(_){}
  links();$('supplierWorkerUrl').addEventListener('input',links);
  $('supplierWorkerSave').addEventListener('click',()=>{const v=worker();if(!v){status('Укажи HTTPS-адрес Cloudflare Worker с доменом .workers.dev.');return}try{localStorage.setItem(storageKey,v+'/')}catch(_){}$('supplierWorkerUrl').value=v+'/';links();status('Адрес сохранён. Проверь сервер. Каждому поставщику нужен индивидуальный секретный код.')});
- $('supplierWorkerCheck').addEventListener('click',async()=>{const v=worker();if(!v){status('Сначала укажи адрес сервера.');return}status('Проверяем соединение…');try{const r=await fetch(v+'/health',{cache:'no-store'}),d=await r.json();if(!r.ok||d.app!=='LANDA-supplier-bridge')throw Error('нет подтверждения от сервера LANDA');status(d.github?'✓ Сервер работает, доступ к GitHub настроен. Можно отправлять накладные.':'Сервер работает, но токен GitHub ещё не настроен.')}catch(e){status('Не удалось соединиться с сервером: '+e.message)}});
+ $('supplierWorkerCheck').addEventListener('click',async()=>{const v=worker();if(!v){status('Сначала укажи адрес сервера.');return}status('Проверяем соединение…');try{const r=await fetch(v+'/health',{cache:'no-store'}),d=await r.json();if(!r.ok||d.app!=='LANDA-supplier-bridge')throw Error('нет подтверждения от сервера LANDA');status(d.github?'✓ Сервер отвечает, GitHub-токен задан. Доступ к базе подтвердится при первой отправке.':'Сервер отвечает, но GitHub-токен ещё не задан.')}catch(e){status('Не удалось соединиться с сервером: '+e.message)}});
+ let generatedCodes=null;
+ function newCode(){if(!globalThis.crypto||!crypto.getRandomValues)throw Error('Защищённая генерация кодов недоступна в этом браузере.');const bytes=crypto.getRandomValues(new Uint8Array(32));return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('')}
+ $('supplierCreateCodes').addEventListener('click',()=>{try{generatedCodes={anna:newCode(),alina:newCode(),anatoly:newCode()};$('supplierCodeAnna').value=generatedCodes.anna;$('supplierCodeAlina').value=generatedCodes.alina;$('supplierCodeAnatoly').value=generatedCodes.anatoly;$('supplierCodesJson').value=JSON.stringify(generatedCodes,null,2);$('supplierCodesDetails').hidden=false;$('supplierCopyCodes').disabled=false;status('✓ Коды созданы только в твоём браузере. Сохрани их и добавь JSON в Cloudflare → SUPPLIER_CODES.')}catch(e){status('Ошибка создания кодов: '+e.message)}});
+ $('supplierCopyCodes').addEventListener('click',async()=>{if(!generatedCodes)return;try{await navigator.clipboard.writeText(JSON.stringify(generatedCodes));status('✓ JSON кодов скопирован. Вставь его в секрет Cloudflare SUPPLIER_CODES; не отправляй никому весь JSON.')}catch(e){status('Не удалось скопировать. Нажми на поле JSON выше и выбери «Копировать».')}});
  $('supplierWorkerLinks').addEventListener('click',async()=>{
   links();const msg=[['Анна','supplierLinkAnna'],['Алина','supplierLinkAlina'],['Анатолий','supplierLinkAnatoly']].map(([n,id])=>n+': '+$(id).href).join('\n');
   try{await navigator.clipboard.writeText(msg);status('Три ссылки скопированы. Коды доступа передай каждому поставщику отдельно.')}
