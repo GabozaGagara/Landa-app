@@ -46,7 +46,7 @@ async function createBackup(manual){
  inFlight=true;let db=null;
  try{
   const snapshot=capture();
-  if(!manual&&!snapshot.proschet.rows.length&&!snapshot.operations.invoices.length)return;
+  if(!manual&&!snapshot.proschet.rows.length&&!snapshot.operations.invoices.length&&!snapshot.operations.payments.length&&!snapshot.operations.cash.length)return;
   const data=JSON.stringify(snapshot);
   let h=2166136261;for(let i=0;i<data.length;i++)h=Math.imul(h^data.charCodeAt(i),16777619);
   const signature=data.length+'-'+(h>>>0).toString(16);
@@ -94,5 +94,17 @@ $('lcMakeBackup').addEventListener('click',async()=>{await createBackup(true);aw
 $('lcListBackups').addEventListener('click',listBackups);
 $('lcBackups').addEventListener('click',e=>{const b=e.target.closest('[data-lc-download-version]');if(b)downloadVersion(b.dataset.lcDownloadVersion)});
 window.addEventListener('landa:data-changed',()=>{clearTimeout(timer);timer=setTimeout(()=>createBackup(false),3000)});
-status('Автоматические локальные версии создаются при изменениях, не чаще одного раза за 2 минуты. GitHub остаётся основным облачным хранилищем.');
+async function ensureInitialBackup(){
+ let db;
+ try{
+  db=await openDatabase();
+  if(!(await readAll(db)).length){
+   db.close();db=null;
+   await createBackup(false);
+  }
+ }catch(e){status('Локальная резервная версия недоступна: '+e.message+'. Скачайте полную JSON-копию.')}
+ finally{if(db)db.close()}
+}
+status('Резервные версии хранятся в этом браузере. Первая создаётся при запуске, следующие — после изменений. Для защиты от потери устройства сохраняйте JSON-копию отдельно.');
+ensureInitialBackup();
 })();
