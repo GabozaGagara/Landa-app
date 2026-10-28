@@ -1,0 +1,29 @@
+name: LANDA safety checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-and-finance:
+    name: Syntax, supplier privacy and accounting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify Cloudflare Worker and site JavaScript
+        run: |
+          node --check cloudflare/worker.mjs
+          node --check cloudflare/supplier-view.mjs
+          node --check js/landa-control-center.js
+          node --check js/landa-local-backups.js
+      - name: Run regression tests
+        run: node tests/validate-source.mjs
