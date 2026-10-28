@@ -1046,7 +1046,7 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  <div class="gh-actions"><button class="btn btn-primary" type="button" id="ghLoadNow">⬇ Загрузить финансовые данные из GitHub</button></div>
  <div class="gh-note">Подключение GitHub не всегда означает, что облачная база уже открыта. Если просчёт пустой, нажми «Загрузить финансовые данные из GitHub». Программа покажет количество строк и периодов до замены локальных данных; облачная копия останется неизменной.</div>
  <div class="gh-message" id="ghMessage" role="status" aria-live="polite">GitHub не подключён.</div>
- <div id="ghConflict"><strong style="font-size:13px">Локальные и облачные данные различаются</strong><p id="ghConflictText">Для защиты учёта автоматическая замена отключена. Выбери нужную версию.</p><div class="gh-actions"><button type="button" class="btn" id="ghLoad">Загрузить с GitHub</button><button type="button" class="btn" id="ghForceUpload">Заменить данные GitHub текущими</button></div></div>
+ <div id="ghConflict"><strong style="font-size:13px">Локальные и облачные данные различаются</strong><p id="ghConflictText">Для защиты учёта автоматическая замена отключена. Выбери нужную версию.</p><div class="gh-actions"><button type="button" class="btn" id="ghLoad">Загрузить с GitHub</button><button type="button" class="btn btn-primary" id="ghMergeInvoices" title="Только когда прочие финансовые данные совпадают">Объединить новые накладные</button><button type="button" class="btn" id="ghForceUpload">Заменить данные GitHub текущими</button></div></div>
  <div class="gh-actions"><button class="btn" type="button" id="ghDownloadLocal">⇩ Скачать локальную JSON-копию</button><button class="btn" type="button" id="ghDisconnect">Отключить GitHub</button></div>
  <div class="gh-warning"><b>Безопасность:</b> используй только приватный репозиторий. Данные в нём хранятся обычным JSON, без шифрования. Токен не входит в резервные копии и не записывается внутрь HTML. Не отправляй токен в чат. Для постоянной работы после закрытия браузера потребуется включить «Запомнить токен».</div>
  <div class="gh-note"><b>Если видишь ошибку 404:</b> название репозитория может быть правильным, но сохранённый токен не имеет к нему доступа. Проверка LANDA покажет, действителен ли токен. Токен вводится только сюда и никогда не публикуется в репозитории.</div>
@@ -1199,6 +1199,49 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
    if(!confirm(prompt)){msg('Облачная база найдена, загрузка отменена. Локальные данные не менялись.');return}
    ready=false;clearTimeout(timer);queued=false;remote=found;restoreRemote(found,false);
  }
+ // Strict add-only merge. Never merge changed balances, payments, prices, statuses or historical estimates.
+ async function safeMergeNewInvoices(){
+   storeForm();await checkRepoPrivate();
+   const original=getSnapshot(),originalHash=fingerprint(original);
+   const found=await getCloud();
+   if(!found)throw Error('В GitHub нет облачной копии');
+   const local=original.operations,cloud=found.data.operations;
+   if(JSON.stringify(original.proschet)!==JSON.stringify(found.data.proschet))
+     throw Error('Просчёт отличается — автоматическое объединение запрещено. Скачай обе версии и сверь вручную.');
+   const other=o=>{const x=JSON.parse(JSON.stringify(o));delete x.invoices;delete x.auditTrail;delete x.nextSeq;return x};
+   if(JSON.stringify(other(local))!==JSON.stringify(other(cloud)))
+     throw Error('Изменились платежи, касса, продажи или другие данные. Объединять только накладные небезопасно.');
+   const localById=new Map(local.invoices.map(i=>[i.id,i]));
+   const remoteById=new Map(cloud.invoices.map(i=>[i.id,i]));
+   for(const [id,item] of localById)if(remoteById.has(id)&&JSON.stringify(item)!==JSON.stringify(remoteById.get(id)))
+     throw Error('Накладная '+String(item.number||id)+' изменена в разных версиях. Необходимо проверить её вручную.');
+   const additions=cloud.invoices.filter(i=>!localById.has(i.id));
+   const localOnly=local.invoices.filter(i=>!remoteById.has(i.id));
+   const key=i=>String(i.tracking||i.number||'').replace(/\s/g,'').toLowerCase();
+   const all=[...local.invoices,...additions];
+   const keys=new Set();
+   for(const i of all){const k=key(i);if(k&&keys.has(k))throw Error('Найден повтор номера '+k+'. Автоматическое объединение отменено.');if(k)keys.add(k)}
+   if(!additions.length&&!localOnly.length)throw Error('Новых накладных для объединения нет. Используй «Проверить облако».');
+   if(fingerprint(getSnapshot())!==originalHash)throw Error('Локальные записи изменились во время проверки. Повтори действие.');
+   const message='Объединить записи без замены кассы и просчёта?\nИз GitHub добавится: '+additions.length+' накладных.\nЛокальных новых: '+localOnly.length+'.\nСуществующие накладные не меняются.\nПеред действием будет скачана полная локальная JSON-копия.';
+   if(!confirm(message))return;
+   if(fingerprint(getSnapshot())!==originalHash)throw Error('Локальные данные изменились. Повтори проверку.');
+   // Download before mutation; never auto-replace a financial record.
+   downloadBackup();
+   const oldOps=ops;
+   const seen=new Set(),trail=[];
+   for(const e of [...(cloud.auditTrail||[]),...(local.auditTrail||[])]){const id=String(e.id||'');if(!id||seen.has(id))continue;seen.add(id);trail.push(e)}
+   const merged={...local,invoices:[...local.invoices,...additions],nextSeq:Math.max(Number(local.nextSeq)||0,Number(cloud.nextSeq)||0),auditTrail:trail.sort((a,b)=>String(a.at||'').localeCompare(String(b.at||''))).slice(-900)};
+   if(!isOps(merged))throw Error('Объединённые данные не прошли проверку формата.');
+   ops=merged;
+   if(!saveOps()){ops=oldOps;throw Error('Браузер не сохранил объединённые данные. GitHub не изменён.')}
+   renderOps();
+   const updatedHash=fingerprint(getSnapshot());
+   setMeta(found.sha,updatedHash);remote=found;ready=true;clearConflict();
+   msg('✓ Объединено '+additions.length+' новых облачных накладных. Локальных новых: '+localOnly.length+'. Сохраняем итоговую версию в GitHub.','ok');
+   if(conf.auto)queueUpload();else msg('✓ Накладные объединены локально. Включи автосохранение или нажми «Сохранить на GitHub», чтобы записать объединённую версию.','ok');
+ }
+ action('ghMergeInvoices',safeMergeNewInvoices);
  action('ghLoadNow',userLoadCloud);
  action('ghLoad',userLoadCloud);
  action('ghForceUpload',async()=>{storeForm();const existing=await getCloud();if(existing&&isEmptyInstallation()&&existing.data.proschet.rows.length>0)throw Error('Нельзя перезаписать непустую облачную базу пустым просчётом. Сначала загрузи данные из GitHub.');if(!confirm('Перезаписать облачный файл данными ЭТОГО устройства? Облачная версия сохранится только в истории GitHub.'))return;await upload(true)});
