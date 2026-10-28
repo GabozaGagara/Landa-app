@@ -214,11 +214,24 @@ function renderSales(){
  return '<div class="lc-row"><div><b>'+esc(x.item)+' · '+esc(x.channel)+'</b><p>'+esc(x.date)+' · '+esc(x.qty)+' шт. · выручка '+esc(rub(p.gross))+'</p></div><div><b>'+esc(rub(p.net))+'</b> <button type="button" class="lc-btn" data-lc-delete-sale="'+esc(x.id)+'">Удалить</button></div></div>'
  }).join('')||'<p class="lc-muted">Продажи пока не внесены. Данные не меняют денежную кассу.</p>';
 }
+function quantityAvailable(source){
+ const pos=String(source||'').lastIndexOf(':');
+ if(pos<0)return null;
+ let invoiceId;
+ try{invoiceId=decodeURIComponent(source.slice(0,pos))}catch(_){return null}
+ const itemIndex=Number(source.slice(pos+1)),invoice=ops.invoices.find(i=>i.id===invoiceId);
+ if(!invoice||!Number.isSafeInteger(itemIndex)||itemIndex<0)return null;
+ const row=invoice.items?.[itemIndex];if(!row)return null;
+ const received=Number(row.qty)||0;
+ const sold=(ops.sales||[]).filter(s=>s.source===source).reduce((sum,s)=>sum+(Number(s.qty)||0),0);
+ return {received,sold,remaining:Math.max(0,Math.round((received-sold)*10000)/10000)};
+}
 function updateSaleSources(){
- const f=$('lcSaleForm'),sel=$('lcSaleSource'),old=sel.value;
+ const sel=$('lcSaleSource'),old=sel.value;
  const sources=[['','Ввести вручную']];
  for(const i of ops.invoices.filter(i=>!i.isOpening))for(let n=0;n<(i.items||[]).length;n++){
-  const row=i.items[n];sources.push([encodeURIComponent(i.id)+':'+n,(i.number||i.tracking)+' · '+row.name]);
+  const row=i.items[n],source=encodeURIComponent(i.id)+':'+n,stock=quantityAvailable(source);
+  sources.push([source,(i.number||i.tracking)+' · '+row.name+' · остаток '+(stock?.remaining??'?')+' шт.']);
  }
  sel.innerHTML=sources.map(([id,title])=>'<option value="'+esc(id)+'">'+esc(title)+'</option>').join('');
  if(sources.some(x=>x[0]===old))sel.value=old;
@@ -229,11 +242,16 @@ function saveSale(e){
  const qty=Number(x.qty),costUsd=Number(x.costUsd),rate=Number(x.rate),saleRub=Number(x.saleRub),feesRub=Number(x.feesRub),deliveryRub=Number(x.deliveryRub);
  if(!x.date||!x.item.trim()||![qty,costUsd,rate,saleRub,feesRub,deliveryRub].every(Number.isFinite)||qty<=0||rate<=0||[costUsd,saleRub,feesRub,deliveryRub].some(n=>n<0))return alert('Проверь дату, товар, курс и суммы продажи.');
  if(qty>100000||[costUsd,rate,saleRub,feesRub,deliveryRub].some(n=>n>1e8))return alert('Слишком большая сумма продажи.');
+ if(x.source){
+  const stock=quantityAvailable(x.source);
+  if(!stock)return alert('Исходная накладная или товарная строка больше не найдена. Выбери действующую позицию.');
+  if(qty>stock.remaining+0.000001)return alert('Нельзя продать '+qty+' шт.: в выбранной накладной осталось '+stock.remaining+' шт. Уменьши количество или выбери другую позицию.');
+ }
  const record={id:'sale-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8),date:x.date,item:x.item.trim().slice(0,180),channel:x.channel,source:x.source||'',qty,costUsd,rate,saleRub,feesRub,deliveryRub};
  if(!Array.isArray(ops.sales))ops.sales=[];
  ops.sales.push(record);
  if(!saveOps()){ops.sales.pop();return alert('Не удалось сохранить продажу. Проверь доступность браузерного хранилища.')}
- f.reset();f.elements.namedItem('date').value=today();renderSales();
+ f.reset();f.elements.namedItem('date').value=today();updateSaleSources();renderSales();
 }
 function render(){
  const choice=$('lcStatementSupplier').value;
