@@ -95,15 +95,18 @@ function diffOps(before,after){
   for(const [id,o] of pre)if(!post.has(id))events.push(auditRecord('removed',id,tag+' удалена'+(o.number?' №'+o.number:'')));
  }
  if(JSON.stringify(before.openings)!==JSON.stringify(after.openings))events.push(auditRecord('opening','accounts','Изменены начальные остатки счетов'));
+ if(before.openingUsdRate!==after.openingUsdRate)events.push(auditRecord('rate','accounts','Изменён курс долларового начального остатка'));
  return events.slice(0,120);
 }
 const savedOps=saveOps;
 saveOps=function(){
- const oldAudit=Array.isArray(ops.auditTrail)?ops.auditTrail:[];
+ const previousAudit=ops.auditTrail;
+ const oldAudit=Array.isArray(previousAudit)?previousAudit:[];
  const entries=diffOps(previousOps,ops);
  if(entries.length)ops.auditTrail=oldAudit.concat(entries).slice(-900);
  const ok=savedOps();
  if(ok)previousOps=JSON.parse(JSON.stringify(ops));
+ else if(entries.length)ops.auditTrail=previousAudit;
  return ok;
 };
 function getIssues(){
@@ -245,13 +248,16 @@ center.addEventListener('click',e=>{
   const i=ops.invoices.find(v=>v.id===approve.dataset.lcApprove);
   if(!i||!i.submittedAt||approval(i))return;
   if(!confirm('Ты проверил состав и стоимость накладной '+i.number+'? Подтвердить её для дальнейшего учёта?'))return;
+  const prior={reviewStatus:i.reviewStatus,reviewedAt:i.reviewedAt,reviewedBy:i.reviewedBy};
   i.reviewStatus='approved';i.reviewedAt=iso();i.reviewedBy='owner';
-  if(!saveOps())return alert('Не удалось сохранить подтверждение. Проверь журнал и синхронизацию.');
+  if(!saveOps()){Object.assign(i,prior);return alert('Не удалось сохранить подтверждение. Проверь журнал и синхронизацию.');}
   render();renderOps();return;
  }
  const del=e.target.closest('[data-lc-delete-sale]');
  if(del){if(!confirm('Удалить запись продажи из аналитики? В кассе ничего не изменится.'))return;
-  ops.sales=(ops.sales||[]).filter(s=>s.id!==del.dataset.lcDeleteSale);if(!saveOps())return alert('Запись не сохранена.');
+  const oldSales=ops.sales||[];
+  ops.sales=oldSales.filter(s=>s.id!==del.dataset.lcDeleteSale);
+  if(!saveOps()){ops.sales=oldSales;return alert('Запись не сохранена.');}
   render();return;
  }
 });
