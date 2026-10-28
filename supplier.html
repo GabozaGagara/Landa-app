@@ -147,10 +147,27 @@ function showOverview(data){
  try{
   const resp=await fetch(workerURL+'/supplier-overview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({supplierId,code,page}),cache:'no-store'});
   const data=await resp.json().catch(()=>({}));
-  if(!resp.ok)throw Error(resp.status===404?'Сервер LANDA ещё не обновлён: раздел просмотра накладных пока недоступен.':(data.error||'HTTP '+resp.status));
+  if(!resp.ok){
+   if(resp.status===403&&data.error==='Неверный код доступа поставщика'){
+    const err=new Error('Сохранённый код не совпадает с текущим кодом доступа. Введите действующий код поставщика в форме ниже и нажмите «Обновить мои накладные» снова.');
+    err.invalidSupplierCode=true;
+    throw err;
+   }
+   throw Error(resp.status===404?'Сервер LANDA ещё не обновлён: раздел просмотра накладных пока недоступен.':(data.error||'HTTP '+resp.status));
+  }
   if(supplierId!==currentSupplier())return; // The supplier may have been changed during loading.
   overviewPage=page;showOverview(data);
- }catch(e){if(supplierId===currentSupplier())$('supplierOverviewStatus').textContent='Не удалось загрузить данные: '+e.message}
+  rememberCodeAfterAccepted(supplierId,code);
+ }catch(e){
+  if(supplierId===currentSupplier()){
+   if(e.invalidSupplierCode){
+    forgetCode(supplierId,true);
+    $('rememberSupplierCode').checked=true;
+    $('codeInfo').textContent='Введите новый действующий код доступа. После успешного просмотра он будет сохранён автоматически.';
+   }
+   $('supplierOverviewStatus').textContent='Не удалось загрузить данные: '+e.message;
+  }
+ }
  finally{$('supplierOverviewRefresh').disabled=false}
 }
 $('supplierOverviewRefresh').onclick=()=>loadSupplierOverview(1);
