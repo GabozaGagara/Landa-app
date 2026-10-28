@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-const src=readFileSync(new URL('../js/landa-control-center.js',import.meta.url),'utf8');
+const src=readFileSync('js/landa-control-center.js','utf8');
 function mock(){
  const els={};
  class Element{
