@@ -125,7 +125,7 @@ function showOverview(data){
  $('supplierOverviewBody').innerHTML=invoices.length?invoices.map(i=>{
    const items=(i.items||[]).map(t=>`<div>${escapeView(t.name)}${t.sku?' · '+escapeView(t.sku):''} — ${escapeView(t.qty)} × ${escapeView(overviewMoney(t.price))}</div>`).join('');
    return `<article class="overview-invoice"><div class="overview-head"><strong>${escapeView(i.number||i.tracking)}</strong><span class="overview-pill">${escapeView(i.statusLabel)}</span></div>
-     <p class="small">${escapeView(i.date)} · СДЭК: ${escapeView(i.tracking||'не указан')} · ${i.trackingVerified?'Статус подтверждён':'Статус в LANDA; не онлайн-проверка СДЭК'}</p>
+     <p class="small">${escapeView(i.date)} · СДЭК: ${escapeView(i.tracking||'не указан')} · ${i.trackingVerified?'Статус подтверждён':'Статус в LANDA; не онлайн-проверка СДЭК'}${i.statusCheckedAt?' · обновлено '+escapeView(i.statusCheckedAt.slice(0,10)):''}</p><p class="small">${i.reviewStatus==='approved'?'✓ Проверена владельцем LANDA':'⏳ Ожидает проверки владельцем LANDA'}</p>
      <div>Товары: <b>${escapeView(overviewMoney(i.goodsCost))}</b> · Доставка: <b>${escapeView(overviewMoney(i.deliveryCost))}</b></div>
      <div class="small">${i.accrued?'Начислено: '+escapeView(overviewMoney(i.total))+' · Зачтено: '+escapeView(overviewMoney(i.allocated))+' · Осталось: '+escapeView(overviewMoney(i.due)):'Долг ещё не начислен'}</div>
      <details><summary>Состав (${(i.items||[]).length})</summary><div class="overview-items">${items||'Состав не указан'}</div></details>
