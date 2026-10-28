@@ -30,7 +30,7 @@ export function supplierOverview(backup,supplierId,page=1){
    const status=i.status==='received'?'delivered':(CDEK_STATUS[i.status]?i.status:'created');
    return {
     number:String(i.number||'').slice(0,100),tracking:String(i.tracking||'').slice(0,100),date:String(i.date||'').slice(0,20),
-    status,statusLabel:CDEK_STATUS[status],trackingVerified:i.trackingVerified===true,accrued:charge,
+    status,statusLabel:CDEK_STATUS[status],trackingVerified:i.trackingVerified===true,accrued:charge,reviewStatus:i.submittedAt?(i.reviewStatus==='approved'?'approved':'pending'):'approved',statusCheckedAt:String(i.statusCheckedAt||''),statusSource:String(i.statusSource||''),
     items:(Array.isArray(i.items)?i.items:[]).slice(0,100).map(x=>({name:String(x.name||'').slice(0,180),qty:Number(x.qty)||0,price:Number(x.price)||0,sku:String(x.sku||'').slice(0,100)})),
     goodsCost:Number.isFinite(i.goodsCost)?i.goodsCost:(Number(i.total)||0),deliveryCost:Number(i.deliveryCost)||0,includeDelivery:!!i.includeDelivery,
     total:Number(i.total)||0,allocated:money(paid),due:charge?money(Math.max(0,cents(i.total)-paid)):0
