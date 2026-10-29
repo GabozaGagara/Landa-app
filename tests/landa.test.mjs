@@ -490,3 +490,32 @@ test('owner dashboard in-transit totals separate old billing from shipment value
  assert.equal(v.legacyDelivery,2);
  assert.equal(JSON.stringify(data),before);
 });
+
+test('multi-device automatic refresh is read-first, throttled, and never interrupts editing',()=>{
+ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ const source=html.match(/function autoCheckCloud\(\)\{[\s\S]*?\n \}/)?.[0];
+ assert.ok(source,'Automatic cloud polling helper must be present');
+ assert.match(html,/window\.setInterval\(autoCheckCloud,90000\)/);
+ assert.match(html,/window\.addEventListener\('focus',autoCheckCloud\)/);
+ assert.match(html,/document\.addEventListener\('visibilitychange'/);
+ assert.match(source,/if\(!conf\.auto\|\|!configReady\(\)\|\|busy\|\|inFlight\|\|document\.hidden\)return/);
+ assert.match(source,/document\.querySelector\('dialog\[open\]'\)/);
+ assert.match(source,/editing\.matches\('input,textarea,select,\[contenteditable="true"\]'\)/);
+ const make=(environment)=>{
+  const vars=['conf','configReady','busy','inFlight','document','Date','checkRemote','lastAutoCheck'];
+  return new Function(...vars,source+'\nreturn autoCheckCloud;')(...vars.map(key=>environment[key]));
+ };
+ let checks=0;
+ const environment={
+  conf:{auto:true},configReady:()=>true,busy:false,inFlight:false,
+  document:{hidden:false,querySelector:()=>null,activeElement:null},
+  Date:{now:()=>100000},checkRemote:()=>{checks++},lastAutoCheck:0
+ };
+ make(environment)();
+ assert.equal(checks,1,'Idle synchronized tab should check cloud');
+ make({...environment,document:{...environment.document,querySelector:()=>({open:true})}})();
+ make({...environment,document:{...environment.document,activeElement:{matches:()=>true}}})();
+ make({...environment,conf:{auto:false}})();
+ make({...environment,inFlight:true})();
+ assert.equal(checks,1,'Busy, editing or disconnected tabs must not check cloud');
+});
