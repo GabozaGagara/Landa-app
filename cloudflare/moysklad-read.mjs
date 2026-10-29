@@ -43,7 +43,14 @@ async function msGet(path,env){
   if(res.status===401)fail('API МойСклад: HTTP 401 — токен недействителен или отозван.',502);
   if(res.status===403)fail('API МойСклад: HTTP 403 — недостаточно прав или доступ ограничен.',502);
   if(res.status===429)fail('API МойСклад: HTTP 429 — превышен лимит запросов. Повторите позднее.',503);
-  fail('API МойСклад вернул HTTP '+res.status,502);
+  // The upstream JSON API returns numeric error codes; return only numeric IDs, never raw error text.
+  let apiCodes=[];
+  try{
+   const body=await res.json();
+   apiCodes=(Array.isArray(body?.errors)?body.errors:[])
+    .slice(0,3).map(e=>Number(e?.code)).filter(n=>Number.isSafeInteger(n)&&n>0&&n<10000000);
+  }catch(_){}
+  fail('API МойСклад вернул HTTP '+res.status+(apiCodes.length?' · код ошибки МойСклад: '+apiCodes.join(', '):' · код причины API не предоставил')+'. Проверьте код по документации API.',502);
  }
  try{return await res.json()}catch(_){fail('МойСклад вернул некорректный JSON')}
 }
