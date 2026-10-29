@@ -145,6 +145,8 @@ test('public HTML and JavaScript remain parseable and include control modules',(
  assert.match(html,/js\/landa-receiving-ui\.mjs/);
  assert.match(html,/js\/landa-moysklad-ui\.mjs/);
  assert.match(portal,/id="nextInvoice"[^>]*>＋ Следующая накладная/);
+ assert.match(portal,/Итого известных сумм/);
+ assert.match(portal,/включая указанную доставку/);
  assert.ok(portal.indexOf('id="nextInvoice"')>portal.indexOf('id="shareHelp"'),'Next invoice button must appear after sending instructions');
  assert.ok(portal.indexOf('id="nextInvoice"')<portal.indexOf('</form><footer>'),'Next invoice button must remain inside the form');
  assert.doesNotMatch(portal,/id="newInvoiceFromList"/);
