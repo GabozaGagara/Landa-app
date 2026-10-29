@@ -1,6 +1,6 @@
 // LANDA: supplier-only API. Deployed to Cloudflare Worker, NEVER as GitHub Pages JS.
 import {supplierOverview} from './supplier-view.mjs';
-import {loadSupplies,validateRange} from './moysklad-read.mjs';
+import {loadSupplies,validateRange,checkConnection} from './moysklad-read.mjs';
 // Required secrets: GH_TOKEN (fine-grained PAT to private repo contents only),
 // SUPPLIER_CODES (JSON of three 24+ character random passwords for each supplier).
 const REPO='GabozaGagara/Landa-financenot',PATH='landa-data/backup.json',ORIGIN='https://gabozagagara.github.io';
@@ -110,6 +110,14 @@ export default {async fetch(request,env){
  try{
   const u=new URL(request.url);
   if(u.pathname==='/health'&&request.method==='GET')return response({app:'LANDA-supplier-bridge',github:!!env.GH_TOKEN},200,origin);
+  if(u.pathname==='/admin/moysklad-check'&&request.method==='POST'){
+   if(origin!==ORIGIN)fail('Недопустимый источник',403);
+   if((request.headers.get('Content-Type')||'').split(';')[0]!=='application/json')fail('Ожидается application/json');
+   const raw=await request.text();if(te.encode(raw).length>1500)fail('Слишком большой запрос',413);
+   let data;try{data=JSON.parse(raw)}catch{fail('Неверный JSON')}
+   validateMoyskladAdmin(data?.adminKey,env);
+   return response(await checkConnection(env),200,origin);
+  }
   if(u.pathname==='/admin/moysklad-supplies'&&request.method==='POST'){
    if(origin!==ORIGIN)fail('Недопустимый источник',403);
    if((request.headers.get('Content-Type')||'').split(';')[0]!=='application/json')fail('Ожидается application/json');
