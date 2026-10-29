@@ -1075,14 +1075,14 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  <div class="modal-hd" id="ghTitle">☁ Синхронизация с GitHub <button type="button" class="btn" id="ghClose" style="float:right" aria-label="Закрыть">✕</button></div>
  <div class="gh-body">
  <div class="gh-warning"><b>iPhone:</b> для синхронизации открой сайт LANDA по HTTPS в Safari. Встроенный просмотрщик HTML (в ChatGPT, «Файлах» и мессенджерах) может блокировать запросы GitHub и показывать «Load failed».</div>
- <div class="gh-note">После подключения LANDA будет <strong>хранить данные и локально, и в приватном репозитории GitHub</strong>. При каждом новом запуске проверяется облачная версия. После изменения программы запись отправляется автоматически с небольшой задержкой. Нужен интернет.</div>
+ <div class="gh-note">После подключения LANDA <strong>хранит данные локально и в приватном GitHub</strong>. На запуске, после возвращения к вкладке и примерно каждые 90 секунд активной работы проверяет облачные изменения. Сохраняет свои изменения с небольшой задержкой. Если две версии изменены независимо, синхронизация остановится до ручного разрешения конфликта. Нужен интернет.</div>
  <div class="gh-grid">
   <label class="gh-label">Репозиторий GitHub (владелец/имя)<input class="gh-input" id="ghRepo" placeholder="GabozaGagara/Landa-financenot" autocapitalize="off" spellcheck="false" autocomplete="off"></label>
   <label class="gh-label">Путь резервной копии<input class="gh-input" id="ghPath" value="landa-data/backup.json" spellcheck="false" autocapitalize="off"></label>
  </div>
  <label class="gh-label">Fine-grained Personal Access Token (Contents: Read &amp; write только для этого репозитория)<input type="password" class="gh-input" id="ghToken" placeholder="github_pat_…" autocomplete="off" spellcheck="false"></label>
  <label style="display:flex;gap:9px;align-items:flex-start;font-size:12px"><input type="checkbox" id="ghRemember"> Запомнить токен в браузере на этом устройстве (удобно, но небезопасно на общем компьютере)</label>
- <label style="display:flex;gap:9px;align-items:flex-start;font-size:12px"><input type="checkbox" id="ghAuto" checked> Автоматически сохранять изменения в GitHub после подключения</label>
+ <label style="display:flex;gap:9px;align-items:flex-start;font-size:12px"><input type="checkbox" id="ghAuto" checked> Автоматическая синхронизация: сохранять изменения и получать обновления с других устройств</label>
  <div class="gh-actions"><button class="btn btn-primary" type="button" id="ghConnect">Подключить и проверить</button><button class="btn" type="button" id="ghUpload">Сохранить на GitHub</button><button class="btn" type="button" id="ghRefresh">Проверить облако</button></div>
  <div class="gh-actions"><button class="btn btn-primary" type="button" id="ghLoadNow">⬇ Загрузить финансовые данные из GitHub</button></div>
  <div class="gh-note">Подключение GitHub не всегда означает, что облачная база уже открыта. Если просчёт пустой, нажми «Загрузить финансовые данные из GitHub». Программа покажет количество строк и периодов до замены локальных данных; облачная копия останется неизменной.</div>
@@ -1103,7 +1103,21 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  const el=id=>document.getElementById(id);
  let conf={repo:'GabozaGagara/Landa-financenot',path:'landa-data/backup.json',remember:false,auto:true};
  let meta={repo:'',path:'',sha:null,hash:null}, token='', remote=null, ready=false, busy=false, queued=false, timer=0, inFlight=false;
- let paused=false;
+ // Cloud polling is read-first and never overwrites diverged financial versions.
+ let lastAutoCheck=Date.now();
+ function autoCheckCloud(){
+  if(!conf.auto||!configReady()||busy||inFlight||document.hidden)return;
+  // Never reload the page while a person is filling in a form or dialog.
+  if(document.querySelector('dialog[open]'))return;
+  const editing=document.activeElement;
+  if(editing&&editing.matches&&editing.matches('input,textarea,select,[contenteditable="true"]'))return;
+  if(Date.now()-lastAutoCheck<60000)return;
+  lastAutoCheck=Date.now();
+  void checkRemote(true);
+ }
+ window.setInterval(autoCheckCloud,90000);
+ window.addEventListener('focus',autoCheckCloud);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoCheckCloud()});
  function readStore(storage,key){try{return storage.getItem(key)}catch(_){return null}}
  function writeStore(storage,key,value){try{storage.setItem(key,value);return true}catch(_){return false}}
  function delStore(storage,key){try{storage.removeItem(key)}catch(_){}}
@@ -1290,7 +1304,7 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  action('ghDisconnect',()=>{if(!confirm('Отключить синхронизацию GitHub на этом устройстве? Локальные финансовые данные останутся.'))return;clearTimeout(timer);ready=false;remote=null;token='';delStore(localStorage,CONFKEY);delStore(localStorage,METAKEY);delStore(localStorage,LOCAL_TOKEN);delStore(sessionStorage,LOCAL_TOKEN);conf={repo:'',path:'landa-data/backup.json',remember:false,auto:true};meta={repo:'',path:'',sha:null,hash:null};el('ghToken').value='';el('ghRepo').value='';el('ghPath').value=conf.path;clearConflict();msg('☁ GitHub отключён. Локальные данные сохранены.')});
  window.addEventListener('landa:data-changed',()=>{if(ready){msg('● Локально сохранено · ожидает GitHub');queueUpload()}else if(conf.repo){msg('● Локальные изменения. GitHub сейчас не синхронизирован.') }});
  try{const v=JSON.parse(readStore(localStorage,CONFKEY)||'null');if(v&&v.repo){conf=Object.assign(conf,v);meta=JSON.parse(readStore(localStorage,METAKEY)||'null')||meta;token=readStore(conf.remember?localStorage:sessionStorage,LOCAL_TOKEN)||'';if(meta.repo!==conf.repo||meta.path!==conf.path)meta={repo:conf.repo,path:conf.path,sha:null,hash:null}}}catch(e){}
- if(conf.repo){msg(token?'☁ GitHub: проверяем облачную копию…':'☁ GitHub настроен, нужен токен');if(token)checkRemote(true)}else msg('☁ GitHub не настроен');
+ if(conf.repo){msg(token?'☁ GitHub: проверяем облачную копию…':'☁ GitHub настроен, нужен токен');if(token){lastAutoCheck=Date.now();checkRemote(true)}}else msg('☁ GitHub не настроен');
 })();
 
 </script>
