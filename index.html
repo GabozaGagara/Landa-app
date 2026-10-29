@@ -579,7 +579,14 @@ $('invoiceForm').addEventListener('submit',e=>{e.preventDefault();let f=e.curren
   if(v.items.length&&Math.abs(v.listed-v.goodsCost)>0.009&&!confirm('Сумма товара в накладной ('+cashFmt(v.goodsCost,'USD')+') отличается от суммы её позиций ('+cashFmt(v.listed,'USD')+'). Сохранить эту разницу намеренно?'))return;
  if(!number)throw Error('Укажите номер накладной');if(!ops.suppliers.some(s=>s.id===supplierId))throw Error('Не выбран поставщик');
  if(ops.invoices.some(i=>i.id!==editingInvoiceId&&!i.isOpening&&i.supplierId===supplierId&&i.number.trim().toLowerCase()===number.toLowerCase()))throw Error('У этого поставщика уже есть накладная с таким номером');
- if(existing){if(supplierId!==existing.supplierId&&invoicePaid(existing.id)>0)throw Error('Нельзя изменить поставщика после зачёта оплаты');if(moneyCents(v.total)<moneyCents(invoicePaid(existing.id)))throw Error('Новая сумма меньше уже зачтённых платежей');}
+ if(existing){
+  if(supplierId!==existing.supplierId&&invoicePaid(existing.id)>0)throw Error('Нельзя изменить поставщика после зачёта оплаты');
+  if(moneyCents(v.total)<moneyCents(invoicePaid(existing.id)))throw Error('Новая сумма меньше уже зачтённых платежей');
+  if(!existing.isOpening&&!existing.includeDelivery&&Number(existing.deliveryCost)>0&&moneyCents(v.total)!==moneyCents(existing.total)){
+   if(!confirm('Ранее доставка не входила в долг по этой накладной. После сохранения сумма изменится с '+
+    cashFmt(existing.total,'USD')+' на '+cashFmt(v.total,'USD')+' (включая доставку). Это изменит баланс поставщика, если долг уже начислен. Продолжить?'))return;
+  }
+ }
  const inv={id:existing?.id||opId('invoice'),seq:existing?.seq||nextSeq(),supplierId,date:f.elements.date.value,number,tracking:f.elements.tracking.value.trim(),moysklad:f.elements.moysklad.value.trim(),status:f.elements.status.value,items:v.items,total:v.total,goodsCost:v.goodsCost,deliveryCost:v.deliveryCost,deliveryMissing:!f.elements.deliveryCost.value.trim(),includeDelivery:true,sender:f.elements.sender.value.trim(),route:f.elements.route.value.trim(),note:f.elements.note.value.trim(),accrued:existing?invoiceAccrued(existing):false};
  if(existing)Object.assign(existing,inv);else ops.invoices.push(inv);
  let applied=inv.accrued&&f.elements.applyAdvance.checked?applyAdvance(inv.id):0;
