@@ -26,12 +26,24 @@ async function msGet(path,env){
  const url=new URL(path,API);
  if(url.origin!=='https://api.moysklad.ru'||!url.pathname.startsWith('/api/remap/1.2/'))fail('Недопустимый путь API',400);
  let res;
- try{res=await fetch(url.toString(),{method:'GET',headers:{Authorization:'Bearer '+token.trim(),Accept:'application/json'},redirect:'error'});}
- catch(_){fail('Нет соединения с API МойСклад');}
+ try{
+  res=await fetch(url.toString(),{
+   method:'GET',
+   headers:{Authorization:'Bearer '+token.trim(),Accept:'application/json','Accept-Encoding':'gzip'},
+   // Do not forward the secret to a different host when the API redirects.
+   redirect:'manual'
+  });
+ }catch(e){
+  // Never expose request headers, tokens, or arbitrary exception messages.
+  const kind=e?.name==='AbortError'?'TIMEOUT':'NETWORK';
+  fail('Нет соединения с api.moysklad.ru ('+kind+'). Проверьте доступ Cloudflare Worker к API и журналы Worker. Секреты повторно вводить не нужно.',503);
+ }
+ if(res.status>=300&&res.status<400)fail('API МойСклад вернул перенаправление (HTTP '+res.status+'). Проверьте адрес API и доступ Worker; токен не был перенаправлен.',502);
  if(!res.ok){
-  if(res.status===401||res.status===403)fail('МойСклад отклонил доступ. Проверьте токен и права чтения.',502);
-  if(res.status===429)fail('МойСклад ограничил количество запросов. Повторите позднее.',503);
-  fail('МойСклад вернул HTTP '+res.status);
+  if(res.status===401)fail('API МойСклад: HTTP 401 — токен недействителен или отозван.',502);
+  if(res.status===403)fail('API МойСклад: HTTP 403 — недостаточно прав или доступ ограничен.',502);
+  if(res.status===429)fail('API МойСклад: HTTP 429 — превышен лимит запросов. Повторите позднее.',503);
+  fail('API МойСклад вернул HTTP '+res.status,502);
  }
  try{return await res.json()}catch(_){fail('МойСклад вернул некорректный JSON')}
 }
