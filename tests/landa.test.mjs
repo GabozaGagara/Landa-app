@@ -462,6 +462,7 @@ test('owner dashboard in-transit totals separate old billing from shipment value
  assert.match(html,/includeDelivery:true,total:roundCents\(d\.goodsCost\+d\.deliveryCost\)/);
  assert.match(html,/Накладных в пути/);
  assert.match(html,/Включая доставку/);
+ assert.match(html,/Ранее доставка не входила в долг по этой накладной/);
  const shipment=html.match(/const shipmentTotalCents=i=>\{[\s\S]*?\n\};/)?.[0];
  const totals=html.match(/function supplierTotals\(id\)\{[\s\S]*?\n\}/)?.[0];
  assert.ok(shipment&&totals,'Pure financial computation helpers must exist');
