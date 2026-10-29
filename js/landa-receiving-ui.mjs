@@ -87,7 +87,7 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   const label=comparisonLabels[state]||state,cl=state==='matched'?'good':state==='difference'?'bad':'wait';
   const difference=comp.delta===null?'—':(comp.delta>0?'+':'')+qty(comp.delta);
   return '<div class="rc-item">'+
-   '<div><div class="rc-item-title">'+esc(row.name||'Без названия')+'</div><div class="rc-sub">'+(row.sku?'Артикул: '+esc(row.sku):'Без артикула')+'</div></div>'+
+   '<div><div class="rc-item-title">'+esc(row.name||'Без названия')+'</div><div class="rc-sub">'+(row.sku?'Артикул: '+esc(row.sku):'Без артикула')+' · '+(row.price>0?'Цена: '+esc(row.price)+' $/шт.':'Цена не указана')+'</div></div>'+
    '<div><div class="rc-label">По накладной</div><div class="rc-value">'+esc(qty(row.qty))+' шт.</div></div>'+
    '<div><div class="rc-label">Принято, шт.</div><input type="number" min="0" step="any" inputmode="decimal" aria-label="Фактически принято, '+esc(row.name)+'" data-rc-count="'+esc(row.key)+'" value="'+esc(v.received??'')+'" placeholder="Не сверено"></div>'+
    '<div><div class="rc-label">Разница</div><div class="rc-value">'+esc(difference)+'</div><div class="rc-state '+cl+'">'+esc(label)+'</div></div>'+
@@ -100,9 +100,11 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   const done=all.filter(r=>['matched','difference'].includes(compareCount(r,records[r.key]).state));
   const discrepancies=done.filter(r=>compareCount(r,records[r.key]).state==='difference');
   const shipments=new Set(all.map(r=>r.invoiceId));
+  const expectedQty=all.reduce((sum,r)=>sum+r.qty,0);
   $('rcSummary').innerHTML=[
    '<span>Накладных: <b>'+shipments.size+'</b></span>',
    '<span>Товарных строк: <b>'+all.length+'</b></span>',
+   '<span>Заявлено единиц: <b>'+qty(expectedQty)+'</b></span>',
    '<span>Проверено: <b>'+done.length+'</b></span>',
    '<span>Расхождений: <b>'+discrepancies.length+'</b></span>'
   ].join('');
