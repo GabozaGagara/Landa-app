@@ -184,6 +184,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
  }
  btn.addEventListener('click',open);
  $('msClose').addEventListener('click',()=>dialog.close());
+ dialog.addEventListener('close',()=>{$('msAdmin').value='';payload=null;chosenDocs.clear();});
  $('msLoad').addEventListener('click',load);$('msCompare').addEventListener('click',renderResult);
  $('msCSV').addEventListener('click',exportCSV);
  $('msSupplier').addEventListener('change',()=>{chosenInvoices.clear();renderInvoices();renderResult()});
