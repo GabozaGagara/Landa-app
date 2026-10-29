@@ -132,7 +132,7 @@ function showOverview(data){
    <div class="overview-tile"><small>Переведено поставщику</small><b>${escapeView(overviewMoney(b.paid))}</b></div>
    <div class="overview-tile"><small>Начислено к оплате</small><b>${escapeView(overviewMoney(b.accrued))}</b></div>
    <div class="overview-tile"><small>Не оплачено / свободный аванс</small><b>${escapeView(overviewMoney(b.open))} / ${escapeView(overviewMoney(b.advance))}</b></div>
- </div><p class="small">Не начислено: ${escapeView(String(b.pendingCount||0))} накладных на ${escapeView(overviewMoney(b.pendingAmount))}. До начисления они не влияют на баланс.</p>`;
+ </div><p class="small">Не начислено: ${escapeView(String(b.pendingCount||0))} накладных на ${escapeView(overviewMoney(b.pendingAmount))}. До начисления они не влияют на баланс.</p><p class="small"><strong>Накладных в пути: ${escapeView(String(b.transitCount||0))} на ${escapeView(overviewMoney(b.transitAmount))} (включая доставку).</strong>${b.transitMissingDelivery?' Для '+escapeView(String(b.transitMissingDelivery))+' накладных доставка пока не указана.':''}</p>`;
  const invoices=data.invoices||[];
  $('supplierOverviewBody').innerHTML=invoices.length?invoices.map(i=>{
    const items=(i.items||[]).map(t=>`<div>${escapeView(t.name)}${t.sku?' · '+escapeView(t.sku):''} — ${escapeView(t.qty)} × ${escapeView(overviewMoney(t.price))}</div>`).join('');
