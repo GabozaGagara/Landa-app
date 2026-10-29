@@ -44,8 +44,10 @@ jobs:
           node --check cloudflare/moysklad-read.mjs
           node --check js/landa-moysklad-match.mjs
           node --check js/landa-moysklad-ui.mjs
-      - name: Supplier security and accounting checks
-        run: node --test tests/landa.test.mjs
+          node --check js/landa-proschet-b-core.mjs
+          node --check js/landa-proschet-b.mjs
+      - name: Supplier, accounting and historical proschet invariance tests
+        run: node --test tests/landa.test.mjs tests/proschet-b.test.mjs
       - name: D1 schema syntax and foreign keys (test only)
         run: |
           python3 - <<'PY'
