@@ -387,6 +387,7 @@ test('MoySklad API requests include gzip and never forward bearer tokens to redi
   assert.equal(options.method,'GET');
   assert.equal(options.redirect,'manual');
   assert.equal(options.headers['Accept-Encoding'],'gzip');
+  assert.equal(options.headers.Accept,'application/json;charset=utf-8');
   assert.equal(options.headers.Authorization,'Bearer local-fixture-token');
   return new Response(null,{status:302,headers:{Location:'https://untrusted.example/'}}); 
  };
