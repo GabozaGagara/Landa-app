@@ -29,7 +29,7 @@ async function msGet(path,env){
  try{
   res=await fetch(url.toString(),{
    method:'GET',
-   headers:{Authorization:'Bearer '+token.trim(),Accept:'application/json','Accept-Encoding':'gzip'},
+   headers:{Authorization:'Bearer '+token.trim(),Accept:'application/json;charset=utf-8','Accept-Encoding':'gzip'},
    // Do not forward the secret to a different host when the API redirects.
    redirect:'manual'
   });
