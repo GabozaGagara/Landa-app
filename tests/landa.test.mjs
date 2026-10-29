@@ -398,3 +398,27 @@ test('MoySklad API requests include gzip and never forward bearer tokens to redi
   assert.equal(n,1);
  }finally{globalThis.fetch=previous}
 });
+
+test('MoySklad HTTP 400 safely reports numeric API error code without echoing private payload',async()=>{
+ const previous=globalThis.fetch;
+ globalThis.fetch=async()=>new Response(JSON.stringify({errors:[{code:1012,error:'secret supplier details',error_message:'access-token-do-not-echo'}]}),{status:400});
+ try{
+  const response=await worker.fetch(post('/admin/moysklad-check',{adminKey:'x'.repeat(40)}),
+   {...env,LANDA_MS_ADMIN_KEY:'x'.repeat(40),MOYSKLAD_TOKEN:'test-token-must-be-hidden'});
+  assert.equal(response.status,502);
+  const msg=JSON.stringify(await response.json());
+  assert.match(msg,/HTTP 400/);
+  assert.match(msg,/1012/);
+  assert.doesNotMatch(msg,/access-token-do-not-echo|secret supplier details|test-token-must-be-hidden/);
+ }finally{globalThis.fetch=previous}
+});
+test('owner code retention is opt-in and does not alter financial backup',()=>{
+ const code=readFileSync(new URL('../js/landa-moysklad-ui.mjs',import.meta.url),'utf8');
+ assert.match(code,/id="msRememberCode"/);
+ assert.match(code,/id="msForgetCode"/);
+ assert.match(code,/localStorage\.setItem\(OWNER_CODE_KEY,value\)/);
+ assert.match(code,/localStorage\.removeItem\(OWNER_CODE_KEY\)/);
+ assert.match(code,/confirm\('Сохранить код владельца/);
+ assert.match(code,/function storedCode\(/);
+ assert.doesNotMatch(code,/saveOps\(/);
+});
