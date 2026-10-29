@@ -197,3 +197,56 @@ test('repeated SHA conflicts fail safely, without reporting a successful write',
   assert.equal((await result.json()).created,undefined);
  }finally{globalThis.fetch=original}
 });
+
+import {collectShipmentRows,compareCount,aggregateProducts,receiptCSV} from '../js/landa-receiving-core.mjs';
+
+test('shipment reconciliation reads all items but can limit to supplier portal submissions',()=>{
+ const invoices=[
+  {id:'v1',supplierId:'anna',number:'TEST-1',tracking:'TRACK-1',date:'2026-10-20',submittedAt:'2026-10-20T00:00:00Z',
+   items:[{name:'Dyson X',sku:'DX',qty:2,price:20},{name:'Dyson Y',sku:'DY',qty:1,price:30}]},
+  {id:'v2',supplierId:'alina',number:'TEST-2',date:'2026-10-21',items:[{name:'Karcher',sku:'K',qty:3,price:50}]},
+  {id:'opening',isOpening:true,supplierId:'anna',items:[{name:'Opening',qty:100}]}
+ ];
+ const unchanged=JSON.stringify(invoices);
+ const all=collectShipmentRows(invoices);
+ assert.equal(all.length,3);
+ assert.equal(collectShipmentRows(invoices,{onlyPortal:true}).length,2);
+ assert.equal(collectShipmentRows(invoices,{supplier:'anna',search:'DX'}).length,1);
+ assert.equal(collectShipmentRows(invoices,{supplier:'alina'}).length,1);
+ assert.equal(JSON.stringify(invoices),unchanged,'Reading shipments must not mutate financial invoices');
+});
+test('manual comparison distinguishes pending, matching, shortages and extra pieces',()=>{
+ const row={qty:3};
+ assert.deepEqual(compareCount(row,undefined),{state:'pending',received:null,delta:null});
+ assert.deepEqual(compareCount(row,{received:''}),{state:'pending',received:null,delta:null});
+ assert.deepEqual(compareCount(row,{received:3}),{state:'matched',received:3,delta:0});
+ assert.deepEqual(compareCount(row,{received:2}),{state:'difference',received:2,delta:-1});
+ assert.deepEqual(compareCount(row,{received:4}),{state:'difference',received:4,delta:1});
+ assert.equal(compareCount(row,{received:-1}).state,'invalid');
+});
+test('supplier-specific product aggregation never treats an unchecked line as received',()=>{
+ const invoices=[
+  {id:'1',supplierId:'anna',number:'INV-A',items:[{name:'Dyson',sku:'D',qty:2},{name:'Dyson',sku:'D',qty:1}]},
+  {id:'2',supplierId:'alina',number:'INV-B',items:[{name:'Dyson',sku:'D',qty:5}]}
+ ];
+ const rows=collectShipmentRows(invoices),records={};
+ const anna=rows.filter(x=>x.supplierId==='anna');
+ records[anna[0].key]={received:2};
+ let ag=aggregateProducts(rows,records);
+ const a=ag.find(x=>x.supplierId==='anna'),b=ag.find(x=>x.supplierId==='alina');
+ assert.equal(a.expected,3);assert.equal(a.received,null);assert.equal(a.done,1);
+ assert.equal(b.expected,5);assert.equal(b.received,null);
+ records[anna[1].key]={received:1};
+ ag=aggregateProducts(rows,records);
+ assert.equal(ag.find(x=>x.supplierId==='anna').received,3);
+ assert.equal(ag.find(x=>x.supplierId==='anna').delta,0);
+});
+test('reconciliation CSV retains negative numeric differences and guards formula-like strings',()=>{
+ const invoices=[{id:'x1',supplierId:'anna',number:'TEST-CSV',items:[{name:'=HYPERLINK("bad")',sku:'SKU',qty:3}]}];
+ const rows=collectShipmentRows(invoices),count={};
+ count[rows[0].key]={received:1,note:'+unsafe formula'};
+ const csv=receiptCSV(rows,count,{anna:'Анна'});
+ assert.match(csv,/"-2"/);
+ assert.match(csv,/"'=HYPERLINK/);
+ assert.match(csv,/"'\+unsafe formula"/);
+});
