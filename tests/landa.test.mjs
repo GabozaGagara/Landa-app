@@ -28,7 +28,7 @@ const post=(pathname,body,origin=ORIGIN)=>new Request('https://landa-app.example
 test('supplier summary uses the same accrued-only cash formula as LANDA',()=>{
  const d=supplierOverview(base(),'anna',1);
  assert.equal(d.supplier.id,'anna');
- assert.deepEqual(d.summary,{balance:-10,paid:90,accrued:100,allocated:70,open:30,advance:20,pendingAmount:20,pendingCount:1,count:2});
+ assert.deepEqual(d.summary,{balance:-10,paid:90,accrued:100,allocated:70,open:30,advance:20,pendingAmount:20,pendingCount:1,count:2,transitAmount:0,transitCount:0,transitMissingDelivery:0});
  assert.equal(d.invoices.length,2);
  assert.equal(d.invoices[0].number,'10000000002');
  assert.equal(d.invoices[0].due,0); // Not accrued: no supplier debt yet
@@ -118,7 +118,10 @@ test('supplier submit is unaccrued, review-pending, auditable and deduplicated',
   assert.equal(added.accrued,false);
   assert.equal(added.reviewStatus,'pending');
   assert.equal(added.status,'created');
-  assert.equal(added.total,20.5);
+  assert.equal(added.total,25.5);
+  assert.equal(added.includeDelivery,true);
+  assert.equal(added.deliveryCost,5);
+  assert.equal(added.deliveryMissing,false);
   assert.equal(saved.operations.cash.length,1);
   assert.ok(saved.operations.auditTrail.some(e=>e.recordId===added.id&&e.source==='supplier:anna'));
   const duplicate=await worker.fetch(post('/submit',{invoice:incoming(),code:codes.anna}),env);
@@ -425,4 +428,62 @@ test('owner code retention is opt-in and does not alter financial backup',()=>{
  assert.match(code,/confirm\('Сохранить код владельца/);
  assert.match(code,/function storedCode\(/);
  assert.doesNotMatch(code,/saveOps\(/);
+});
+
+
+test('supplier in-transit total includes delivery without changing legacy financial debt',()=>{
+ const b=base();
+ b.operations.invoices.push(
+  {id:'t1',supplierId:'anna',date:'2026-10-29',status:'transit',accrued:false,goodsCost:100,deliveryCost:12.5,total:100,includeDelivery:false,deliveryMissing:false,items:[]},
+  {id:'t2',supplierId:'anna',date:'2026-10-29',status:'transit',accrued:false,goodsCost:25,deliveryCost:5.4,total:30.4,includeDelivery:true,items:[]},
+  {id:'t3',supplierId:'alina',date:'2026-10-29',status:'transit',accrued:false,goodsCost:900,deliveryCost:20,total:920,includeDelivery:true,items:[]});
+ const before=JSON.stringify(b.operations);
+ const result=supplierOverview(b,'anna');
+ assert.equal(result.summary.transitCount,2);
+ assert.equal(result.summary.transitAmount,142.9);
+ assert.equal(result.summary.balance,-10,'Legacy balances must not silently change');
+ assert.equal(result.summary.open,30);
+ assert.equal(JSON.stringify(b.operations),before,'Supplier overview must not rewrite the database');
+});
+test('unknown delivery amount is identified in the in-transit amount',()=>{
+ const b=base();
+ b.operations.invoices.push({id:'t4',supplierId:'anna',status:'transit',accrued:false,goodsCost:200,deliveryCost:0,deliveryMissing:true,total:200,items:[]});
+ const v=supplierOverview(b,'anna');
+ assert.equal(v.summary.transitAmount,200);
+ assert.equal(v.summary.transitMissingDelivery,1);
+});
+test('owner dashboard in-transit totals separate old billing from shipment value',()=>{
+ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ assert.equal((html.match(/<\/html>/g)||[]).length,1,'HTML must not be duplicated');
+ assert.doesNotMatch(html,/name="includeDelivery"/);
+ assert.match(html,/const total=roundCents\(goodsCost\+deliveryCost\)/);
+ assert.match(html,/includeDelivery:true,total:roundCents\(d\.goodsCost\+d\.deliveryCost\)/);
+ assert.match(html,/Накладных в пути/);
+ assert.match(html,/Включая доставку/);
+ const shipment=html.match(/const shipmentTotalCents=i=>\{[\s\S]*?\n\};/)?.[0];
+ const totals=html.match(/function supplierTotals\(id\)\{[\s\S]*?\n\}/)?.[0];
+ assert.ok(shipment&&totals,'Pure financial computation helpers must exist');
+ const data={
+  invoices:[
+   {id:'s1',supplierId:'anna',status:'transit',accrued:false,goodsCost:100,deliveryCost:12.5,total:100,includeDelivery:false},
+   {id:'s2',supplierId:'anna',status:'transit',accrued:false,goodsCost:25,deliveryCost:5.4,total:30.4,includeDelivery:true},
+   {id:'s3',supplierId:'anna',status:'delivered',accrued:true,goodsCost:50,deliveryCost:5,total:50,includeDelivery:false}],
+  payments:[{id:'p1',supplierId:'anna',amount:30}],
+  allocations:[]};
+ const compute=new Function('ops',[
+  'const moneyCents=n=>Math.round(Number(n)*100);',
+  'const fromCents=n=>Math.round(n)/100;',
+  'const statusCode=i=>i.status;',
+  'const invoiceAmount=i=>i.accrued?moneyCents(i.total):0;',
+  shipment,totals,'return supplierTotals;'
+ ].join('\n'))(data);
+ const before=JSON.stringify(data);
+ const v=compute('anna');
+ assert.equal(v.transit,142.9);
+ assert.equal(v.transitCount,2);
+ assert.equal(v.total,50);
+ assert.equal(v.open,50);
+ assert.equal(v.balance,-20);
+ assert.equal(v.legacyDelivery,2);
+ assert.equal(JSON.stringify(data),before);
 });
