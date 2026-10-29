@@ -39,6 +39,8 @@ jobs:
           node --check cloudflare/supplier-view.mjs
           node --check js/landa-control-center.js
           node --check js/landa-local-backups.js
+          node --check js/landa-receiving-core.mjs
+          node --check js/landa-receiving-ui.mjs
       - name: Supplier security and accounting checks
         run: node --test tests/landa.test.mjs
       - name: D1 schema syntax and foreign keys (test only)
