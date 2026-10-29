@@ -59,7 +59,7 @@ export function aggregateProducts(rows,counts={}) {
 
 export function csvCell(value){
  let v=String(value??'');
- if(/^[\s]*[=+\-@]/.test(v))v="'"+v;
+ if(typeof value==='string' && /^[\s]*[=+\-@]/.test(v))v="'"+v;
  return '"'+v.replace(/"/g,'""')+'"';
 }
 export function receiptCSV(rows,counts={},supplierNames={}) {
