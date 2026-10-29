@@ -140,6 +140,7 @@ test('public HTML and JavaScript remain parseable and include control modules',(
  assert.match(html,/js\/landa-control-center\.js/);
  assert.match(html,/js\/landa-local-backups\.js/);
  assert.match(html,/js\/landa-receiving-ui\.mjs/);
+ assert.match(html,/js\/landa-moysklad-ui\.mjs/);
  assert.match(portal,/id="newInvoiceFromList"/);
  for(const p of ['landa-control-center.js','landa-local-backups.js']){
   const js=readFileSync(new URL('../js/'+p,import.meta.url),'utf8');
