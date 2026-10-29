@@ -37,6 +37,12 @@ test('stage 0 protects every old row and every historical field',()=>{
  copy.rows[0].notes.early='Потеряно';
  assert.equal(checkBaseline(data,copy).ok,false);
  copy.rows[0].notes.early='Сверено';
+ copy.groups[0].label='Другая группа';
+ assert.equal(checkBaseline(data,copy).ok,false);
+ copy.groups[0].label='Маркетплейсы';
+ copy.controlTotals={late:123};
+ assert.equal(checkBaseline(data,copy).ok,false);
+ delete copy.controlTotals;
  copy.rows.reverse();
  assert.equal(checkBaseline(data,copy).ok,false);
 });
