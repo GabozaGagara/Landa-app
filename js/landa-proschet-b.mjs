@@ -73,7 +73,7 @@ if(typeof document!=='undefined'&&typeof state!=='undefined'&&typeof snap!=='und
   try{const raw=JSON.stringify(prefs);localStorage.setItem(KEY,raw);if(localStorage.getItem(KEY)!==raw)throw Error('write failed');return true}
   catch(_){alert('Не удалось записать настройки просчёта. Финансовые данные не затронуты.');return false}
  }
- function changePrefs(fn){const original=JSON.stringify(prefs);fn();if(!persist()){prefs=JSON.parse(original);return}draw()}
+ function changePrefs(fn){const original=JSON.stringify(prefs);fn();if(!persist()){prefs=JSON.parse(original);return}if(prefs.mode==='detail')renderGroups();else draw()}
  function controls(row){
   const favorite=prefs.favorites.includes(row.id),checked=isChecked(row),archived=inArchive(row);
   const note=prefs.comments[noteKey(row.id)]||row.notes?.[snap]||'';
