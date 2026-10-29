@@ -1,5 +1,6 @@
 // LANDA: supplier-only API. Deployed to Cloudflare Worker, NEVER as GitHub Pages JS.
 import {supplierOverview} from './supplier-view.mjs';
+import {loadSupplies,validateRange} from './moysklad-read.mjs';
 // Required secrets: GH_TOKEN (fine-grained PAT to private repo contents only),
 // SUPPLIER_CODES (JSON of three 24+ character random passwords for each supplier).
 const REPO='GabozaGagara/Landa-financenot',PATH='landa-data/backup.json',ORIGIN='https://gabozagagara.github.io';
@@ -53,6 +54,21 @@ function validateSupplierAccess(supplierId,code,env){
  const candidate=String(code||''),expected=codes[supplierId];
  if(typeof expected!=='string'||expected.length<24||candidate.length<24||candidate.length>200||!constantEquals(candidate,expected))fail('Неверный код доступа поставщика',403);
 }
+// Separate owner-only access for the read-only warehouse integration.
+function validateMoyskladAdmin(key,env){
+ const expected=env.LANDA_MS_ADMIN_KEY;
+ if(typeof expected!=='string'||expected.length<32)fail('Не настроен LANDA_MS_ADMIN_KEY в Cloudflare',503);
+ const candidate=typeof key==='string'?key:'';
+ if(candidate.length<32||candidate.length>256||!constantEquals(candidate,expected))fail('Неверный код владельца для интеграции МойСклад',403);
+}
+async function moyskladSupplies(request,env){
+ const raw=await request.text();if(te.encode(raw).length>1500)fail('Слишком большой запрос',413);
+ let data;try{data=JSON.parse(raw)}catch{fail('Неверный JSON')}
+ if(!data||typeof data!=='object')fail('Некорректный запрос');
+ validateMoyskladAdmin(data.adminKey,env);
+ validateRange(data.from,data.to);
+ return loadSupplies(env,data.from,data.to);
+}
 async function diagnose(request,env){
  const raw=await request.text();if(te.encode(raw).length>2000)fail('Слишком большой запрос',413);
  let d;try{d=JSON.parse(raw)}catch{fail('Неверный JSON')}
@@ -94,6 +110,11 @@ export default {async fetch(request,env){
  try{
   const u=new URL(request.url);
   if(u.pathname==='/health'&&request.method==='GET')return response({app:'LANDA-supplier-bridge',github:!!env.GH_TOKEN},200,origin);
+  if(u.pathname==='/admin/moysklad-supplies'&&request.method==='POST'){
+   if(origin!==ORIGIN)fail('Недопустимый источник',403);
+   if((request.headers.get('Content-Type')||'').split(';')[0]!=='application/json')fail('Ожидается application/json');
+   return response(await moyskladSupplies(request,env),200,origin);
+  }
   if(u.pathname==='/diagnose'&&request.method==='POST'){
    if(origin!==ORIGIN)fail('Недопустимый источник',403);
    if((request.headers.get('Content-Type')||'').split(';')[0]!=='application/json')fail('Ожидается application/json');
