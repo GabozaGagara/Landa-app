@@ -36,7 +36,6 @@ async function msGet(path,env){
  try{return await res.json()}catch(_){fail('МойСклад вернул некорректный JSON')}
 }
 function short(x,n=180){return String(x??'').slice(0,n)}
-const qty=x=>Number.isFinite(Number(x))?Number(x):0;
 export async function loadSupplies(env,from,to){
  ({from,to}=validateRange(from,to));
  const docs=[];
@@ -70,9 +69,11 @@ export async function loadSupplies(env,from,to){
      }
      product=memo.get(key);
     }
-    positions.push({id:short(p.id,50),productId:key,name:short(product?.name||'',200),
+    const quantity=Number(p.quantity);
+    if(!product?.name||!Number.isFinite(quantity)||quantity<0)fail('В приёмке '+short(doc.name,60)+' обнаружен товар с неуказанным названием или количеством.');
+    positions.push({id:short(p.id,50),productId:key,name:short(product.name,200),
      sku:short(product?.article||product?.code||'',100),article:short(product?.article||'',100),
-     code:short(product?.code||'',100),quantity:qty(p.quantity)});
+     code:short(product?.code||'',100),quantity});
    }
    if(!page.meta?.nextHref)break;
    if(offset===1000)fail('В одной приёмке слишком много товарных строк.',422);
