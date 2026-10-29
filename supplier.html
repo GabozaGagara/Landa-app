@@ -36,7 +36,21 @@ const $=id=>document.getElementById(id), names={anna:'Анна',alina:'Алин�
 const id=new URLSearchParams(location.search).get('supplier');if(Object.hasOwn(names,id)){$('supplier').value=id;$('supplier').disabled=true}
 function localDate(){const d=new Date(),offset=d.getTimezoneOffset();return new Date(d.getTime()-offset*60000).toISOString().slice(0,10)}$('date').value=localDate();
 function itemRow(data={}){const e=document.createElement('div');e.className='item';e.innerHTML='<div class="item-head"><span>Товар</span><button type="button" class="btn danger remove">Удалить</button></div><div class="item-grid"><label class="name">Название товара<input class="item-name" required maxlength="180" placeholder="Например, робот-пылесос"></label><label>Количество<input class="item-qty" type="number" required min="0.01" step="any" max="100000" inputmode="decimal" value="1"></label><label>Цена за шт., $<input class="item-price" type="number" min="0" step="0.01" max="99999999" inputmode="decimal" placeholder="Неизвестна"></label><label>Артикул<input class="item-sku" maxlength="100" placeholder="Необязательно"></label></div>';e.querySelector('.remove').onclick=()=>{if(document.querySelectorAll('.item').length===1){alert('Добавьте хотя бы один товар');return}e.remove();calculate()};$('items').append(e);for(const [field,selector] of [['name','.item-name'],['qty','.item-qty'],['price','.item-price'],['sku','.item-sku']])if(data[field]!==undefined&&data[field]!==null)e.querySelector(selector).value=data[field];return e}
-function calculate(){let total=0,missing=0;for(let item of document.querySelectorAll('.item')){let qty=Number(item.querySelector('.item-qty').value),v=item.querySelector('.item-price').value;if(v==='')missing++;else if(Number.isFinite(qty)&&qty>0)total+=Math.round(qty*Number(v)*100)/100}$('total').textContent='Сумма известных цен: '+total.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' $'+(missing?' · без цены: '+missing+' позиций':'')}
+function calculate(){
+ let goodsCents=0,missing=0;
+ for(const item of document.querySelectorAll('.item')){
+  const qty=Number(item.querySelector('.item-qty').value),value=item.querySelector('.item-price').value;
+  if(value==='')missing++;
+  else if(Number.isFinite(qty)&&qty>0)goodsCents+=Math.round(qty*Math.round(Number(value)*100));
+ }
+ const deliveryRaw=$('delivery').value,deliveryUnknown=deliveryRaw==='';
+ const deliveryCents=deliveryUnknown?0:Math.round(Number(deliveryRaw)*100);
+ const format=cents=>(Math.round(cents)/100).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' $';
+ const total=goodsCents+deliveryCents;
+ $('total').textContent='Товары: '+format(goodsCents)+' · Доставка: '+(deliveryUnknown?'не указана':format(deliveryCents))+
+  ' · '+(missing||deliveryUnknown?'Итого известных сумм: ':'Итого: ')+format(total)+' (включая указанную доставку)'+
+  (missing?' · без цены: '+missing+' позиций':'');
+}
 function setStatus(message,err=false){$('status').textContent=message;$('status').className='status '+(err?'error':'ok')}
 let lastAcceptedTracking='';
 function beginNewInvoice(){
