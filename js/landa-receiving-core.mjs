@@ -11,11 +11,12 @@ export function collectShipmentRows(invoices, filters = {}) {
   if(!inv || inv.isOpening || (onlyPortal&&!inv.submittedAt))continue;
   if(supplier!=='all' && inv.supplierId!==supplier)continue;
   const items=Array.isArray(inv.items)?inv.items:[];
+  const invoiceId=String(inv.id||inv.tracking||inv.number||[inv.supplierId,inv.date].join(':'));
   items.forEach((item,index)=>{
    const name=String(item?.name??'').trim(),sku=String(item?.sku??'').trim();
    const row={
-    key:JSON.stringify([String(inv.id??''),index,name,sku,number(item?.qty)]),
-    invoiceId:String(inv.id??''),supplierId:String(inv.supplierId??''),
+    key:JSON.stringify([invoiceId,index,name,sku,number(item?.qty)]),
+    invoiceId,supplierId:String(inv.supplierId??''),
     invoice:String(inv.number||inv.tracking||inv.id||''),
     tracking:String(inv.tracking||''),date:String(inv.date||'').slice(0,10),
     status:String(inv.status||'created'),submittedAt:String(inv.submittedAt||''),
