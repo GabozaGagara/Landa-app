@@ -45,7 +45,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
   '<label>По дату<input id="msTo" type="date"></label>',
   '<label>Код владельца Cloudflare<input id="msAdmin" type="password" autocomplete="off" placeholder="LANDA_MS_ADMIN_KEY"></label>',
   '</div>',
-  '<div class="msflex"><button class="msbtn msprimary" id="msLoad" type="button">↻ Загрузить приёмки</button>',
+  '<div class="msflex"><button class="msbtn" id="msCheck" type="button">✓ Проверить подключение</button><button class="msbtn msprimary" id="msLoad" type="button">↻ Загрузить приёмки</button>',
   '<button class="msbtn" id="msCompare" type="button">Сверить выбранное</button>',
   '<button class="msbtn" id="msCSV" type="button">↓ Отчёт CSV</button></div>',
   '<p id="msMessage" class="msinfo" role="status" aria-live="polite"></p>',
@@ -143,11 +143,30 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
   dialog.showModal();renderInvoices();renderDocs();renderResult();
   message('Сначала настройте серверные секреты в Cloudflare. Ключ владельца не сохраняется в браузере.');
  }
- function endpoint(){
+ function endpoint(route='moysklad-supplies'){
+  if(!['moysklad-check','moysklad-supplies'].includes(route))throw Error('Неверная операция');
   const raw=($('supplierWorkerUrl')?.value||'https://landa-app.kamily1997.workers.dev').trim().replace(/\/+$/,'');
   const url=new URL(raw);
   if(url.protocol!=='https:')throw Error('Укажите HTTPS-адрес Cloudflare Worker');
-  return url.origin+url.pathname.replace(/\/+$/,'')+'/admin/moysklad-supplies';
+  return url.origin+url.pathname.replace(/\/+$/,'')+'/admin/'+route;
+ }
+ async function checkConnection(){
+  if(busy)return;
+  const code=$('msAdmin').value;
+  if(code.length<32){message('Введите код владельца для проверки подключения (не менее 32 символов).',true);return;}
+  busy=true;$('msCheck').disabled=true;
+  message('Проверяем доступ к API «МоегоСклада» без чтения накладных и без записи данных…');
+  try{
+   const response=await fetch(endpoint('moysklad-check'),{method:'POST',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify({adminKey:code}),cache:'no-store'});
+   const data=await response.json().catch(()=>({}));
+   if(!response.ok)throw Error(response.status===404?
+    'Cloudflare Worker ещё не обновлён. Проверьте Deployments → Ready.':
+    (data.error||'Сервер вернул HTTP '+response.status));
+   if(data.ok!==true)throw Error('Сервер не подтвердил подключение.');
+   message('✓ Подключение к «МоемуСкладу» работает. Доступ к чтению приёмок подтверждён. Теперь выберите период и нажмите «Загрузить приёмки».');
+  }catch(e){message('Проверка подключения не прошла: '+e.message,true);}
+  finally{busy=false;$('msCheck').disabled=false;}
  }
  async function load(){
   if(busy)return;
@@ -185,6 +204,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
  btn.addEventListener('click',open);
  $('msClose').addEventListener('click',()=>dialog.close());
  dialog.addEventListener('close',()=>{$('msAdmin').value='';payload=null;chosenDocs.clear();});
+ $('msCheck').addEventListener('click',checkConnection);
  $('msLoad').addEventListener('click',load);$('msCompare').addEventListener('click',renderResult);
  $('msCSV').addEventListener('click',exportCSV);
  $('msSupplier').addEventListener('change',()=>{chosenInvoices.clear();renderInvoices();renderResult()});
