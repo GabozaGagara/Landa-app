@@ -25,6 +25,7 @@
  <p class="small" id="supplierOverviewStatus" role="status" aria-live="polite">Нажмите «Обновить», чтобы посмотреть актуальные данные.</p>
  <div id="supplierOverviewSummary"></div><div id="supplierOverviewBody"></div>
  <div class="overview-pagination" id="supplierOverviewPaging" hidden><button class="btn" type="button" id="supplierOverviewPrev">← Назад</button><span class="small" id="supplierOverviewPage"></span><button class="btn" type="button" id="supplierOverviewNext">Вперёд →</button></div>
+ <div class="actions"><button class="btn primary" type="button" id="newInvoiceFromList">＋ Новая накладная</button></div>
 </section>
 <form id="invoice" autocomplete="on"><section class="panel"><h2>1. Отправление</h2><label>Поставщик<select id="supplier" required><option value="">Выберите поставщика</option><option value="anna">Анна</option><option value="alina">Алина</option><option value="anatoly">Анатолий</option></select></label><div class="two"><label>Номер накладной СДЭК<input id="tracking" required maxlength="35" inputmode="text" placeholder="Например, 10337904109" autocomplete="off"></label><label>Дата отправки<input id="date" type="date" required></label></div><div class="two"><label>Город отправления<input value="Брест" readonly title="Принимаются только отправления из Бреста"></label><label>Город назначения<input id="destination" required maxlength="80" value="Москва"></label></div><label>ФИО отправителя<input id="sender" maxlength="100" placeholder="Имя и фамилия отправителя"></label><div class="small">Для LANDA принимаются только отправления из Бреста. Текущий статус проверяется отдельно.</div></section>
 <section class="panel"><h2>2. Товары</h2><p class="hint">Внесите каждый товар отдельно. Цены в долларах, без пересчёта по курсу. Если цена пока неизвестна, оставьте её пустой.</p><div id="items"></div><button class="btn" type="button" id="addItem">＋ Добавить товар</button><div class="summary" id="total">Заполните состав накладной</div></section>
@@ -38,6 +39,17 @@ function localDate(){const d=new Date(),offset=d.getTimezoneOffset();return new 
 function itemRow(data={}){const e=document.createElement('div');e.className='item';e.innerHTML='<div class="item-head"><span>Товар</span><button type="button" class="btn danger remove">Удалить</button></div><div class="item-grid"><label class="name">Название товара<input class="item-name" required maxlength="180" placeholder="Например, робот-пылесос"></label><label>Количество<input class="item-qty" type="number" required min="0.01" step="any" max="100000" inputmode="decimal" value="1"></label><label>Цена за шт., $<input class="item-price" type="number" min="0" step="0.01" max="99999999" inputmode="decimal" placeholder="Неизвестна"></label><label>Артикул<input class="item-sku" maxlength="100" placeholder="Необязательно"></label></div>';e.querySelector('.remove').onclick=()=>{if(document.querySelectorAll('.item').length===1){alert('Добавьте хотя бы один товар');return}e.remove();calculate()};$('items').append(e);for(const [field,selector] of [['name','.item-name'],['qty','.item-qty'],['price','.item-price'],['sku','.item-sku']])if(data[field]!==undefined&&data[field]!==null)e.querySelector(selector).value=data[field];return e}
 function calculate(){let total=0,missing=0;for(let item of document.querySelectorAll('.item')){let qty=Number(item.querySelector('.item-qty').value),v=item.querySelector('.item-price').value;if(v==='')missing++;else if(Number.isFinite(qty)&&qty>0)total+=Math.round(qty*Number(v)*100)/100}$('total').textContent='Сумма известных цен: '+total.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' $'+(missing?' · без цены: '+missing+' позиций':'')}
 function setStatus(message,err=false){$('status').textContent=message;$('status').className='status '+(err?'error':'ok')}
+let lastAcceptedTracking='';
+function beginNewInvoice(){
+ const tracking=$('tracking').value.trim().replace(/\s/g,'');
+ const hasDraft=!!(tracking||$('delivery').value||$('note').value||Array.from(document.querySelectorAll('.item-name')).some(x=>x.value.trim()));
+ if(hasDraft&&tracking!==lastAcceptedTracking&&!confirm('Текущая накладная ещё не подтверждена как отправленная. Очистить её и начать новую?'))return;
+ $('tracking').value='';$('date').value=localDate();$('delivery').value='';$('note').value='';
+ $('items').replaceChildren();itemRow();calculate();setStatus('Новая накладная готова. Выберите товары и укажите новый номер СДЭК.');
+ shareFallback(!workerURL);lastAcceptedTracking='';
+ $('invoice').scrollIntoView({behavior:'smooth',block:'start'});
+ $('tracking').focus({preventScroll:true});
+}
 function makePayload(){if(!$('invoice').reportValidity())throw Error('Заполните обязательные поля.');const supplierId=$('supplier').value;if(!Object.hasOwn(names,supplierId))throw Error('Укажите поставщика.');const tracking=$('tracking').value.trim().replace(/\s+/g,'');if(!/^[A-Za-z0-9-]{8,35}$/.test(tracking))throw Error('Проверьте номер СДЭК (от 8 до 35 символов).');const items=[];let missing=[];for(let e of document.querySelectorAll('.item')){const name=e.querySelector('.item-name').value.trim(),qty=Number(e.querySelector('.item-qty').value),pr=e.querySelector('.item-price').value,sku=e.querySelector('.item-sku').value.trim();if(!name||!Number.isFinite(qty)||qty<=0||qty>100000)throw Error('Укажите название и количество каждого товара.');let price=pr===''?null:Number(pr);if(price!==null&&(!Number.isFinite(price)||price<0||price>99999999))throw Error('Проверьте цены товаров.');if(price===null)missing.push(name);items.push({name,qty,price,sku})}if(!items.length)throw Error('Добавьте хотя бы один товар.');let dc=$('delivery').value,deliveryCost=dc===''?null:Number(dc);if(deliveryCost!==null&&(!Number.isFinite(deliveryCost)||deliveryCost<0||deliveryCost>99999999))throw Error('Проверьте стоимость доставки.');return {app:'LANDA-supplier-invoice',schemaVersion:1,supplierId,supplierName:names[supplierId],tracking,number:tracking,date:$('date').value,origin:'Брест',destination:$('destination').value.trim(),sender:$('sender').value.trim(),items,deliveryCost,note:$('note').value.trim(),createdAt:new Date().toISOString()}}
 function data(){const d=makePayload();return {d,raw:JSON.stringify(d,null,2),name:'LANDA-'+d.supplierId+'-'+d.tracking+'.json'}}
 function blobUrl(raw){return URL.createObjectURL(new Blob([raw],{type:'application/json;charset=utf-8'}))}
@@ -91,9 +103,10 @@ async function sendAuto(){
  try{
   const r=await fetch(workerURL+'/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({invoice:d,code})});
   const result=await r.json().catch(()=>({}));
-  if(r.status===409&&result.duplicate){rememberCodeAfterAccepted(d.supplierId,code);shareFallback(false);setStatus('Накладная '+d.tracking+' уже была добавлена в LANDA. Повторно отправлять не нужно.');return}
+  if(r.status===409&&result.duplicate){rememberCodeAfterAccepted(d.supplierId,code);lastAcceptedTracking=d.tracking;shareFallback(false);setStatus('Накладная '+d.tracking+' уже была добавлена в LANDA. Для следующей нажмите «Новая накладная».');return}
   if(!r.ok)throw Error(result.error||'Сервер вернул HTTP '+r.status);
-  rememberCodeAfterAccepted(d.supplierId,code);shareFallback(false);setStatus('✓ Накладная '+d.tracking+' автоматически добавлена в приватную базу LANDA. Статус доставки пока не проверен.');
+  rememberCodeAfterAccepted(d.supplierId,code);lastAcceptedTracking=d.tracking;shareFallback(false);setStatus('✓ Накладная '+d.tracking+' добавлена в LANDA. Для следующей нажмите «Новая накладная» внизу списка.');
+  void loadSupplierOverview(1);
  }finally{$('sendAuto').disabled=false}
 }
 $('sendAuto').onclick=()=>sendAuto().catch(e=>{shareFallback(true);setStatus('Не удалось передать: '+e.message+'. Можно использовать кнопку «Поделиться накладной».',true)});
@@ -173,6 +186,7 @@ function showOverview(data){
 $('supplierOverviewRefresh').onclick=()=>loadSupplierOverview(1);
 $('supplierOverviewPrev').onclick=()=>loadSupplierOverview(overviewPage-1);
 $('supplierOverviewNext').onclick=()=>loadSupplierOverview(overviewPage+1);
+$('newInvoiceFromList').onclick=beginNewInvoice;
 $('supplier').addEventListener('change',clearOverview);
 
 $('addItem').onclick=()=>{itemRow();calculate()};$('invoice').addEventListener('input',calculate);itemRow();calculate();
