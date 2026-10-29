@@ -336,3 +336,34 @@ test('reconciliation totals include shortages, unlinked and mixed-name shared pr
  assert.equal(r.results[0].sharedExpected,2);
  assert.equal(r.results[0].sharedDifference,0);
 });
+
+test('read-only MoySklad connection check requires owner key and makes no request for invalid code',async()=>{
+ const previous=globalThis.fetch;let calls=0;
+ globalThis.fetch=async()=>{calls++;throw Error('Never fetch with bad key')};
+ try{
+  const request=post('/admin/moysklad-check',{adminKey:'wrong'});
+  const response=await worker.fetch(request,{...env,LANDA_MS_ADMIN_KEY:'x'.repeat(40),MOYSKLAD_TOKEN:'synthetic'});
+  assert.equal(response.status,403);
+  assert.equal(calls,0);
+ }finally{globalThis.fetch=previous}
+});
+test('read-only MoySklad connection check returns only health metadata after a GET request',async()=>{
+ const previous=globalThis.fetch,requested=[];
+ globalThis.fetch=async(url,options)=>{
+  requested.push({url,method:options.method});
+  assert.match(url,/^https:\/\/api\.moysklad\.ru\/api\/remap\/1\.2\/entity\/supply\?limit=1$/);
+  return new Response(JSON.stringify({rows:[{id:'test-only',name:'Private supplier data'}],meta:{}}),{status:200});
+ };
+ try{
+  const response=await worker.fetch(post('/admin/moysklad-check',{adminKey:'x'.repeat(40)}),
+   {...env,LANDA_MS_ADMIN_KEY:'x'.repeat(40),MOYSKLAD_TOKEN:'synthetic-secret'});
+  assert.equal(response.status,200);
+  const out=await response.json();
+  assert.equal(out.ok,true);
+  assert.equal(out.access,'read-only');
+  assert.equal(JSON.stringify(out).includes('Private supplier data'),false);
+  assert.equal(JSON.stringify(out).includes('synthetic-secret'),false);
+  assert.equal(requested.length,1);
+  assert.equal(requested[0].method,'GET');
+ }finally{globalThis.fetch=previous}
+});
