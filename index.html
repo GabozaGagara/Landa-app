@@ -182,9 +182,9 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
 <dialog id="exchangeDialog" class="op-modal"><div class="modal-hd">Покупка долларов за рубли</div><form id="exchangeForm" class="modal-body" novalidate><div class="op-fieldrow"><label class="field"><span>Куплено, $</span><input class="textinput" name="usd" type="text" inputmode="decimal" placeholder="1000" required></label><label class="field"><span>Курс покупки, ₽ / $</span><input class="textinput" name="rate" type="text" inputmode="decimal" placeholder="95.50" required></label></div><div class="op-fieldrow"><label class="field"><span>Откуда списать рубли</span><select name="sourceRub" required><option value="RUB">Наличные ₽</option><option value="CARD">Карты ₽</option></select></label><label class="field"><span>Дата обмена</span><input class="textinput" type="date" name="date" required></label></div><label class="field"><span>Примечание</span><input class="textinput" name="note" maxlength="280" placeholder="Где покупали, условия"></label><div class="op-preview" id="exchangePreview">Укажите количество долларов и курс.</div><div class="modal-info">Создаются две связанные записи: расход рублей с выбранного счёта и приход наличных долларов. Удаляются только вместе.</div><div class="modal-ft"><button type="button" class="btn" data-close="exchangeDialog">Отмена</button><button type="submit" class="btn btn-primary">Зафиксировать покупку</button></div></form></dialog>
 <dialog id="usdRateDialog" class="op-modal"><div class="modal-hd">Курс ранее внесённых долларов</div><form id="usdRateForm" class="modal-body" novalidate><div class="modal-info" id="usdRateInfo">Укажите реальный курс, по которому получили доллары.</div><label class="field"><span>Фактический курс, ₽ за 1 $</span><input name="rate" class="textinput" type="text" inputmode="decimal" placeholder="Например, 92.50" required></label><div class="modal-ft"><button type="button" class="btn" data-close="usdRateDialog">Отмена</button><button type="submit" class="btn btn-primary">Сохранить курс</button></div></form></dialog>
 <dialog id="openingDialog" class="op-modal"><div class="modal-hd">Начальные остатки по счетам</div><form id="openingForm" class="modal-body" novalidate><div class="op-fieldrow"><label class="field"><span>Наличные рубли, ₽</span><input class="textinput" name="RUB" inputmode="decimal" type="text" required></label><label class="field"><span>Наличные доллары, $</span><input class="textinput" name="USD" inputmode="decimal" type="text" required></label></div><label class="field"><span>Курс покупки начальных долларов, ₽ за 1 $</span><input class="textinput" name="USD_rate" type="text" inputmode="decimal" placeholder="Если знаете, например 93.50"><small class="op-formnote">Необязательно. Если курс старого остатка неизвестен, программа покажет его отдельно без рублёвой оценки.</small></label><div class="op-fieldrow"><label class="field"><span>На картах, ₽</span><input class="textinput" type="text" name="CARD" inputmode="decimal" required></label><label class="field"><span>В Авито Доставке к получению, ₽</span><input class="textinput" type="text" name="AVITO" inputmode="decimal" required></label></div><div class="ops-notice warn">Начальные остатки — деньги и ожидаемые выплаты <strong>до первой операции</strong> в журнале. Не вводите здесь сумму, уже отражённую поступлениями, иначе деньги будут посчитаны дважды.</div><div class="modal-ft"><button type="button" class="btn" data-close="openingDialog">Отмена</button><button class="btn btn-primary" type="submit">Установить остатки</button></div></form></dialog>
-<dialog id="invoiceDialog" class="op-modal"><div class="modal-hd" id="invoiceDialogTitle">Новая накладная</div><form id="invoiceForm" class="modal-body" novalidate><div class="op-fieldrow"><label class="field"><span>Поставщик</span><select name="supplierId" required></select></label><label class="field"><span>Дата отправки / накладной</span><input class="textinput" name="date" type="date" required></label></div><div class="op-fieldrow"><label class="field"><span>Номер накладной / заказа</span><input class="textinput" name="number" maxlength="100" placeholder="Например, AN-1234" required></label><label class="field"><span>Трек / накладная СДЭК</span><input class="textinput" name="tracking" maxlength="100" placeholder="Номер СДЭК (необязательно)"></label></div><div class="op-fieldrow"><label class="field"><span>Статус доставки</span><select name="status"><option value="created">Создан</option><option value="transit">В пути</option><option value="ready">Готов к выдаче</option><option value="delivered">Вручен</option></select></label><label class="field"><span>Номер документа в «МойСклад»</span><input class="textinput" name="moysklad" maxlength="100" placeholder="Необязательно"></label></div><label class="field"><span>Список товаров</span><textarea class="textinput" name="items" rows="5" placeholder="Название товара; Количество; Цена за 1 шт. в $; Артикул&#10;Робот-пылесос А; 2; 300; SKU-123&#10;Фильтр; 5; 20; F-456"></textarea><div class="field-hint">Каждый товар — с новой строки. Разделитель — точка с запятой. Количество × цена = стоимость. Можно оставить пустым и указать только общую сумму.</div></label><div class="op-fieldrow"><label class="field"><span>Стоимость товара, $</span><input class="textinput" name="amount" type="text" inputmode="decimal" placeholder="2000.00"><small class="op-formnote">Можно указать вручную, даже если есть список товаров. Если пусто — сумма товаров автоматически.</small></label><label class="field"><span>Стоимость доставки, $</span><input class="textinput" name="deliveryCost" type="text" inputmode="decimal" placeholder="0.00"><small class="op-formnote">Учитывается отдельно от товаров.</small></label></div>
-<label class="op-checkbox"><input type="checkbox" name="includeDelivery"> <span>Доставку оплачиваю <strong>этому поставщику</strong> — включить её в долг перед ним</span></label>
-<div class="op-fieldrow"><label class="field"><span>Отправитель СДЭК</span><input class="textinput" name="sender" placeholder="ФИО отправителя (необязательно)"></label><label class="field"><span>Маршрут / город</span><input class="textinput" name="route" placeholder="Брест (необязательно)"></label></div><div class="op-preview" id="invoicePreview">Укажите товары или сумму.</div><label class="field"><span>Комментарий</span><textarea class="textinput" name="note" rows="2" maxlength="500" placeholder="Особенности доставки / заказа"></textarea></label><label class="op-checkbox"><input type="checkbox" name="applyAdvance"> <span>После сохранения <strong>зачесть свободный аванс</strong> поставщика в эту накладную (если он есть)</span></label><div class="modal-info">Сохранение новой накладной само по себе не создаёт долг. После статуса «Вручен» нажмите «Начислить поставщику». Для старых накладных уже начисленный долг сохраняется. Доставка включается в долг только при установленной галочке.</div><div class="modal-ft"><button type="button" class="btn" data-close="invoiceDialog">Отмена</button><button class="btn btn-primary" type="submit">Сохранить накладную</button></div></form></dialog>
+<dialog id="invoiceDialog" class="op-modal"><div class="modal-hd" id="invoiceDialogTitle">Новая накладная</div><form id="invoiceForm" class="modal-body" novalidate><div class="op-fieldrow"><label class="field"><span>Поставщик</span><select name="supplierId" required></select></label><label class="field"><span>Дата отправки / накладной</span><input class="textinput" name="date" type="date" required></label></div><div class="op-fieldrow"><label class="field"><span>Номер накладной / заказа</span><input class="textinput" name="number" maxlength="100" placeholder="Например, AN-1234" required></label><label class="field"><span>Трек / накладная СДЭК</span><input class="textinput" name="tracking" maxlength="100" placeholder="Номер СДЭК (необязательно)"></label></div><div class="op-fieldrow"><label class="field"><span>Статус доставки</span><select name="status"><option value="created">Создан</option><option value="transit">В пути</option><option value="ready">Готов к выдаче</option><option value="delivered">Вручен</option></select></label><label class="field"><span>Номер документа в «МойСклад»</span><input class="textinput" name="moysklad" maxlength="100" placeholder="Необязательно"></label></div><label class="field"><span>Список товаров</span><textarea class="textinput" name="items" rows="5" placeholder="Название товара; Количество; Цена за 1 шт. в $; Артикул&#10;Робот-пылесос А; 2; 300; SKU-123&#10;Фильтр; 5; 20; F-456"></textarea><div class="field-hint">Каждый товар — с новой строки. Разделитель — точка с запятой. Количество × цена = стоимость. Можно оставить пустым и указать только общую сумму.</div></label><div class="op-fieldrow"><label class="field"><span>Стоимость товара, $</span><input class="textinput" name="amount" type="text" inputmode="decimal" placeholder="2000.00"><small class="op-formnote">Можно указать вручную, даже если есть список товаров. Если пусто — сумма товаров автоматически.</small></label><label class="field"><span>Стоимость доставки, $</span><input class="textinput" name="deliveryCost" type="text" inputmode="decimal" placeholder="0.00"><small class="op-formnote">Показывается отдельно, но всегда включается в общую стоимость.</small></label></div>
+<div class="modal-info">Доставка всегда входит в общую стоимость накладной и в сумму долга после начисления. Ниже она также показывается отдельной строкой.</div>
+<div class="op-fieldrow"><label class="field"><span>Отправитель СДЭК</span><input class="textinput" name="sender" placeholder="ФИО отправителя (необязательно)"></label><label class="field"><span>Маршрут / город</span><input class="textinput" name="route" placeholder="Брест (необязательно)"></label></div><div class="op-preview" id="invoicePreview">Укажите товары или сумму.</div><label class="field"><span>Комментарий</span><textarea class="textinput" name="note" rows="2" maxlength="500" placeholder="Особенности доставки / заказа"></textarea></label><label class="op-checkbox"><input type="checkbox" name="applyAdvance"> <span>После сохранения <strong>зачесть свободный аванс</strong> поставщика в эту накладную (если он есть)</span></label><div class="modal-info">Новая накладная сначала ожидает подтверждения. После статуса «Вручен» нажмите «Начислить поставщику»: долг включает товары и доставку. Уже начисленные исторические накладные не пересчитываются автоматически.</div><div class="modal-ft"><button type="button" class="btn" data-close="invoiceDialog">Отмена</button><button class="btn btn-primary" type="submit">Сохранить накладную</button></div></form></dialog>
 <dialog id="supplierImportDialog" class="op-modal"><div class="modal-hd">Принять накладную от поставщика</div><div class="modal-body">
  <div class="op-help"><strong>Безопасный импорт:</strong> вставьте JSON, присланный поставщиком, или выберите файл LANDA-*.json. Программа проверит маршрут из Бреста, поставщика, товары, суммы и дубликаты. Приём не начисляет долг и не подтверждает вручение.</div>
  <label class="field"><span>JSON-файл поставщика</span><input id="supplierImportFile" class="textinput" type="file" accept=".json,application/json"></label>
@@ -507,9 +507,786 @@ function invoiceTotalFromForm(form){
  let goodsCost=raw?fromCents(amountInput(raw,false)):listed;
  let deliveryCost=form.elements.deliveryCost.value.trim()?fromCents(amountInput(form.elements.deliveryCost.value,false)):0;
  if(goodsCost<0||deliveryCost<0)throw Error('Стоимость товара и доставки не может быть отрицательной');
- let includeDelivery=form.elements.includeDelivery.checked;
- let total=roundCents(goodsCost+(includeDelivery?deliveryCost:0));
- if(moneyCents(total)<=0)throw Error('Укажите стоимость товара (или доставки, оплачиваемой поставщику) больше 0 $');
+ const includeDelivery=true;
+ const total=roundCents(goodsCost+deliveryCost);
+ if(moneyCents(total)<=0)throw Error('Укажите стоимость товара или доставки больше 0 
+}
+function previewInvoice(){let t=$('invoicePreview'),f=$('invoiceForm');try{let v=invoiceTotalFromForm(f);t.textContent=`Товары: ${cashFmt(v.goodsCost,'USD')} · доставка: ${cashFmt(v.deliveryCost,'USD')} · долг после начисления: ${cashFmt(v.total,'USD')}. ${v.items.length?'Товарных строк: '+v.items.length+'.':''}${v.items.length&&Math.abs(v.listed-v.goodsCost)>0.009?' Сумма вручную отличается от суммы позиций.':''}`}catch(e){t.textContent=e.message}}
+function openInvoice(id=null){
+ editingInvoiceId=id;let existing=ops.invoices.find(i=>i.id===id),f=$('invoiceForm');f.reset();
+ $('invoiceDialogTitle').textContent=existing?'Редактировать накладную':'Новая накладная';
+ f.elements.supplierId.innerHTML=supplyOptions(existing?.supplierId||selectedSupplier);f.elements.date.value=existing?.date||opDate();f.elements.number.value=existing?.number||'';
+ f.elements.tracking.value=existing?.tracking||'';f.elements.status.value=existing?statusCode(existing):'created';f.elements.moysklad.value=existing?.moysklad||'';
+ f.elements.amount.value=existing?(Number.isFinite(existing.goodsCost)?existing.goodsCost:roundCents((Number(existing.total)||0)-(existing.includeDelivery?Number(existing.deliveryCost)||0:0))):'';
+ f.elements.deliveryCost.value=existing?(existing.deliveryMissing?'':String(existing.deliveryCost??'')):'';
+ f.elements.sender.value=existing?.sender||'';f.elements.route.value=existing?.route||'';
+ f.elements.note.value=existing?.note||'';f.elements.items.value=(existing?.items||[]).map(it=>[it.name,it.qty,it.price,it.sku||''].join('; ')).join('\n');
+ f.elements.applyAdvance.checked=false;previewInvoice();$('invoiceDialog').showModal()
+}
+function openCash(){let f=$('cashForm');f.reset();formDate(f);updateCashCategory();$('cashDialog').showModal()}
+function updateCashCategory(){let f=$('cashForm'),account=f.elements.currency.value,kind=f.elements.kind.value;$('usdRateField').classList.toggle('op-hide',!(account==='USD'&&kind==='income'));f.elements.category.value=kind==='expense'?'Выдача / расход':account==='CARD'?'Перевод клиента на карту':account==='AVITO'?'Продажа через Авито Доставку':'Выручка / поступление'}
+function openTransfer(){let f=$('transferForm');f.reset();formDate(f);updateTransferTarget();previewTransfer();$('transferDialog').showModal()}
+function updateTransferTarget(){let f=$('transferForm'),from=f.elements.from.value,to=f.elements.to.value,available=from==='AVITO'?['CARD']:from==='CARD'?['RUB']:['CARD'];f.elements.to.innerHTML=available.map(account=>`<option value="${account}">${esc(cashLabel(account))}</option>`).join('');if(available.includes(to))f.elements.to.value=to;previewTransfer()}
+function previewTransfer(){let f=$('transferForm');try{let from=f.elements.from.value,to=f.elements.to.value,cents=amountInput(f.elements.amount.value);if(from===to||!isRubAccount(from)||!isRubAccount(to)||from==='AVITO'&&to!=='CARD'||to==='AVITO')throw Error('Недопустимое направление перевода');let after=moneyCents(balanceCash(from))-cents;$('transferPreview').textContent=`−${cashFmt(fromCents(cents),'RUB')} со счёта «${cashLabel(from)}»; +${cashFmt(fromCents(cents),'RUB')} на «${cashLabel(to)}». После перевода на исходном счёте: ${cashFmt(fromCents(after),'RUB')}${after<0?' (отрицательный баланс; проверьте остатки)':''}.`;}catch(e){$('transferPreview').textContent='Выберите счета и укажите положительную сумму.'}}
+
+function openExchange(){let f=$('exchangeForm');f.reset();formDate(f);$('exchangePreview').textContent='Укажите количество долларов и курс.';$('exchangeDialog').showModal()}
+function previewExchange(){let f=$('exchangeForm');try{let d=amountInput(f.elements.usd.value),rate=amountInput(f.elements.rate.value),source=f.elements.sourceRub.value;$('exchangePreview').textContent=`Со счёта «${cashLabel(source)}»: −${cashFmt(fromCents(Math.round(d*rate/100)),'RUB')}. В наличные доллары: +${cashFmt(fromCents(d),'USD')}. Курс: ${cashFmt(fromCents(rate),'RUB')} за доллар.`}catch(e){$('exchangePreview').textContent='Укажите количество долларов и курс.'}}
+function openPayment(){let f=$('paymentForm');f.reset();f.elements.supplierId.innerHTML=supplyOptions(selectedSupplier);formDate(f);f.elements.fromCash.checked=true;updatePaymentInvoice();$('paymentDialog').showModal()}
+function updatePaymentInvoice(){let f=$('paymentForm'),supplierId=f.elements.supplierId.value,prev=f.elements.invoiceId.value;let due=ops.invoices.filter(i=>i.supplierId===supplierId&&invoiceDue(i)>0).sort(sortAsc);f.elements.invoiceId.innerHTML='<option value="">Без привязки — свободный аванс</option>'+due.map(i=>`<option value="${esc(i.id)}">${esc(i.number)} · долг ${cashFmt(invoiceDue(i),'USD')}</option>`).join('');if(prev&&due.some(i=>i.id===prev))f.elements.invoiceId.value=prev;else if(due.length)f.elements.invoiceId.value=due[0].id;else f.elements.invoiceId.value='';previewPayment()}
+function previewPayment(){let f=$('paymentForm'),text=$('paymentPreview');try{let cents=amountInput(f.elements.amount.value),due=ops.invoices.find(i=>i.id===f.elements.invoiceId.value);let allocated=due?Math.min(cents,moneyCents(invoiceDue(due))):0,free=cents-allocated,bal=supplierTotals(f.elements.supplierId.value).balance;let pieces=[`Баланс поставщика станет ${cashFmt(fromCents(moneyCents(bal)+cents),'USD')}.`,`В накладную: ${cashFmt(fromCents(allocated),'USD')}.`,`В аванс: ${cashFmt(fromCents(free),'USD')}.`];if(f.elements.fromCash.checked){let after=moneyCents(balanceCash('USD'))-cents;pieces.push('В долларовой кассе останется '+cashFmt(fromCents(after),'USD')+(after<0?' (ниже нуля; проверьте остатки)':''))}text.textContent=pieces.join(' ')}catch(e){text.textContent='Укажите сумму перевода.'}}
+function openSupplierOpening(){let f=$('supplierOpeningForm');f.reset();f.elements.supplierId.innerHTML=supplyOptions(selectedSupplier);formDate(f);$('supplierOpeningDialog').showModal()}
+function cashOpening(){let f=$('openingForm');for(let k of Object.keys(CASH_ACCOUNTS))f.elements[k].value=String(ops.openings[k]||0);f.elements.USD_rate.value=ops.openingUsdRate?String(ops.openingUsdRate):'';$('openingDialog').showModal()}
+$('supplierOpeningForm').addEventListener('submit',async e=>{e.preventDefault();let f=e.currentTarget;try{let id=f.elements.supplierId.value,amount=evaluated(f.elements.amount.value);if(amount===null||!amount)throw Error('Нужно указать баланс со знаком');if(!ops.suppliers.some(s=>s.id===id))throw Error('Выберите поставщика');let cents=moneyCents(amount);if(ops.invoices.some(i=>i.isOpening&&i.supplierId===id)||ops.payments.some(p=>p.isOpening&&p.supplierId===id)){if(!await askConfirmAsync('Для этого поставщика уже есть начальная позиция. Добавить ещё одну? Баланс может задвоиться.'))return}if(cents>0){ops.payments.push({id:opId('opening-credit'),seq:nextSeq(),supplierId:id,date:f.elements.date.value,amount:fromCents(cents),fromCash:false,isOpening:true,note:'Начальный аванс'})}else{ops.invoices.push({id:opId('opening-debt'),seq:nextSeq(),supplierId:id,date:f.elements.date.value,number:'НАЧАЛЬНЫЙ-ДОЛГ-'+opId('entry'),tracking:'',moysklad:'',status:'received',items:[],total:fromCents(-cents),isOpening:true,note:'Учетный начальный долг, без детализации по товарам'})}selectedSupplier=id;$('supplierOpeningDialog').close();opCommit('Начальный баланс поставщика учтён')}catch(err){toast('Начальный баланс: '+err.message)}});
+$('cashForm').addEventListener('submit',e=>{e.preventDefault();let f=e.currentTarget;try{let cents=amountInput(f.elements.amount.value),curr=f.elements.currency.value,kind=f.elements.kind.value;if(!Object.prototype.hasOwnProperty.call(CASH_ACCOUNTS,curr)||!['income','expense'].includes(kind))throw Error('Неверный тип операции');let rate=null;if(curr==='USD'&&kind==='income'&&f.elements.rate.value.trim())rate=fromCents(amountInput(f.elements.rate.value));ops.cash.push({id:opId('cash'),seq:nextSeq(),date:f.elements.date.value,currency:curr,amount:fromCents(cents*(kind==='income'?1:-1)),kind,rate,category:f.elements.category.value,note:f.elements.note.value.trim()});$('cashDialog').close();opCommit('Операция в кассе добавлена')}catch(err){toast('Проверьте данные: '+err.message)}});
+$('transferForm').addEventListener('submit',e=>{e.preventDefault();let f=e.currentTarget;try{let cents=amountInput(f.elements.amount.value),from=f.elements.from.value,to=f.elements.to.value;if(!isRubAccount(from)||!isRubAccount(to)||from===to||from==='AVITO'&&to!=='CARD'||to==='AVITO')throw Error('Недопустимые счета перевода');let id=opId('move'),base={date:f.elements.date.value,transferId:id,kind:'transfer',category:'Между своими счетами',note:f.elements.note.value.trim()};ops.cash.push({...base,id:opId('cash'),seq:nextSeq(),currency:from,amount:fromCents(-cents)},{...base,id:opId('cash'),seq:nextSeq(),currency:to,amount:fromCents(cents)});$('transferDialog').close();opCommit('Перевод проведён без двойного учёта поступления')}catch(err){toast('Перевод: '+err.message)}});
+$('exchangeForm').addEventListener('submit',e=>{e.preventDefault();let f=e.currentTarget;try{let dollars=amountInput(f.elements.usd.value),rate=amountInput(f.elements.rate.value),source=f.elements.sourceRub.value,rub=Math.round(dollars*rate/100);if(!['RUB','CARD'].includes(source))throw Error('Укажите рублёвый источник');if(rub<=0||rub>1e15)throw Error('Некорректная сумма покупки');let id=opId('fx'),base={date:f.elements.date.value,exchangeId:id,rate:fromCents(rate),category:'Покупка долларов',note:f.elements.note.value.trim()};ops.cash.push({...base,id:opId('rub'),seq:nextSeq(),currency:source,amount:fromCents(-rub),kind:'exchangeRUB'},{...base,id:opId('usd'),seq:nextSeq(),currency:'USD',amount:fromCents(dollars),kind:'exchangeUSD'});$('exchangeDialog').close();opCommit('Покупка долларов записана в обе кассы')}catch(err){toast('Проверьте обмен: '+err.message)}});
+$('openingForm').addEventListener('submit',async e=>{e.preventDefault();let f=e.currentTarget;try{let values={};for(let k of Object.keys(CASH_ACCOUNTS))values[k]=amountInput(f.elements[k].value,false);if(Object.values(values).some(n=>n<0))throw Error('Начальный остаток не может быть отрицательным');const openingRate=f.elements.USD_rate.value.trim()?fromCents(amountInput(f.elements.USD_rate.value)):null;if(ops.cash.length&&!await askConfirmAsync('В журнале уже есть операции. Изменение начальных остатков пересчитает всю кассу. Продолжить?'))return;ops.openingUsdRate=openingRate;ops.openings=Object.fromEntries(Object.entries(values).map(([k,v])=>[k,fromCents(v)]));$('openingDialog').close();opCommit('Начальные остатки обновлены')}catch(err){toast(err.message)}});
+$('invoiceForm').addEventListener('submit',e=>{e.preventDefault();let f=e.currentTarget;try{
+ const v=invoiceTotalFromForm(f),supplierId=f.elements.supplierId.value,number=f.elements.number.value.trim(),existing=ops.invoices.find(i=>i.id===editingInvoiceId);
+  if(v.items.length&&Math.abs(v.listed-v.goodsCost)>0.009&&!confirm('Сумма товара в накладной ('+cashFmt(v.goodsCost,'USD')+') отличается от суммы её позиций ('+cashFmt(v.listed,'USD')+'). Сохранить эту разницу намеренно?'))return;
+ if(!number)throw Error('Укажите номер накладной');if(!ops.suppliers.some(s=>s.id===supplierId))throw Error('Не выбран поставщик');
+ if(ops.invoices.some(i=>i.id!==editingInvoiceId&&!i.isOpening&&i.supplierId===supplierId&&i.number.trim().toLowerCase()===number.toLowerCase()))throw Error('У этого поставщика уже есть накладная с таким номером');
+ if(existing){if(supplierId!==existing.supplierId&&invoicePaid(existing.id)>0)throw Error('Нельзя изменить поставщика после зачёта оплаты');if(moneyCents(v.total)<moneyCents(invoicePaid(existing.id)))throw Error('Новая сумма меньше уже зачтённых платежей');}
+ const inv={id:existing?.id||opId('invoice'),seq:existing?.seq||nextSeq(),supplierId,date:f.elements.date.value,number,tracking:f.elements.tracking.value.trim(),moysklad:f.elements.moysklad.value.trim(),status:f.elements.status.value,items:v.items,total:v.total,goodsCost:v.goodsCost,deliveryCost:v.deliveryCost,deliveryMissing:!f.elements.deliveryCost.value.trim(),includeDelivery:true,sender:f.elements.sender.value.trim(),route:f.elements.route.value.trim(),note:f.elements.note.value.trim(),accrued:existing?invoiceAccrued(existing):false};
+ if(existing)Object.assign(existing,inv);else ops.invoices.push(inv);
+ let applied=inv.accrued&&f.elements.applyAdvance.checked?applyAdvance(inv.id):0;
+ $('invoiceDialog').close();opCommit('Накладная сохранена'+(inv.accrued?' · долг поставщика обновлён':' · долг ещё не начислен')+(applied?' · аванс зачтён: '+cashFmt(applied,'USD'):''));
+ }catch(err){toast('Накладная: '+err.message)}});
+
+$('paymentForm').addEventListener('submit',e=>{e.preventDefault();let f=e.currentTarget;try{let cents=amountInput(f.elements.amount.value),id=f.elements.supplierId.value,invoiceId=f.elements.invoiceId.value,invoice=ops.invoices.find(i=>i.id===invoiceId);if(!ops.suppliers.some(s=>s.id===id))throw Error('Неизвестный поставщик');if(invoiceId&&(!invoice||invoice.supplierId!==id))throw Error('Накладная не принадлежит поставщику');let payment={id:opId('pay'),seq:nextSeq(),date:f.elements.date.value,supplierId:id,amount:fromCents(cents),fromCash:f.elements.fromCash.checked,note:f.elements.note.value.trim()};ops.payments.push(payment);if(invoiceId)addAllocation(payment.id,invoiceId,payment.amount);if(payment.fromCash)ops.cash.push({id:opId('cash'),seq:nextSeq(),date:payment.date,currency:'USD',amount:fromCents(-cents),kind:'supplier',paymentId:payment.id,category:'Оплата поставщику: '+supName(id),note:payment.note||'Оплата поставщику'});selectedSupplier=id;$('paymentDialog').close();opCommit('Перевод сохранён; баланс поставщика обновлён')}catch(err){toast('Перевод: '+err.message)}});
+let editingUsdRateId=null;
+function openUsdRateEditor(id){
+ const rec=ops.cash.find(r=>r.id===id);
+ if(!rec||rec.currency!=='USD'||rec.kind!=='income')return;
+ editingUsdRateId=id;
+ $('usdRateInfo').textContent='Поступление '+cashFmt(rec.amount,'USD')+' от '+dateText(rec.date)+'. Введите фактический курс получения этих долларов.';
+ $('usdRateForm').elements.rate.value=rec.rate?String(rec.rate):'';
+ $('usdRateDialog').showModal();
+}
+$('usdRateForm').addEventListener('submit',e=>{
+ e.preventDefault();
+ try{
+   const rec=ops.cash.find(r=>r.id===editingUsdRateId);
+   if(!rec||rec.currency!=='USD'||rec.kind!=='income')throw Error('Не удалось найти поступление долларов');
+   rec.rate=fromCents(amountInput(e.currentTarget.elements.rate.value));
+   $('usdRateDialog').close();opCommit('Курс поступления долларов сохранён, рублёвая стоимость пересчитана');
+ }catch(err){toast('Проверьте курс: '+err.message)}
+});
+function removeInvoice(id){
+ let inv=ops.invoices.find(i=>i.id===id);if(!inv){toast('Накладная не найдена');return}
+ let amt=invoicePaid(id),warning=amt?'Зачтённые платежи ('+cashFmt(amt,'USD')+') станут свободным авансом. ':'';
+ askConfirm(`Удалить накладную «${inv.number}» (${cashFmt(inv.total,'USD')})? ${warning}Восстановление возможно из резервной копии.`,()=>{
+  ops.invoices=ops.invoices.filter(i=>i.id!==id);ops.allocations=ops.allocations.filter(a=>a.invoiceId!==id);opCommit('Накладная удалена, расчеты обновлены')
+ });
+}
+function removePayment(id){
+ let p=ops.payments.find(x=>x.id===id);if(!p){toast('Перевод не найден');return}
+ askConfirm(`Удалить перевод ${cashFmt(p.amount,'USD')} поставщику ${supName(p.supplierId)}? Привязки к накладным и связанное списание из долларовой кассы также будут удалены.`,()=>{
+  ops.payments=ops.payments.filter(x=>x.id!==id);ops.allocations=ops.allocations.filter(a=>a.paymentId!==id);ops.cash=ops.cash.filter(x=>x.paymentId!==id);opCommit('Перевод удалён из взаиморасчётов и кассы')
+ });
+}
+function removeCash(id){
+ let c=ops.cash.find(x=>x.id===id);if(!c){toast('Кассовая операция не найдена');return}
+ if(c.kind==='supplier'){toast('Удалите этот перевод в разделе «Поставщики»');return}
+ let bundle=c.exchangeId?ops.cash.filter(x=>x.exchangeId===c.exchangeId):c.transferId?ops.cash.filter(x=>x.transferId===c.transferId):[c];
+ askConfirm(`Удалить ${bundle.length===2?'обе связанные записи перевода/обмена':'кассовую операцию'} за ${dateText(c.date)}?`,()=>{
+  let ids=new Set(bundle.map(x=>x.id));ops.cash=ops.cash.filter(x=>!ids.has(x.id));opCommit('Операция кассы удалена')
+ });
+}
+function applyAdvanceClick(id){let inv=ops.invoices.find(i=>i.id===id);if(!inv)return;let applied=applyAdvance(id);if(!applied){toast('Нет свободного аванса для зачёта');return}opCommit(`Зачтено в накладную ${inv.number}: ${cashFmt(applied,'USD')}`)}
+// --- CDEK CSV import with a preview. Never silently charge suppliers. ---
+function cdekSimplify(s){return String(s||'').toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ').trim()}
+function cdekSupplier(sender){const s=cdekSimplify(sender);
+ if(['малагин вадим','малагина елена','малинина алина'].some(n=>s.includes(n)))return 'alina';
+ if(s.includes('нестер дмитрий'))return 'anna';
+ if(/(^|\W)анатолий($|\W)/u.test(s))return 'anatoly';
+ return null;
+}
+function cdekStatus(s){let v=cdekSimplify(s);if(/вручен|вручена|доставлен|получен/.test(v))return 'delivered';if(/готов.*выдач|прибыл.*пункт|ожидает выдач/.test(v))return 'ready';if(/создан|зарегистрирован|оформлен/.test(v))return 'created';return v?'transit':'created'}
+function parseCdekCSV(text){
+ text=String(text).replace(/^\uFEFF/,'');if(text.length>8e6)throw Error('CSV слишком большой');
+ let first=text.split(/\r?\n/).find(s=>s.trim())||'',counts={';':(first.match(/;/g)||[]).length,',':(first.match(/,/g)||[]).length,'\t':(first.match(/\t/g)||[]).length};
+ let delimiter=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];if(!counts[delimiter])throw Error('Не найден разделитель CSV (;, запятая или табуляция)');
+ let rows=[],row=[],field='',quote=false;
+ for(let i=0;i<text.length;i++){const ch=text[i];if(ch==='"'){if(quote&&text[i+1]==='"'){field+='"';i++}else quote=!quote}
+ else if(ch===delimiter&&!quote){row.push(field);field=''}else if((ch==='\n'||ch==='\r')&&!quote){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(field);if(row.some(x=>x.trim()))rows.push(row);row=[];field=''}else field+=ch;}
+ if(quote)throw Error('В CSV незакрытая кавычка');row.push(field);if(row.some(x=>x.trim()))rows.push(row);
+ if(rows.length>20000)throw Error('Больше 20 000 строк: разделите CSV');return rows;
+}
+function cdekHeaderIndex(h,terms){return h.findIndex(s=>terms.some(t=>s.includes(t)))}
+function cdekDate(x){let t=String(x||'').trim();let match=t.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})/);if(match){let dt=match[3]+'-'+match[2].padStart(2,'0')+'-'+match[1].padStart(2,'0');return /^\d{4}-\d{2}-\d{2}$/.test(dt)?dt:opDate()};return /^\d{4}-\d{2}-\d{2}/.test(t)?t.slice(0,10):opDate()}
+function cdekImportRead(rows){
+ if(!rows.length)throw Error('CSV пустой');let headerAt=rows.findIndex((r,i)=>i<15&&r.some(x=>/отправител|накладн|трек|получател|сдэк|номер заказа|номер отправл/i.test(x)));
+ if(headerAt<0)throw Error('Не найдена строка заголовков CSV. Нужны колонки «Отправитель» и «Номер накладной» или «Трек»');
+ let headers=rows[headerAt].map(cdekSimplify);
+ let sender=cdekHeaderIndex(headers,['отправител','от кого','фио отправителя']);
+ let number=cdekHeaderIndex(headers,['номер накладной','№ накладной','номер отправления','номер заказа','номер отправки','номер заявки','накладная','трек','номер сдэк','номера накладных','сдэк']);
+ let tracking=cdekHeaderIndex(headers,['трек','трек номер','номер сдэк','сдэк']);if(tracking<0)tracking=cdekHeaderIndex(headers,['номер накладной','номер отправления']);
+ let status=cdekHeaderIndex(headers,['статус','состояние']);
+ let date=cdekHeaderIndex(headers,['дата создания','дата отправки','дата накладной','создан','дата']);
+ let city=cdekHeaderIndex(headers,['город получателя','город назначения','населенный пункт получателя','город доставки','город отправителя','маршрут']);
+ if(sender<0||number<0)throw Error('В CSV не обнаружены отдельные колонки «Отправитель» и «Номер накладной/трек». Заголовки: '+headers.slice(0,12).join(', '));
+ const existing=new Set(ops.invoices.flatMap(i=>[i.number,i.tracking].filter(Boolean).map(cdekSimplify))),seen=new Set();
+ let valid=[],excluded=[],all=rows.slice(headerAt+1);
+ for(let [idx,row] of all.entries()){
+  if(!row.some(c=>String(c).trim()))continue;
+  const cityText=row.join(' '),isBrest=/(^|[^а-яёa-z])брест([^а-яёa-z]|$)/i.test(cityText);
+  const send=String(row[sender]||'').trim(),sup=cdekSupplier(send),num=String(row[number]||'').trim(),track=String(row[tracking]||'').trim()||num;
+  const reason=!isBrest?'Нет «Брест»':!sup?'Неизвестный отправитель':!num?'Нет номера накладной':existing.has(cdekSimplify(num))||existing.has(cdekSimplify(track))||seen.has(cdekSimplify(num))||seen.has(cdekSimplify(track))?'Дубликат':'';
+  let rec={line:headerAt+idx+2,number:num,tracking:track,sender:send,supplierId:sup,status:cdekStatus(row[status]||''),date:cdekDate(row[date]||''),route:String(row[city]||'Брест').trim()||'Брест',reason};
+  if(reason)excluded.push(rec);else {seen.add(cdekSimplify(num));seen.add(cdekSimplify(track));valid.push(rec)}
+ }
+ return {valid,excluded,allCount:all.length};
+}
+
+// --- Supplier portal: admin-reviewed import only; suppliers have no GitHub credentials. ---
+let supplierImportCandidate=null;
+function supplierDataCheck(raw){
+ if(typeof raw!=='string'||raw.length>500000)throw Error('Файл поставщика должен быть JSON не больше 500 КБ.');
+ let d;try{d=JSON.parse(raw)}catch(e){throw Error('Не удалось разобрать JSON поставщика.')}
+ if(!d||d.app!=='LANDA-supplier-invoice'||d.schemaVersion!==1)throw Error('Это не накладная из кабинета поставщика LANDA.');
+ if(!['anna','alina','anatoly'].includes(d.supplierId))throw Error('Поставщик не распознан.');
+ if(cdekSimplify(d.origin)!=='брест')throw Error('Принимаются только отправления из Бреста.');
+ const tracking=String(d.tracking||'').trim().replace(/\s+/g,'');
+ if(!/^[a-z0-9-]{8,35}$/i.test(tracking))throw Error('Укажите корректный трек-номер СДЭК (8–35 символов).');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(String(d.date||''))||!Number.isFinite(Date.parse(d.date+'T00:00:00')))throw Error('Неверная дата отправки.');
+ const destination=String(d.destination||'').trim();if(!destination||destination.length>80)throw Error('Не указан город назначения.');
+ if(!Array.isArray(d.items)||d.items.length===0||d.items.length>100)throw Error('Должно быть от 1 до 100 товаров.');
+ const items=d.items.map((item,i)=>{
+   const name=String(item.name||'').trim(),qty=Number(item.qty);
+   if(!name||name.length>180||!Number.isFinite(qty)||qty<=0||qty>100000)throw Error('Ошибка названия или количества товара №'+(i+1));
+   if(item.price!==null&&item.price!==undefined&&(!Number.isFinite(item.price)||item.price<0||item.price>99999999))throw Error('Ошибка цены товара №'+(i+1));
+   return {name,qty,price:item.price==null?null:Math.round(item.price*100)/100,sku:String(item.sku||'').slice(0,100)};
+ });
+ if(d.deliveryCost!=null&&(!Number.isFinite(d.deliveryCost)||d.deliveryCost<0||d.deliveryCost>99999999))throw Error('Неверная стоимость доставки.');
+ if(ops.invoices.some(x=>[x.tracking,x.number].some(n=>cdekSimplify(n)===cdekSimplify(tracking))))throw Error('Накладная с таким номером уже есть в LANDA: '+tracking);
+ const goodsCost=fromCents(items.reduce((v,it)=>v+(it.price===null?0:Math.round(it.qty*moneyCents(it.price))),0));
+ if(!Number.isFinite(goodsCost)||goodsCost>1e13)throw Error('Слишком большая сумма товаров.');
+ return {supplierId:d.supplierId,tracking,date:d.date,destination,sender:String(d.sender||'').slice(0,100),items,goodsCost,deliveryCost:d.deliveryCost==null?0:Math.round(d.deliveryCost*100)/100,missingItems:items.filter(it=>it.price===null).length,deliveryUnknown:d.deliveryCost==null,note:String(d.note||'').slice(0,500)};
+}
+function supplierImportShow(){
+ try{
+  let text=$('supplierImportText').value.trim();
+  if(!text){supplierImportCandidate=null;$('supplierImportApply').disabled=true;$('supplierImportPreview').textContent='Выберите файл или вставьте JSON для проверки.';return}
+  const d=supplierDataCheck(text);supplierImportCandidate=d;
+  $('supplierImportApply').disabled=false;
+  const line=d.items.map(it=>esc(it.name)+' × '+fmt.format(it.qty)+' · '+(it.price===null?'цена не указана':cashFmt(it.price,'USD')+' за шт.')).join('<br>');
+  $('supplierImportPreview').innerHTML='<strong>'+esc(supName(d.supplierId))+' · СДЭК '+esc(d.tracking)+'</strong><br>Откуда: Брест → '+esc(d.destination)+'<br>Отправитель: '+esc(d.sender||'не указан')+'<br>Дата: '+esc(d.date)+'<br><br>'+line+'<br><br>Сумма известных цен: '+cashFmt(d.goodsCost,'USD')+' · доставка: '+(d.deliveryUnknown?'не указана':cashFmt(d.deliveryCost,'USD'))+(d.missingItems?'<br><strong>⚠ Без цены: '+d.missingItems+' товар(ов). Уточните стоимость перед начислением.</strong>':'')+'<br><strong>Всего с доставкой: '+cashFmt(roundCents(d.goodsCost+d.deliveryCost),'USD')+' (включая доставку). Статус: «Создан», долг пока не начислен.</strong>';
+ }catch(e){supplierImportCandidate=null;$('supplierImportApply').disabled=true;$('supplierImportPreview').textContent='Ошибка проверки: '+e.message}
+}
+$('supplierImportOpen').addEventListener('click',()=>{supplierImportCandidate=null;$('supplierImportText').value='';$('supplierImportFile').value='';supplierImportShow();$('supplierImportDialog').showModal()});
+$('supplierImportText').addEventListener('input',supplierImportShow);
+$('supplierImportFile').addEventListener('change',async e=>{const f=e.currentTarget.files[0];if(!f)return;try{if(f.size>500000)throw Error('Файл больше 500 КБ');$('supplierImportText').value=await f.text();supplierImportShow()}catch(err){supplierImportCandidate=null;$('supplierImportApply').disabled=true;$('supplierImportPreview').textContent='Ошибка: '+err.message}});
+$('supplierImportApply').addEventListener('click',()=>{
+ if(!supplierImportCandidate)return;
+ try{
+  // Re-check immediately before writing, including duplicate protection.
+  const d=supplierDataCheck($('supplierImportText').value.trim());
+  if(!confirm('Принять накладную СДЭК '+d.tracking+' от '+supName(d.supplierId)+'? Статус «Создан», долг НЕ начисляется.'))return;
+  // Missing prices remain 0 in the operational schema; marked for manual correction.
+  let itemRows=d.items.map(it=>({name:it.name,qty:it.qty,price:it.price??0,sku:it.sku}));
+  let notes=['Создана поставщиком через форму LANDA. Данные о вручении не проверены.'];
+  if(d.missingItems)notes.push('⚠ Без цены: '+d.missingItems+' товарных позиций; уточнить перед начислением.');
+  if(d.deliveryUnknown)notes.push('Стоимость доставки ещё не указана.');
+  if(d.note)notes.push(d.note);
+  ops.invoices.push({id:opId('invoice'),seq:nextSeq(),supplierId:d.supplierId,date:d.date,number:d.tracking,tracking:d.tracking,moysklad:'',status:'created',items:itemRows,goodsCost:d.goodsCost,deliveryCost:d.deliveryCost,deliveryMissing:d.deliveryUnknown,includeDelivery:true,total:roundCents(d.goodsCost+d.deliveryCost),accrued:false,sender:d.sender,route:'Брест → '+d.destination,note:notes.join(' ').slice(0,500)});
+  supplierImportCandidate=null;$('supplierImportDialog').close();setPage('invoices');opCommit('Накладная '+d.tracking+' добавлена. Проверьте статус СДЭК; долг не начислен.');
+ }catch(e){supplierImportCandidate=null;$('supplierImportApply').disabled=true;$('supplierImportPreview').textContent='Ошибка: '+e.message}
+});
+
+let cdekCandidates=[];
+function openCdekImport(){cdekCandidates=[];$('cdekCsvFile').value='';$('cdekCsvCommit').disabled=true;$('cdekCsvPreview').innerHTML='';$('cdekCsvReport').textContent='Выберите CSV-файл СДЭК.';$('cdekImportDialog').showModal()}
+$('cdekCsvFile').addEventListener('change',async e=>{
+ cdekCandidates=[];$('cdekCsvCommit').disabled=true;
+ try{const file=e.currentTarget.files[0];if(!file)return;if(file.size>8e6)throw Error('Максимальный размер 8 МБ');
+ const bytes=await file.arrayBuffer();let text;
+ try{text=new TextDecoder('utf-8',{fatal:true}).decode(bytes)}catch(err){text=new TextDecoder('windows-1251').decode(bytes)}
+ const r=cdekImportRead(parseCdekCSV(text));cdekCandidates=r.valid;
+ $('cdekCsvReport').textContent=`Строк с данными: ${r.allCount}. К добавлению: ${r.valid.length}. Пропущено: ${r.excluded.length} (без Бреста, неизвестный отправитель, дубликаты или без номера). Стоимости товара и доставки после импорта заполняются вручную.`;
+ const preview=r.valid.map(i=>({...i,result:'Добавить'})).concat(r.excluded.map(i=>({...i,result:i.reason})));
+ $('cdekCsvPreview').innerHTML=opTable(['Строка','Номер','Отправитель','Поставщик','Статус','Результат'],preview.slice(0,100).map(i=>`<tr><td>${i.line}</td><td>${esc(i.number)}</td><td>${esc(i.sender)}</td><td>${esc(i.supplierId?supName(i.supplierId):'—')}</td><td>${esc(CDEK_STATUS[i.status])}</td><td>${esc(i.result)}</td></tr>`),'Подходящих накладных нет');
+ $('cdekCsvCommit').disabled=!r.valid.length;
+ }catch(err){$('cdekCsvReport').textContent='Ошибка CSV: '+err.message;$('cdekCsvPreview').innerHTML='';toast('Ошибка импорта: '+err.message)}
+});
+$('cdekCsvCommit').addEventListener('click',()=>{
+ if(!cdekCandidates.length)return;let count=0;
+ const known=new Set(ops.invoices.flatMap(i=>[i.number,i.tracking].filter(Boolean).map(cdekSimplify)));
+ for(const row of cdekCandidates){if(known.has(cdekSimplify(row.number))||known.has(cdekSimplify(row.tracking)))continue;
+  ops.invoices.push({id:opId('invoice'),seq:nextSeq(),supplierId:row.supplierId,date:row.date,number:row.number,tracking:row.tracking,moysklad:'',status:row.status,items:[],goodsCost:0,deliveryCost:0,deliveryMissing:true,includeDelivery:true,total:0,accrued:false,sender:row.sender,route:row.route,note:'Импорт СДЭК из CSV; укажите стоимость товара и доставки в $'});count++;
+  known.add(cdekSimplify(row.number));known.add(cdekSimplify(row.tracking));
+ }
+ cdekCandidates=[];$('cdekImportDialog').close();setPage('invoices');opCommit('Импортировано '+count+' накладных. Укажите суммы в $, отметьте «Вручен» и начислите долг поставщикам.')
+});
+
+// Batch CDEK verification. This module NEVER claims a live tracking API:
+// the public CDEK tracking page requires an interactive browser check.
+// Only the owner can approve updates, and accounting entries stay untouched.
+const CDEK_BATCH_RANK={created:0,transit:1,ready:2,delivered:3};
+function cdekFromBrest(invoice){
+ const route=String(invoice.route||'').trim();
+ return /^брест(?=$|[\s,;/—→-])/i.test(route);
+}
+function cdekPending(){
+ return ops.invoices.filter(i=>!i.isOpening&&cdekFromBrest(i)&&statusCode(i)!=='delivered'&&String(i.tracking||'').trim()).slice().sort(sortDesc);
+}
+function cdekTrackKey(s){return String(s||'').replace(/\s/g,'').toLowerCase()}
+function cdekBatchView(){
+ const pending=cdekPending();
+ $('cdekBatchCount').textContent=pending.length+' накладных без статуса «Вручен» · из Бреста';
+ $('cdekBatchRows').innerHTML=pending.length?pending.map(i=>{
+  const tracking=esc(i.tracking),id=esc(i.id),status=statusCode(i);
+  return `<div class="ops-section" style="align-items:center;gap:9px;flex-wrap:wrap;margin:8px 0;padding:10px;border:1px solid #dae4f2;border-radius:10px">
+   <div style="flex:1;min-width:145px"><strong>${tracking}</strong><small style="display:block;color:#697a94">${esc(supName(i.supplierId))} · ${esc(CDEK_STATUS[status])}</small></div>
+   <button class="btn" type="button" data-cdek-visit="${id}">↗ Проверить</button>
+   <select class="invoice-status-select" data-cdek-stage="${id}" aria-label="Новый статус ${tracking}"><option value="">Без изменений</option>${Object.entries(CDEK_STATUS).filter(([s])=>CDEK_BATCH_RANK[s]>=CDEK_BATCH_RANK[status]).map(([s,l])=>`<option value="${s}">${l}</option>`).join('')}</select>
+  </div>`}).join(''):'<div class="ops-empty">Накладных из Бреста, ожидающих проверки, пока нет.</div>';
+ $('cdekBatchReport').textContent='Выбери статус вручную после проверки на сайте СДЭК или вставь проверенный список из Work.';
+}
+function cdekOpenBatch(){
+ $('cdekBatchText').value='';cdekBatchView();$('cdekBatchDialog').showModal();
+}
+function cdekWorkPrompt(){
+ const items=cdekPending().map(i=>`${i.tracking} (поставщик: ${supName(i.supplierId)}, текущий: ${CDEK_STATUS[statusCode(i)]}, маршрут в LANDA: ${i.route})`);
+ return `Проверь через официальный сайт https://www.cdek.ru/ru/tracking/ все перечисленные накладные СДЭК в браузере. Вход в личный кабинет НЕ нужен. Проверяй только отправления ИЗ Бреста; направление в другую сторону исключай. Нужен именно ТЕКУЩИЙ статус, а не упоминания предыдущих этапов в истории.\n\n${items.join('\n')}\n\nДля каждой накладной открой реальный результат поиска и проверь её номер и город отправления. Не выдумывай результаты, не используй старые статусы из LANDA как новые, не указывай неподтверждённые данные. Если результат не открывается, номер не найден или отправление НЕ из Бреста — исключи его и отдельно поясни.\n\nВерни только подтверждённые данные в формате ОДНА строка на накладную:\nНОМЕР | Создан/В пути/Готов к выдаче/Вручен | Брест → [город назначения]\n\nНе меняй финансовый JSON, кассу, начисления или платежи. Я сам вставлю строки в LANDA и подтвержу обновления.`;
+}
+function cdekBatchParseLine(line){
+ const cols=line.split('|').map(x=>x.trim());if(cols.length<3)return null;
+ const track=cdekTrackKey(cols[0]);const s=cols[1].toLocaleLowerCase('ru').replace(/ё/g,'е');
+ const route=cols[2].toLocaleLowerCase('ru').replace(/ё/g,'е');
+ if(!/^брест(?=$|[\s,;/—→-])/i.test(route))return {track,error:'Не подтверждено отправление из Бреста'};
+ let status=s==='создан'?'created':s==='в пути'?'transit':s==='готов к выдаче'?'ready':s==='вручен'?'delivered':null;
+ if(!status)return {track,error:'Неизвестный статус'};
+ return {track,status};
+}
+function cdekBatchParseText(){
+ const raw=$('cdekBatchText').value.trim();if(raw.length>30000){$('cdekBatchReport').textContent='Слишком длинный текст: максимум 30 000 символов.';return}
+ const pending=cdekPending(),byTrack=new Map(pending.map(i=>[cdekTrackKey(i.tracking),i]));
+ let selected=0,ignored=[],seen=new Set();
+ for(const [idx,line] of raw.split(/\r?\n/).entries()){
+  if(!line.trim())continue;const rec=cdekBatchParseLine(line);
+  if(!rec){ignored.push('Строка '+(idx+1)+': неправильный формат');continue}
+  const i=byTrack.get(rec.track);
+  if(!i){ignored.push('Строка '+(idx+1)+': накладной нет в списке проверки');continue}
+  if(seen.has(rec.track)){ignored.push('Строка '+(idx+1)+': повтор номера');continue}seen.add(rec.track);
+  if(rec.error){ignored.push('Строка '+(idx+1)+': '+rec.error);continue}
+  if(CDEK_BATCH_RANK[rec.status]<CDEK_BATCH_RANK[statusCode(i)]){ignored.push('Строка '+(idx+1)+': статус не может быть понижен');continue}
+  const node=Array.from($('cdekBatchRows').querySelectorAll('[data-cdek-stage]')).find(x=>x.dataset.cdekStage===i.id);
+  if(node){node.value=rec.status;selected++}
+ }
+ $('cdekBatchReport').textContent=`Подготовлено статусов: ${selected}. ${ignored.length?'Пропущено: '+ignored.length+'. '+ignored.slice(0,3).join('; '):'Проверь значения в списке и подтверди применение.'}`;
+}
+function cdekBatchApply(){
+ let updates=[];for(const select of $('cdekBatchRows').querySelectorAll('[data-cdek-stage]')){
+  const status=select.value;if(!status||!Object.hasOwn(CDEK_STATUS,status))continue;
+  const inv=ops.invoices.find(x=>x.id===select.dataset.cdekStage);
+  if(!inv||!cdekFromBrest(inv)||inv.isOpening||statusCode(inv)==='delivered')continue;
+  if(CDEK_BATCH_RANK[status]<CDEK_BATCH_RANK[statusCode(inv)])continue;
+  if(status===statusCode(inv))continue;
+  updates.push({inv,status});
+ }
+ if(!updates.length){$('cdekBatchReport').textContent='Новых статусов нет. Проверь выбранные значения.';return}
+ const delivered=updates.filter(v=>v.status==='delivered').length;
+ askConfirm('Обновить '+updates.length+' статусов СДЭК? '+(delivered?'Отметка «Вручен»: '+delivered+'. ':'')+'Долги поставщикам НЕ начисляются, суммы и касса не меняются.',()=>{
+  for(const u of updates){u.inv.status=u.status;u.inv.statusCheckedAt=new Date().toISOString();u.inv.statusSource='admin-batch';u.inv.trackingVerified=false;}
+  $('cdekBatchDialog').close();opCommit('Обновлено '+updates.length+' статусов СДЭК (без начисления долгов)');
+ });
+}
+$('cdekBatchOpen').addEventListener('click',cdekOpenBatch);
+$('cdekBatchClose').addEventListener('click',()=>$('cdekBatchDialog').close());
+$('cdekBatchRows').addEventListener('click',async e=>{
+ const btn=e.target.closest('[data-cdek-visit]');if(!btn)return;
+ const inv=ops.invoices.find(x=>x.id===btn.dataset.cdekVisit);
+ if(!inv)return;
+ // Open synchronously in the user gesture, avoiding browser popup blockers.
+ window.open('https://www.cdek.ru/ru/tracking/','_blank','noopener,noreferrer');
+ try{await navigator.clipboard.writeText(inv.tracking);$('cdekBatchReport').textContent='Номер '+inv.tracking+' скопирован. Вставь его на сайте СДЭК и выбери показанный статус в LANDA.'}
+ catch(_){$('cdekBatchReport').textContent='Открылось отслеживание СДЭК. Введи номер '+inv.tracking+' в поиске, затем выбери проверенный статус.'}
+});
+$('cdekBatchCopyWork').addEventListener('click',async()=>{
+ const pending=cdekPending();if(!pending.length){$('cdekBatchReport').textContent='Нет накладных для проверки.';return}
+ const promptText=cdekWorkPrompt();
+ try{await navigator.clipboard.writeText(promptText);$('cdekBatchReport').textContent='✓ Задание со всеми '+pending.length+' номерами скопировано. Открой ChatGPT Work, вставь задание, затем скопируй подтверждённые строки ответа обратно сюда.'}
+ catch(_){$('cdekBatchText').value=promptText;$('cdekBatchReport').textContent='Браузер не разрешил копирование. Текст задания помещён в поле ниже — скопируй его вручную в ChatGPT Work.'}
+});
+$('cdekBatchParse').addEventListener('click',cdekBatchParseText);
+$('cdekBatchApply').addEventListener('click',cdekBatchApply);
+
+function updateCdekStatus(id,status){
+ const i=ops.invoices.find(x=>x.id===id);if(!i||i.isOpening||!CDEK_STATUS[status])return;
+ i.status=status;i.statusCheckedAt=new Date().toISOString();i.statusSource='admin-manual';i.trackingVerified=false;opCommit('Статус '+i.number+': '+CDEK_STATUS[status]+(invoiceAccrued(i)?' · ранее начисленный долг сохранён':' · долг пока не начислен'));
+}
+function chargeCdek(id){const i=ops.invoices.find(x=>x.id===id);if(!i||invoiceAccrued(i))return;
+ if(i.submittedAt&&i.reviewStatus!=='approved'){toast('Сначала проверь и подтверди накладную поставщика в Центре контроля.');return}
+ if(statusCode(i)!=='delivered'){toast('Начисление доступно только для статуса «Вручен»');return}
+ if(!i.includeDelivery&&Number(i.deliveryCost)>0){toast('Это старая накладная без доставки в долге. Откройте «Изменить» и подтвердите новый итог с доставкой.');return}
+  if(moneyCents(i.total)<=0){toast('Сначала нажмите «Изменить» и укажите стоимость товара/доставки в долларах');return}
+ askConfirm(`Начислить ${cashFmt(i.total,'USD')} в долг поставщику ${supName(i.supplierId)} по накладной ${i.number}? Товары: ${cashFmt(i.goodsCost||0,'USD')}, доставка: ${cashFmt(i.deliveryCost||0,'USD')} (включена в долг).`,()=>{
+  if(invoiceAccrued(i))return;i.accrued=true;i.accruedAt=new Date().toISOString();opCommit('Долг по накладной '+i.number+' начислен поставщику: '+cashFmt(i.total,'USD'));
+ });
+}
+function unchargeCdek(id){const i=ops.invoices.find(x=>x.id===id);if(!i||!invoiceAccrued(i)||i.isOpening)return;
+ if(invoicePaid(i.id)>0){toast('Сначала отмените зачёты по накладной, иначе долг нельзя снять');return}
+ askConfirm('Отменить начисление по накладной '+i.number+'? Баланс поставщика увеличится на '+cashFmt(i.total,'USD')+'. Статус доставки не изменится.',()=>{i.accrued=false;opCommit('Начисление по накладной отменено')});
+}
+$('invoiceTable').addEventListener('change',e=>{let select=e.target.closest('[data-invoice-status]');if(select)updateCdekStatus(select.dataset.invoiceStatus,select.value)});
+$('supplierInvoices').addEventListener('change',e=>{let select=e.target.closest('[data-invoice-status]');if(select)updateCdekStatus(select.dataset.invoiceStatus,select.value)});
+$('dashboardInvoices').addEventListener('change',e=>{let select=e.target.closest('[data-invoice-status]');if(select)updateCdekStatus(select.dataset.invoiceStatus,select.value)});
+document.addEventListener('click',e=>{let ch=e.target.closest('[data-charge]');if(ch){chargeCdek(ch.dataset.charge);return}let undo=e.target.closest('[data-uncharge]');if(undo){unchargeCdek(undo.dataset.uncharge);return}});
+
+function csvQuote(s){let str=String(s??'');if(/^[=+@\-\t\r]/.test(str)&&typeof s==='string')str="'"+str;return '"'+str.replace(/"/g,'""')+'"'}
+function exportOps(kind){let rows=[],name='';if(kind==='cash'){name='касса';rows=[['Дата','Счёт','Тип','Статья','Сумма','Курс ₽/$','После операции','Примечание']];for(let c of cashRows())rows.push([dateText(c.date),cashLabel(c.currency),cashKinds[c.kind],c.category,c.amount,c.rate||'',c.running,c.note||''])}
+else if(kind==='suppliers'){name='поставщики';rows=[['Тип','Дата','Поставщик','Номер накладной','Сумма $','Зачтено $','Долг по накладной $','Свободный аванс платежа $','Источник оплаты','Товары','СДЭК']];for(let i of ops.invoices)rows.push([i.isOpening?'Начальный долг':'Накладная',dateText(i.date),supName(i.supplierId),i.number,i.total,invoicePaid(i.id),invoiceDue(i),'','',i.items.map(t=>`${t.name} × ${t.qty}`).join(' / '),i.tracking]);for(let p of ops.payments)rows.push([p.isOpening?'Начальный аванс':'Перевод',dateText(p.date),supName(p.supplierId),'',p.amount,paymentAllocated(p.id),'',paymentFree(p),p.fromCash?'Касса $':'Вне кассы','',''])}
+else {name='накладные';rows=[['Дата','Поставщик','Накладная','СДЭК','Отправитель','Маршрут','МойСклад','Статус','Товар','Артикул','Кол-во','Цена за ед. $','Сумма товара $','Доставка $','Включить доставку в долг','Начислено поставщику','Сумма к оплате поставщику $','Зачтено $','Осталось $','Примечание']];for(let i of ops.invoices.filter(i=>!i.isOpening)){let items=i.items.length?i.items:[{name:'Без детализации',sku:'',qty:'',price:''}];for(let it of items)rows.push([dateText(i.date),supName(i.supplierId),i.number,i.tracking,i.sender||'',i.route||'',i.moysklad,CDEK_STATUS[statusCode(i)],it.name,it.sku,it.qty,it.price,it.qty&&it.price?roundCents(it.qty*it.price):'',i.deliveryCost||0,i.includeDelivery?'Да':'Нет',invoiceAccrued(i)?'Да':'Нет',i.total,invoicePaid(i.id),invoiceDue(i),i.note])}}
+download('\ufeff'+rows.map(r=>r.map(csvQuote).join(';')).join('\r\n'),'LANDA-'+name+'-'+opDate()+'.csv','text/csv;charset=utf-8');toast('CSV «'+name+'» скачан')}
+// Backup v2 includes BOTH ledgers. Legacy v1 backups remain importable.
+downloadBackup=function(){download(JSON.stringify({app:'LANDA-suite',backupVersion:3,createdAt:new Date().toISOString(),proschet:state,operations:ops},null,2),'LANDA-полная-копия-'+opDate()+'.json','application/json;charset=utf-8');toast('Полная копия просчёта, кассы и поставщиков скачана')};
+// Older click listeners kept the old function reference: intercept these clicks before them.
+for(const id of ['backupSide','downloadJson'])$(id).addEventListener('click',e=>{e.stopImmediatePropagation();downloadBackup()},true);
+// Capture before the legacy v1 handler: this handler accepts either v1 or v2 data.
+$('fileInput').addEventListener('change',async function(e){e.stopImmediatePropagation();let file=e.target.files?.[0];if(!file)return;try{if(file.size>15e6)throw Error('Файл больше 15 МБ');let data=JSON.parse(await file.text());if(data.app==='LANDA-suite'&&[2,3].includes(data.backupVersion)&&validate(data.proschet)&&isOps(data.operations)){if(!await askConfirmAsync('Заменить просчёт, кассу и поставщиков из полной резервной копии? Текущие данные будут заменены.'))return;state=data.proschet;ops=normalizeOps(data.operations);snap=state.snapshots[state.snapshots.length-1].id;undo=[];save();saveOps();render();renderOps();toast('Полная копия восстановлена')}else if(validate(data)){if(!await askConfirmAsync('Это старая копия просчёта. Восстановить только просчёт? Касса и поставщики останутся без изменений.'))return;state=data;snap=state.snapshots[state.snapshots.length-1].id;undo=[];save();render();toast('Просчёт восстановлен, касса и поставщики не изменены')}else throw Error('Неподдерживаемый формат резервной копии')}catch(err){toast('Импорт: '+err.message)}finally{e.target.value=''}},true);
+const exportDialogText=$('exportDialog').querySelector('.modal-body p');if(exportDialogText)exportDialogText.textContent='Полная JSON-копия сохраняет просчёт, движения всех четырёх счетов, накладные, оплаты и распределение авансов. CSV здесь выгружает старый просчёт; журналы кассы и накладных можно выгрузить в соответствующих разделах.';
+$('downloadJson').textContent='⇩ JSON — полная копия всех разделов';
+$('invoiceSearch').addEventListener('input',renderInvoices);$('invoiceSupplierFilter').addEventListener('change',renderInvoices);$('invoiceStateFilter').addEventListener('change',renderInvoices);
+$('cashForm').elements.kind.addEventListener('change',updateCashCategory);$('cashForm').elements.currency.addEventListener('change',updateCashCategory);$('transferForm').elements.from.addEventListener('change',updateTransferTarget);$('transferForm').addEventListener('input',previewTransfer);
+$('exchangeForm').addEventListener('input',previewExchange);$('paymentForm').addEventListener('input',previewPayment);$('paymentSupplier').addEventListener('change',updatePaymentInvoice);$('invoiceForm').addEventListener('input',previewInvoice);
+$('cashFilters').addEventListener('click',e=>{let b=e.target.closest('[data-cash-filter]');if(!b)return;cashFilter=b.dataset.cashFilter;renderCash()});
+// Copy synchronously on tap so iOS Safari keeps the clipboard gesture before opening a new tab.
+function copyCdekTracking(number){
+ let copied=false, field=null;
+ try{
+  field=document.createElement('textarea');
+  field.value=number;
+  field.setAttribute('readonly','');
+  field.style.cssText='position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;';
+  document.body.appendChild(field);
+  field.focus();
+  field.select();
+  field.setSelectionRange(0,number.length);
+  copied=document.execCommand('copy');
+ }catch(_){}
+ finally{if(field&&field.parentNode)field.remove()}
+ if(copied){toast('Номер СДЭК '+number+' скопирован. Вставь его в поиск на сайте.');return}
+ if(navigator.clipboard&&navigator.clipboard.writeText){
+  navigator.clipboard.writeText(number).then(()=>toast('Номер СДЭК '+number+' скопирован')).catch(()=>toast('Не удалось автоматически скопировать номер '+number+'. Скопируй его в LANDA.'));
+ }else toast('Не удалось автоматически скопировать номер '+number+'. Скопируй его в LANDA.');
+}
+document.addEventListener('click',e=>{let cdekLink=e.target.closest('[data-cdek-open]');if(cdekLink){copyCdekTracking(cdekLink.dataset.cdekOpen);return}let copyTrack=e.target.closest('[data-copy-track]');if(copyTrack){const num=copyTrack.dataset.copyTrack;if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(num).then(()=>toast('Трек СДЭК скопирован')).catch(()=>window.prompt('Скопируй трек СДЭК:',num));}else window.prompt('Скопируй трек СДЭК:',num);return}let nav=e.target.closest('[data-page]');if(nav){setPage(nav.dataset.page);return}let go=e.target.closest('[data-go]');if(go){setPage(go.dataset.go);return}let sup=e.target.closest('[data-supplier-card]');if(sup){setSupplier(sup.dataset.supplierCard);return}let act=e.target.closest('[data-action]');if(act){let kind=act.dataset.action;if(kind==='newInvoice')openInvoice();else if(kind==='importInvoices')openCdekImport();else if(kind==='newPayment')openPayment();else if(kind==='newCash')openCash();else if(kind==='newTransfer')openTransfer();else if(kind==='newExchange')openExchange();else if(kind==='openings')cashOpening();else if(kind==='supplierOpening')openSupplierOpening();else if(kind==='exportCash')exportOps('cash');else if(kind==='exportSuppliers')exportOps('suppliers');else if(kind==='exportInvoices')exportOps('invoices');return}let close=e.target.closest('[data-close]');if(close){$(close.dataset.close).close();return}let apply=e.target.closest('[data-apply]');if(apply){applyAdvanceClick(apply.dataset.apply);return}let edit=e.target.closest('[data-edit-invoice]');if(edit){openInvoice(edit.dataset.editInvoice);return}let del=e.target.closest('[data-delete-invoice]');if(del){removeInvoice(del.dataset.deleteInvoice);return}let delPay=e.target.closest('[data-delete-payment]');if(delPay){removePayment(delPay.dataset.deletePayment);return}let rateCash=e.target.closest('[data-rate-cash]');if(rateCash){openUsdRateEditor(rateCash.dataset.rateCash);return}let delCash=e.target.closest('[data-delete-cash]');if(delCash){removeCash(delCash.dataset.deleteCash);return}});
+document.addEventListener('keydown',e=>{let sup=e.target.closest('[data-supplier-card]');if(sup&&(e.key==='Enter'||e.key===' ')){e.preventDefault();setSupplier(sup.dataset.supplierCard)}});
+$('nav').addEventListener('click',e=>{if(e.target.closest('[data-nav]'))setPage('proschet')});
+setPage('dashboard');
+
+// Improved modal validation. Native HTML checks otherwise suppress submit without showing a message in file previews.
+for(const form of document.querySelectorAll('dialog form'))form.noValidate=true;
+document.addEventListener('submit',e=>{
+ const form=e.target;if(!form.closest('dialog')||form.id==='actionConfirmDialog')return;
+ clearDialogWarnings(form.closest('dialog'));
+ if(form.checkValidity())return;
+ e.preventDefault();e.stopImmediatePropagation();
+ const invalid=form.querySelector(':invalid');if(!invalid)return;
+ const label=invalid.closest('label')?.querySelector('span')?.textContent?.trim()||invalid.getAttribute('aria-label')||'обязательное поле';
+ const reason=invalid.validity.valueMissing?'Заполните поле «'+label+'».':'Проверьте поле «'+label+'»: неверное значение.';
+ let msg=document.createElement('div');msg.className='input-feedback';msg.setAttribute('role','alert');msg.textContent=reason;
+ const field=invalid.closest('label.field')||invalid.parentElement;field.appendChild(msg);invalid.setAttribute('aria-invalid','true');invalid.focus();
+},true);
+document.addEventListener('input',e=>{const field=e.target.closest('label.field');if(field){field.querySelector('.input-feedback')?.remove();e.target.removeAttribute('aria-invalid')}e.target.closest('dialog')?.querySelector('.form-feedback')?.remove()},true);
+document.addEventListener('click',e=>{if(e.target.closest('dialog')&&!e.target.closest('#actionConfirmDialog')&&e.target.closest('button[data-close]'))clearDialogWarnings(e.target.closest('dialog'))},true);
+// Detect browser previews/private-mode contexts where local file storage cannot persist data.
+try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.getItem(k)!=='ok')throw Error('Read failed');localStorage.removeItem(k)}catch(e){showStorageWarning()}
+
+// V6: direct form submission with visible error reporting and no hanging progress.
+(function(){
+ const status=document.getElementById('launchStatus');
+ if(status){
+   if(typeof document.getElementById('cashDialog').showModal!=='function'){
+     window.__landaReportError('Браузер не поддерживает окна программы. Откройте скачанный файл напрямую в обновлённом Chrome или Edge.');
+   } else {
+     status.dataset.state='ok';status.innerHTML='<strong>LANDA работает.</strong> Если запись не выполнена, появится конкретная ошибка. Перед повтором операции проверьте журнал.';
+   }
+ }
+ // The click is the actual submission trigger, not merely a "working" badge.
+ // Some mobile/file preview engines cancel the native form default action.
+ // Calling the registered submit listeners ourselves handles those browsers too.
+ for(const form of document.querySelectorAll('dialog form')){
+   form.addEventListener('click', function(event){
+     const target=event.target;
+     const btn=target&&target.closest?target.closest('button[type="submit"],input[type="submit"]'):null;
+     if(!btn || !form.contains(btn))return;
+     event.preventDefault(); // No native second submit and no accidental page navigation.
+     try {
+       const submitEvent=new Event('submit',{bubbles:true,cancelable:true});
+       form.dispatchEvent(submitEvent);
+     } catch(error){
+       window.__landaReportError('Ошибка отправки формы '+form.id+': '+(error&&error.message||String(error)));
+       const dlg=form.closest('dialog');
+       let box=dlg&&dlg.querySelector('.form-feedback');
+       if(dlg&&!box){box=document.createElement('div');box.className='form-feedback';
+          box.setAttribute('role','alert');const footer=dlg.querySelector('.modal-ft');
+          if(footer)footer.before(box);else dlg.appendChild(box)}
+       if(box)box.textContent='Не удалось выполнить операцию: '+(error&&error.message||error);
+     }
+   },true);
+ }
+})();
+</script>
+
+
+
+
+
+<script>
+'use strict';
+// v8: import full backups by direct paste, without needing a file picker.
+(function(){
+  const modal=document.getElementById('pasteBackupDialog');
+  const area=document.getElementById('pasteBackupText');
+  const feedback=document.getElementById('pasteBackupFeedback');
+  const maxSize=15*1024*1024;
+  function note(message,isError){feedback.textContent=message;feedback.style.color=isError?'#9d2334':'#365a78';}
+  function openPaste(){
+    note('');area.value='';modal.showModal();area.focus();
+  }
+  function closePaste(){modal.close();}
+  document.getElementById('pasteBackupSide').addEventListener('click',openPaste);
+  document.getElementById('pasteBackupToolbar').addEventListener('click',openPaste);
+  document.getElementById('pasteBackupFromExport').addEventListener('click',function(){document.getElementById('exportDialog').close();openPaste();});
+  document.getElementById('pasteBackupCancel').addEventListener('click',closePaste);
+  document.getElementById('pasteBackupClipboard').addEventListener('click',async function(){
+    try{
+      if(!navigator.clipboard||!navigator.clipboard.readText)throw Error('Браузер не даёт доступ к буферу обмена');
+      const text=await navigator.clipboard.readText();
+      if(!text)throw Error('Буфер пустой');
+      if(text.length>maxSize)throw Error('Размер текста превышает 15 МБ');
+      area.value=text;note('Текст из буфера вставлен. Нажми «Проверить копию».');
+    }catch(err){note('Автоматическая вставка недоступна: '+err.message+'. Нажми на поле и используй Ctrl+V или ⌘+V.',true);area.focus();}
+  });
+  function decodePayload(text){
+    const raw=String(text||'').replace(/^\uFEFF/,'').trim();
+    if(!raw)throw Error('Вставь текст JSON-копии в поле.');
+    if(raw.length>maxSize)throw Error('Копия больше 15 МБ. Используй восстановление из файла.');
+    let data;
+    try{data=JSON.parse(raw);}catch(err){throw Error('Некорректный JSON: '+err.message+'. Скопируй весь текст файла от первой до последней фигурной скобки.');}
+    if(data&&data.app==='LANDA-suite'&&[2,3].includes(data.backupVersion)&&validate(data.proschet)&&isOps(data.operations)){
+      return {full:true,data:data,caption:'Полная копия: '+data.proschet.snapshots.length+' периодов, '+data.proschet.rows.length+' строк; '+data.operations.cash.length+' кассовых записей; '+data.operations.invoices.length+' накладных; '+data.operations.payments.length+' оплат.'};
+    }
+    if(validate(data)){
+      return {full:false,data:data,caption:'Копия просчёта: '+data.snapshots.length+' периодов, '+data.rows.length+' строк. Касса и поставщики не затронутся.'};
+    }
+    throw Error('Формат не распознан. Нужна полная JSON-копия LANDA или JSON-копия финансового просчёта.');
+  }
+  function checkPaste(){
+    try{let r=decodePayload(area.value);note('✓ '+r.caption);return r;}
+    catch(err){note('Ошибка: '+err.message,true);return null;}
+  }
+  document.getElementById('pasteBackupCheck').addEventListener('click',checkPaste);
+  area.addEventListener('input',function(){note('');});
+  function restoreValidated(parsed){
+    const data=parsed.data;
+    const nextState=parsed.full?data.proschet:data;
+    const nextOps=parsed.full?normalizeOps(deep(data.operations)):ops;
+    // Commit to browser storage before replacing the working state. A failed write
+    // should not display a fake success nor replace the on-screen data.
+    let beforeS,beforeO;
+    try{
+      beforeS=localStorage.getItem(KEY);
+      if(parsed.full)beforeO=localStorage.getItem(OPS_KEY);
+      const rawS=JSON.stringify(nextState);
+      const rawO=parsed.full?JSON.stringify(nextOps):null;
+      localStorage.setItem(KEY,rawS);
+      if(parsed.full)localStorage.setItem(OPS_KEY,rawO);
+      if(localStorage.getItem(KEY)!==rawS||(parsed.full&&localStorage.getItem(OPS_KEY)!==rawO))throw Error('Браузер не подтвердил сохранение');
+    }catch(err){
+      try{if(beforeS===null)localStorage.removeItem(KEY);else if(beforeS!==undefined)localStorage.setItem(KEY,beforeS);
+        if(parsed.full){if(beforeO===null)localStorage.removeItem(OPS_KEY);else if(beforeO!==undefined)localStorage.setItem(OPS_KEY,beforeO);}}catch(_e){}
+      showStorageWarning();throw Error('Не удалось сохранить данные: '+err.message+'. Ничего не импортировано.');
+    }
+    state=deep(nextState);
+    if(parsed.full)ops=deep(nextOps);
+    snap=state.snapshots[state.snapshots.length-1].id;
+    undo=[];
+    document.getElementById('undoBtn').disabled=true;
+    savedMsg('Резервная копия восстановлена');
+    closePaste();
+    try{render();renderOps();toast(parsed.full?'Восстановлены все разделы из JSON-копии':'Просчёт восстановлен; касса и поставщики не изменены');}
+    catch(err){window.__landaReportError('Данные сохранены, но возникла ошибка обновления интерфейса: '+err.message+'. Перезагрузи страницу.');}
+  }
+  async function confirmRestore(parsed){
+    const message=parsed.full?
+      'Восстановить все разделы из этой полной копии? Просчёт, касса, поставщики, накладные и оплаты будут заменены. Сначала рекомендуем выгрузить текущую полную копию.':
+      'Восстановить только просчёт? Текущий финансовый просчёт будет заменён; касса и поставщики сохранятся.';
+    if(!(await askConfirmAsync(message)))return;
+    try{restoreValidated(parsed);}catch(err){note('Ошибка: '+err.message,true);}
+  }
+  document.getElementById('pasteBackupApply').addEventListener('click',async function(){
+    const parsed=checkPaste();if(parsed)await confirmRestore(parsed);
+  });
+  async function restoreEmbedded(){
+    try{
+      if(!(EMBEDDED_BACKUP&&EMBEDDED_BACKUP.app==='LANDA-suite'&&validate(EMBEDDED_BACKUP.proschet)&&isOps(EMBEDDED_BACKUP.operations)))throw Error('Встроенная копия повреждена');
+      await confirmRestore({full:true,data:EMBEDDED_BACKUP});
+    }catch(err){note('Ошибка: '+err.message,true);}
+  }
+  document.getElementById('pasteBackupEmbedded').addEventListener('click',restoreEmbedded);
+  document.getElementById('restoreEmbeddedFromExport').addEventListener('click',async function(){document.getElementById('exportDialog').close();openPaste();await restoreEmbedded();});
+})();
+</script>
+
+
+<dialog id="githubDialog" aria-labelledby="ghTitle">
+ <div class="modal-hd" id="ghTitle">☁ Синхронизация с GitHub <button type="button" class="btn" id="ghClose" style="float:right" aria-label="Закрыть">✕</button></div>
+ <div class="gh-body">
+ <div class="gh-warning"><b>iPhone:</b> для синхронизации открой сайт LANDA по HTTPS в Safari. Встроенный просмотрщик HTML (в ChatGPT, «Файлах» и мессенджерах) может блокировать запросы GitHub и показывать «Load failed».</div>
+ <div class="gh-note">После подключения LANDA будет <strong>хранить данные и локально, и в приватном репозитории GitHub</strong>. При каждом новом запуске проверяется облачная версия. После изменения программы запись отправляется автоматически с небольшой задержкой. Нужен интернет.</div>
+ <div class="gh-grid">
+  <label class="gh-label">Репозиторий GitHub (владелец/имя)<input class="gh-input" id="ghRepo" placeholder="GabozaGagara/Landa-financenot" autocapitalize="off" spellcheck="false" autocomplete="off"></label>
+  <label class="gh-label">Путь резервной копии<input class="gh-input" id="ghPath" value="landa-data/backup.json" spellcheck="false" autocapitalize="off"></label>
+ </div>
+ <label class="gh-label">Fine-grained Personal Access Token (Contents: Read &amp; write только для этого репозитория)<input type="password" class="gh-input" id="ghToken" placeholder="github_pat_…" autocomplete="off" spellcheck="false"></label>
+ <label style="display:flex;gap:9px;align-items:flex-start;font-size:12px"><input type="checkbox" id="ghRemember"> Запомнить токен в браузере на этом устройстве (удобно, но небезопасно на общем компьютере)</label>
+ <label style="display:flex;gap:9px;align-items:flex-start;font-size:12px"><input type="checkbox" id="ghAuto" checked> Автоматически сохранять изменения в GitHub после подключения</label>
+ <div class="gh-actions"><button class="btn btn-primary" type="button" id="ghConnect">Подключить и проверить</button><button class="btn" type="button" id="ghUpload">Сохранить на GitHub</button><button class="btn" type="button" id="ghRefresh">Проверить облако</button></div>
+ <div class="gh-actions"><button class="btn btn-primary" type="button" id="ghLoadNow">⬇ Загрузить финансовые данные из GitHub</button></div>
+ <div class="gh-note">Подключение GitHub не всегда означает, что облачная база уже открыта. Если просчёт пустой, нажми «Загрузить финансовые данные из GitHub». Программа покажет количество строк и периодов до замены локальных данных; облачная копия останется неизменной.</div>
+ <div class="gh-message" id="ghMessage" role="status" aria-live="polite">GitHub не подключён.</div>
+ <div id="ghConflict"><strong style="font-size:13px">Локальные и облачные данные различаются</strong><p id="ghConflictText">Для защиты учёта автоматическая замена отключена. Выбери нужную версию.</p><div class="gh-actions"><button type="button" class="btn" id="ghLoad">Загрузить с GitHub</button><button type="button" class="btn btn-primary" id="ghMergeInvoices" title="Только когда прочие финансовые данные совпадают">Объединить новые накладные</button><button type="button" class="btn" id="ghForceUpload">Заменить данные GitHub текущими</button></div></div>
+ <div class="gh-actions"><button class="btn" type="button" id="ghDownloadLocal">⇩ Скачать локальную JSON-копию</button><button class="btn" type="button" id="ghDisconnect">Отключить GitHub</button></div>
+ <div class="gh-warning"><b>Безопасность:</b> используй только приватный репозиторий. Данные в нём хранятся обычным JSON, без шифрования. Токен не входит в резервные копии и не записывается внутрь HTML. Не отправляй токен в чат. Для постоянной работы после закрытия браузера потребуется включить «Запомнить токен».</div>
+ <div class="gh-note"><b>Если видишь ошибку 404:</b> название репозитория может быть правильным, но сохранённый токен не имеет к нему доступа. Проверка LANDA покажет, действителен ли токен. Токен вводится только сюда и никогда не публикуется в репозитории.</div>
+ <div class="gh-note">Настройка: <a href="https://github.com/new" target="_blank" rel="noopener noreferrer">создать приватный репозиторий</a> → <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">создать ограниченный токен</a> → выбрать <strong>Only select repositories</strong> и <strong>Contents: Read and write</strong> → вставить его здесь. Репозиторий должен существовать и быть private.</div>
+ </div>
+</dialog>
+
+<script>
+'use strict';
+/* LANDA GitHub sync: never put GitHub access tokens in HTML or exported financial JSON. */
+(function(){
+ const CONFKEY='landa_github_sync_v1', METAKEY='landa_github_meta_v1', LOCAL_TOKEN='landa_github_token_v1';
+ const el=id=>document.getElementById(id);
+ let conf={repo:'GabozaGagara/Landa-financenot',path:'landa-data/backup.json',remember:false,auto:true};
+ let meta={repo:'',path:'',sha:null,hash:null}, token='', remote=null, ready=false, busy=false, queued=false, timer=0, inFlight=false;
+ let paused=false;
+ function readStore(storage,key){try{return storage.getItem(key)}catch(_){return null}}
+ function writeStore(storage,key,value){try{storage.setItem(key,value);return true}catch(_){return false}}
+ function delStore(storage,key){try{storage.removeItem(key)}catch(_){}}
+ function getSnapshot(){return {app:'LANDA-suite',backupVersion:3,createdAt:new Date().toISOString(),proschet:JSON.parse(JSON.stringify(state)),operations:JSON.parse(JSON.stringify(ops))}}
+ function snapshotData(d){return JSON.stringify([d.proschet,d.operations])}
+ function fingerprint(d){let s=snapshotData(d), a=2166136261,b=0x811c9dc5;for(let i=0;i<s.length;i++){let x=s.charCodeAt(i);a=Math.imul(a^x,16777619);b=Math.imul(b^(x+257),2246822519)}return s.length.toString(16)+'-'+(a>>>0).toString(16)+'-'+(b>>>0).toString(16)}
+ function snapshotValid(d){return !!(d&&d.app==='LANDA-suite'&&[2,3].indexOf(d.backupVersion)>-1&&d.proschet&&Array.isArray(d.proschet.rows)&&Array.isArray(d.proschet.groups)&&Array.isArray(d.proschet.snapshots)&&d.operations&&typeof validate==='function'&&validate(d.proschet)&&typeof isOps==='function'&&isOps(d.operations))}
+ function msg(txt,kind){el('ghMessage').textContent=txt;el('ghMessage').className='gh-message'+(kind?' '+kind:'');el('githubStatusSide').textContent=txt.length>75?txt.slice(0,72)+'…':txt;el('githubStatusSide').title=txt}
+ function conflict(txt){el('ghConflict').classList.add('show');el('ghConflictText').textContent=txt||'Данные отличаются.';ready=false}
+ function clearConflict(){el('ghConflict').classList.remove('show')}
+ function saveConf(){let copy={repo:conf.repo,path:conf.path,remember:conf.remember,auto:conf.auto};writeStore(localStorage,CONFKEY,JSON.stringify(copy));if(conf.remember){writeStore(localStorage,LOCAL_TOKEN,token);delStore(sessionStorage,LOCAL_TOKEN)}else{delStore(localStorage,LOCAL_TOKEN);writeStore(sessionStorage,LOCAL_TOKEN,token)}}
+ function saveMeta(){writeStore(localStorage,METAKEY,JSON.stringify(meta))}
+ function setMeta(sha,hash){meta={repo:conf.repo,path:conf.path,sha:sha,hash:hash};saveMeta()}
+ function configReady(){return !!(token&&/^[\w.-]+\/[\w.-]+$/.test(conf.repo)&&/^[\w./-]+\.json$/i.test(conf.path)&&!conf.path.includes('..'))}
+ function storeForm(){let r=el('ghRepo').value.trim(),p=el('ghPath').value.trim();if(!/^[\w.-]+\/[\w.-]+$/.test(r))throw Error('Укажи репозиторий как владелец/название.');if(!/^[\w./-]+\.json$/i.test(p)||p.includes('..')||p.startsWith('/'))throw Error('Путь должен быть относительным и оканчиваться на .json');const same=r===conf.repo&&p===conf.path;conf={repo:r,path:p,remember:el('ghRemember').checked,auto:el('ghAuto').checked};token=el('ghToken').value.trim()||token;if(!token)throw Error('Нужен токен GitHub с разрешением Contents: Read and write.');if(!same){ready=false;remote=null;clearConflict();meta={repo:r,path:p,sha:null,hash:null}}saveConf();if(!same)saveMeta()}
+ function base(){return 'https://api.github.com/repos/'+conf.repo.split('/').map(encodeURIComponent).join('/')}
+ function apiHeaders(){return {Accept:'application/vnd.github+json',Authorization:'Bearer '+token,'X-GitHub-Api-Version':'2022-11-28'}}
+ function apiError(status,detail){if(status===401)return 'Токен GitHub недействителен, отозван или просрочен (HTTP 401).';if(status===403)return 'GitHub отказал в доступе (HTTP 403). Проверь разрешение Contents: Read and write и лимиты GitHub.';if(status===404)return 'GitHub не видит ресурс (HTTP 404). Проверь доступ токена к приватному репозиторию.';if(status===409)return 'Файл на GitHub уже изменился. Сначала проверь облачную версию.';return 'GitHub ответил '+status+(detail?': '+detail:'')}
+ async function fetchAPI(url,opts){
+   let response;
+   try{response=await fetch(url,Object.assign({headers:apiHeaders(),cache:'no-store'},opts||{}));}
+   catch(err){
+     let isFile=['file:','blob:','about:'].indexOf(location.protocol)>-1;
+     let note='Нет сетевого доступа к GitHub из этого окна. '+(isFile?'Файл открыт локально или через предпросмотр. ':'')+'Открой LANDA по HTTPS-адресу сайта в Safari (не в просмотрщике файла). Проверь интернет и повтори подключение.';
+     throw Error(note+' Техническая ошибка: '+(err&&err.message||'network'));
+   }
+   let data={};try{data=await response.json()}catch(_){}if(!response.ok&&response.status!==404)throw Error(apiError(response.status,data.message));return {status:response.status,data:data}}
+ 
+ function enc(s){let bytes=new TextEncoder().encode(s),out='';for(let i=0;i<bytes.length;i+=0x8000)out+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(out)}
+ function dec(b){let str=atob(b.replace(/\s/g,''));let arr=new Uint8Array(str.length);for(let i=0;i<str.length;i++)arr[i]=str.charCodeAt(i);return new TextDecoder().decode(arr)}
+ function fileUrl(){return base()+'/contents/'+conf.path.split('/').map(encodeURIComponent).join('/')}
+ async function getCloud(){const r=await fetchAPI(fileUrl());if(r.status===404)return null;let x=r.data;if(!x.sha||!x.content)throw Error('GitHub не прислал содержимое JSON (файл больше 1 МБ?).');let d;try{d=JSON.parse(dec(x.content))}catch(e){throw Error('Не удалось разобрать облачный JSON: '+e.message)}if(!snapshotValid(d))throw Error('JSON на GitHub не соответствует резервной копии LANDA.');return {sha:x.sha,data:d,hash:fingerprint(d)}}
+ async function checkRepoPrivate(){
+  const r=await fetchAPI(base());
+  if(r.status===404){
+    // A private repo deliberately returns 404 both when it doesn't exist and when this exact PAT lacks access.
+    // /user is supported by fine-grained PATs without any extra user permissions.
+    let identity;
+    try{identity=await fetchAPI('https://api.github.com/user')}catch(e){throw Error('GitHub не открыл приватный репозиторий (HTTP 404). Дополнительная проверка токена не прошла: '+e.message)}
+    if(identity.status===200&&identity.data&&identity.data.login){
+      const login=identity.data.login;
+      throw Error('Токен действителен (GitHub: '+login+'), но не видит приватный '+conf.repo+' (HTTP 404). Открой настройки ИМЕННО ЭТОГО токена → Repository access → Only select repositories → '+conf.repo.split('/')[1]+'; в Repository permissions поставь Contents: Read and write. Если недавно менял токен, вставь его новое СЕКРЕТНОЕ ЗНАЧЕНИЕ в LANDA, а не название токена.');
+    }
+    throw Error('GitHub не видит приватный репозиторий '+conf.repo+' (HTTP 404). Проверка личности токена вернула HTTP '+identity.status+'. Укажи правильный токен и репозиторий.');
+  }
+  if(!r.data.private)throw Error('Репозиторий публичный. Для финансовых данных требуется private-репозиторий.');
+  return r.data;
+}
+ function isEmptyInstallation(){
+   if(state.rows.length!==0 || state.snapshots.length!==1 || (state.snapshots[0]&&state.snapshots[0].id!=='INIT'))return false;
+   if(ops.cash.length||ops.invoices.length||ops.payments.length||ops.allocations.length)return false;
+   if(Object.values(ops.openings||{}).some(v=>Number(v&&typeof v==='object'?v.amount:v)||0))return false;
+   if((ops.suppliers||[]).some(v=>Number(v.opening)||Number(v.openingBalance)||Number(v.balance)||0))return false;
+   return true;
+ }
+ function synced(r){ready=true;remote=r;setMeta(r?r.sha:null,fingerprint(getSnapshot()));clearConflict();msg('✓ GitHub подключён · данные синхронизированы', 'ok')}
+ async function checkRemote(bootstrap){if(!configReady())throw Error('Сначала укажи репозиторий и токен.');if(busy)return;busy=true;msg('Проверяем приватный GitHub и облачную копию…');try{
+   await checkRepoPrivate();let found=await getCloud(),local=fingerprint(getSnapshot());remote=found;
+   if(!found){if(meta.sha){conflict('Облачная копия была удалена или перемещена. Можно загрузить сюда локальные данные, но сначала проверь адрес и путь.');msg('В GitHub нет ранее синхронизированной копии.', 'error')}else{ready=false;clearConflict();msg('✓ Приватный репозиторий доступен. Нажми «Сохранить на GitHub» для первой загрузки.')}}
+   else if(found.hash===local){synced(found)}
+   else if(isEmptyInstallation() && found.data.proschet.rows.length>0){
+     // Initial localStorage can already contain the empty SEED after startup.
+     // Such a placeholder must not be pushed over the real cloud backup.
+     ready=false;clearConflict();msg('Найдена облачная база: '+found.data.proschet.rows.length+' строк, '+found.data.proschet.snapshots.length+' периодов. Загружаем её…');restoreRemote(found,true);
+   }
+   else if(meta.repo===conf.repo&&meta.path===conf.path&&meta.sha===found.sha){
+      ready=true;clearConflict();msg('Есть локальные изменения. Отправляем их в GitHub…');if(conf.auto)queued=true;
+   }else if(meta.repo===conf.repo&&meta.path===conf.path&&meta.hash===local){
+      ready=false;clearConflict();msg('В GitHub есть более новые изменения. Загружаем их…');restoreRemote(found,true);
+   }else{
+      conflict('Облачная и локальная версии не совпадают. Автоматическая замена остановлена. Для проверки сначала скачай локальную копию, затем выбери, какую оставить.');msg('⚠ Обнаружены разные версии данных. Выбери одну.', 'error');
+   }
+ }catch(e){ready=false;msg('Ошибка подключения: '+e.message,'error')}finally{busy=false;if(queued&&ready){queued=false;queueUpload()}}}
+ async function upload(force){if(inFlight){queued=true;return}if(!configReady()){msg('Сначала подключи GitHub.', 'error');return}if(!force&&!ready)return;
+   inFlight=true;try{
+     await checkRepoPrivate();
+     const latest=await getCloud();const now=getSnapshot(),localHash=fingerprint(now);
+     // Force cannot erase a newer cloud version, including new supplier invoices.
+     // Compare against the current SHA just before PUT; this also closes the click-to-write race.
+     if(force&&latest&&meta.sha!==latest.sha){
+       remote=latest;
+       const localIds=new Set((now.operations.invoices||[]).map(i=>i.id));
+       const incoming=(latest.data.operations.invoices||[]).filter(i=>!localIds.has(i.id));
+       const note=incoming.length?' В GitHub есть '+incoming.length+' новых накладных, которых нет на этом устройстве.':'';
+       conflict('Защита от потери данных: облачный JSON изменился после последней синхронизации.'+note+' Сначала скачай локальную копию и загрузи облачную версию.');
+       msg('⚠ Новая облачная версия защищена от принудительной перезаписи.','error');
+       return;
+     }
+     if(!force){if(latest&&meta.sha!==latest.sha){remote=latest;conflict('Файл изменён с другого устройства. Чтобы не затереть чужие изменения, автоматическая запись остановлена.');msg('⚠ Конфликт: GitHub изменился. Проверь версии.','error');return}if(!latest&&meta.sha){ready=false;conflict('Облачный файл исчез. Проверь репозиторий перед повторной записью.');msg('⚠ Облачная копия удалена.','error');return}}
+     if(latest&&latest.hash===localHash){synced(latest);return}
+     const body=JSON.stringify(now);if(new TextEncoder().encode(body).length>900000)throw Error('Размер данных близок к лимиту GitHub Contents API (1 МБ). Скачай JSON-копию для сохранности.');
+     msg('☁ Сохраняем изменения на GitHub…');
+     const payload={message:'LANDA: обновление финансовых данных '+new Date().toISOString(),content:enc(body)};
+     if(latest)payload.sha=latest.sha;
+     const response=await fetchAPI(fileUrl(),{method:'PUT',headers:Object.assign({'Content-Type':'application/json'},apiHeaders()),body:JSON.stringify(payload)});
+     if(response.status!==200&&response.status!==201)throw Error(apiError(response.status,response.data.message));
+     const newSha=response.data.content&&response.data.content.sha;if(!newSha)throw Error('GitHub не подтвердил SHA сохранённого файла.');
+     setMeta(newSha,localHash);remote={sha:newSha,data:now,hash:localHash};ready=true;clearConflict();
+     let changed=fingerprint(getSnapshot())!==localHash;
+     msg(changed?'✓ Копия сохранена; появились новые изменения — сохраняем их следом.':'✓ GitHub: все изменения сохранены', 'ok');
+     if(changed)queued=true;
+   }catch(e){ready=false;msg('Ошибка сохранения в GitHub: '+e.message+' Локальная копия не затронута.','error')}
+   finally{inFlight=false;if(queued&&ready){queued=false;queueUpload()}}
+ }
+ function queueUpload(){if(!ready||!conf.auto||!token)return;clearTimeout(timer);timer=setTimeout(()=>upload(false),3200)}
+ function restoreRemote(found,automatic){if(!found)return;try{
+    if(!snapshotValid(found.data))throw Error('Неподдерживаемая копия');
+    const localHash=fingerprint(getSnapshot());
+    const rawS=JSON.stringify(found.data.proschet),rawO=JSON.stringify(found.data.operations);
+    const prevS=readStore(localStorage,'landa_proschet_offline_v1'),prevO=readStore(localStorage,'landa_finance_operations_v1');
+    if(!writeStore(localStorage,'landa_proschet_offline_v1',rawS)||!writeStore(localStorage,'landa_finance_operations_v1',rawO)){
+       if(prevS===null)delStore(localStorage,'landa_proschet_offline_v1');else writeStore(localStorage,'landa_proschet_offline_v1',prevS);
+       if(prevO===null)delStore(localStorage,'landa_finance_operations_v1');else writeStore(localStorage,'landa_finance_operations_v1',prevO);
+       throw Error('Браузер запретил запись в локальное хранилище.');
+    }
+    setMeta(found.sha,found.hash);msg('✓ Данные загружены с GitHub. Перезапускаем приложение…','ok');
+    window.location.reload();
+   }catch(e){ready=false;msg('Не удалось применить облачную копию: '+e.message,'error')}
+ }
+ function showDialog(){el('githubDialog').showModal();el('ghRepo').value=conf.repo;el('ghPath').value=conf.path;el('ghRemember').checked=conf.remember;el('ghAuto').checked=conf.auto;el('ghToken').value=token}
+ function action(button,fn){el(button).addEventListener('click',async()=>{el(button).disabled=true;try{await fn()}catch(e){msg('Ошибка: '+e.message,'error')}finally{el(button).disabled=false}})}
+ el('githubSyncSide').addEventListener('click',showDialog);
+ el('ghClose').addEventListener('click',()=>el('githubDialog').close());
+ action('ghConnect',async()=>{storeForm();await checkRemote(false)});
+ action('ghRefresh',async()=>{storeForm();await checkRemote(false)});
+ action('ghUpload',async()=>{storeForm();await checkRepoPrivate();const existing=await getCloud();if(existing && isEmptyInstallation() && existing.data.proschet.rows.length>0){remote=existing;ready=false;conflict('На GitHub уже есть '+existing.data.proschet.rows.length+' строк! Запрещено заменять существующую базу пустой программой. Выбери «Загрузить финансовые данные из GitHub».');msg('⚠ Облачная база не пуста. Сначала загрузи данные из GitHub.','error');return}if(!ready){if(existing){remote=existing;conflict('На GitHub уже есть данные. Перед перезаписью выбери версию.');msg('⚠ Облачный файл существует. Требуется явное подтверждение.','error');return}if(!confirm('Создать в GitHub первую копию текущих данных?'))return;}await upload(true)});
+ async function userLoadCloud(){
+   storeForm();await checkRepoPrivate();const found=await getCloud();if(!found)throw Error('В GitHub нет файла '+conf.path+'.');
+   const local=getSnapshot();
+   const same=found.hash===fingerprint(local);
+   if(same){synced(found);msg('✓ Облачная база уже открыта: '+found.data.proschet.rows.length+' строк, '+found.data.proschet.snapshots.length+' периодов.','ok');return}
+   let prompt='В GitHub найдена финансовая база: '+found.data.proschet.rows.length+' строк и '+found.data.proschet.snapshots.length+' периодов.\n\nЗагрузить её в LANDA на этом устройстве?';
+   if(!isEmptyInstallation())prompt+='\n\nВНИМАНИЕ: локальные записи будут заменены. Сначала можно скачать локальную JSON-копию.';
+   if(!confirm(prompt)){msg('Облачная база найдена, загрузка отменена. Локальные данные не менялись.');return}
+   ready=false;clearTimeout(timer);queued=false;remote=found;restoreRemote(found,false);
+ }
+ // Strict add-only merge. Never merge changed balances, payments, prices, statuses or historical estimates.
+ async function safeMergeNewInvoices(){
+   storeForm();await checkRepoPrivate();
+   const original=getSnapshot(),originalHash=fingerprint(original);
+   const found=await getCloud();
+   if(!found)throw Error('В GitHub нет облачной копии');
+   const local=original.operations,cloud=found.data.operations;
+   if(JSON.stringify(original.proschet)!==JSON.stringify(found.data.proschet))
+     throw Error('Просчёт отличается — автоматическое объединение запрещено. Скачай обе версии и сверь вручную.');
+   const other=o=>{const x=JSON.parse(JSON.stringify(o));delete x.invoices;delete x.auditTrail;delete x.nextSeq;return x};
+   if(JSON.stringify(other(local))!==JSON.stringify(other(cloud)))
+     throw Error('Изменились платежи, касса, продажи или другие данные. Объединять только накладные небезопасно.');
+   const localById=new Map(local.invoices.map(i=>[i.id,i]));
+   const remoteById=new Map(cloud.invoices.map(i=>[i.id,i]));
+   for(const [id,item] of localById)if(remoteById.has(id)&&JSON.stringify(item)!==JSON.stringify(remoteById.get(id)))
+     throw Error('Накладная '+String(item.number||id)+' изменена в разных версиях. Необходимо проверить её вручную.');
+   const additions=cloud.invoices.filter(i=>!localById.has(i.id));
+   const localOnly=local.invoices.filter(i=>!remoteById.has(i.id));
+   const key=i=>String(i.tracking||i.number||'').replace(/\s/g,'').toLowerCase();
+   const all=[...local.invoices,...additions];
+   const keys=new Set();
+   for(const i of all){const k=key(i);if(k&&keys.has(k))throw Error('Найден повтор номера '+k+'. Автоматическое объединение отменено.');if(k)keys.add(k)}
+   if(!additions.length&&!localOnly.length)throw Error('Новых накладных для объединения нет. Используй «Проверить облако».');
+   if(fingerprint(getSnapshot())!==originalHash)throw Error('Локальные записи изменились во время проверки. Повтори действие.');
+   const message='Объединить записи без замены кассы и просчёта?\nИз GitHub добавится: '+additions.length+' накладных.\nЛокальных новых: '+localOnly.length+'.\nСуществующие накладные не меняются.\nПеред действием будет скачана полная локальная JSON-копия.';
+   if(!confirm(message))return;
+   if(fingerprint(getSnapshot())!==originalHash)throw Error('Локальные данные изменились. Повтори проверку.');
+   // Download before mutation; never auto-replace a financial record.
+   downloadBackup();
+   const oldOps=ops;
+   const seen=new Set(),trail=[];
+   for(const e of [...(cloud.auditTrail||[]),...(local.auditTrail||[])]){const id=String(e.id||'');if(!id||seen.has(id))continue;seen.add(id);trail.push(e)}
+   const merged={...local,invoices:[...local.invoices,...additions],nextSeq:Math.max(Number(local.nextSeq)||0,Number(cloud.nextSeq)||0),auditTrail:trail.sort((a,b)=>String(a.at||'').localeCompare(String(b.at||''))).slice(-900)};
+   if(!isOps(merged))throw Error('Объединённые данные не прошли проверку формата.');
+   ops=merged;
+   if(!saveOps()){ops=oldOps;throw Error('Браузер не сохранил объединённые данные. GitHub не изменён.')}
+   renderOps();
+   const updatedHash=fingerprint(getSnapshot());
+   setMeta(found.sha,updatedHash);remote=found;ready=true;clearConflict();
+   msg('✓ Объединено '+additions.length+' новых облачных накладных. Локальных новых: '+localOnly.length+'. Сохраняем итоговую версию в GitHub.','ok');
+   if(conf.auto)queueUpload();else msg('✓ Накладные объединены локально. Включи автосохранение или нажми «Сохранить на GitHub», чтобы записать объединённую версию.','ok');
+ }
+ action('ghMergeInvoices',safeMergeNewInvoices);
+ action('ghLoadNow',userLoadCloud);
+ action('ghLoad',userLoadCloud);
+ action('ghForceUpload',async()=>{storeForm();const existing=await getCloud();if(existing&&isEmptyInstallation()&&existing.data.proschet.rows.length>0)throw Error('Нельзя перезаписать непустую облачную базу пустым просчётом. Сначала загрузи данные из GitHub.');if(!confirm('Перезаписать облачный файл данными ЭТОГО устройства? Облачная версия сохранится только в истории GitHub.'))return;await upload(true)});
+ action('ghDownloadLocal',()=>{if(typeof downloadBackup==='function')downloadBackup();else throw Error('Выгрузка недоступна')});
+ action('ghDisconnect',()=>{if(!confirm('Отключить синхронизацию GitHub на этом устройстве? Локальные финансовые данные останутся.'))return;clearTimeout(timer);ready=false;remote=null;token='';delStore(localStorage,CONFKEY);delStore(localStorage,METAKEY);delStore(localStorage,LOCAL_TOKEN);delStore(sessionStorage,LOCAL_TOKEN);conf={repo:'',path:'landa-data/backup.json',remember:false,auto:true};meta={repo:'',path:'',sha:null,hash:null};el('ghToken').value='';el('ghRepo').value='';el('ghPath').value=conf.path;clearConflict();msg('☁ GitHub отключён. Локальные данные сохранены.')});
+ window.addEventListener('landa:data-changed',()=>{if(ready){msg('● Локально сохранено · ожидает GitHub');queueUpload()}else if(conf.repo){msg('● Локальные изменения. GitHub сейчас не синхронизирован.') }});
+ try{const v=JSON.parse(readStore(localStorage,CONFKEY)||'null');if(v&&v.repo){conf=Object.assign(conf,v);meta=JSON.parse(readStore(localStorage,METAKEY)||'null')||meta;token=readStore(conf.remember?localStorage:sessionStorage,LOCAL_TOKEN)||'';if(meta.repo!==conf.repo||meta.path!==conf.path)meta={repo:conf.repo,path:conf.path,sha:null,hash:null}}}catch(e){}
+ if(conf.repo){msg(token?'☁ GitHub: проверяем облачную копию…':'☁ GitHub настроен, нужен токен');if(token)checkRemote(true)}else msg('☁ GitHub не настроен');
+})();
+
+</script>
+
+<script>
+'use strict';
+// Public worker ADDRESS only. Never store supplier access codes or GitHub secrets here.
+(()=>{
+ const $=id=>document.getElementById(id), storageKey='landa_supplier_worker_origin_v1';
+ function valid(s){try{const u=new URL(String(s).trim());return u.protocol==='https:'&&u.hostname.endsWith('.workers.dev')&&!u.username&&!u.password&&u.pathname==='/'?u.origin:''}catch(_){return ''}}
+ function worker(){return valid($('supplierWorkerUrl').value)}
+ function links(){const endpoint=worker();for(const [id,supplier] of [['supplierLinkAnna','anna'],['supplierLinkAlina','alina'],['supplierLinkAnatoly','anatoly']]){
+  $(id).href='./supplier.html?supplier='+supplier+(endpoint?'&api='+encodeURIComponent(endpoint+'/'):'')
+ }}
+ function status(t){$('supplierWorkerStatus').textContent=t}
+ try{$('supplierWorkerUrl').value=localStorage.getItem(storageKey)||'https://landa-app.kamily1997.workers.dev/'}catch(_){$('supplierWorkerUrl').value='https://landa-app.kamily1997.workers.dev/'}
+ links();$('supplierWorkerUrl').addEventListener('input',links);
+ $('supplierWorkerSave').addEventListener('click',()=>{const v=worker();if(!v){status('Укажи HTTPS-адрес Cloudflare Worker с доменом .workers.dev.');return}try{localStorage.setItem(storageKey,v+'/')}catch(_){}$('supplierWorkerUrl').value=v+'/';links();status('Адрес сохранён. Проверь сервер. Каждому поставщику нужен индивидуальный секретный код.')});
+ $('supplierWorkerCheck').addEventListener('click',async()=>{const v=worker();if(!v){status('Сначала укажи адрес сервера.');return}status('Проверяем соединение…');try{const r=await fetch(v+'/health',{cache:'no-store'}),d=await r.json();if(!r.ok||d.app!=='LANDA-supplier-bridge')throw Error('нет подтверждения от сервера LANDA');status(d.github?'✓ Сервер отвечает, GitHub-токен задан. Доступ к базе подтвердится при первой отправке.':'Сервер отвечает, но GitHub-токен ещё не задан.')}catch(e){status('Не удалось соединиться с сервером: '+e.message)}});
+ let generatedCodes=null;
+ function newCode(){if(!globalThis.crypto||!crypto.getRandomValues)throw Error('Защищённая генерация кодов недоступна в этом браузере.');const bytes=crypto.getRandomValues(new Uint8Array(32));return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('')}
+ $('supplierCreateCodes').addEventListener('click',()=>{try{generatedCodes={anna:newCode(),alina:newCode(),anatoly:newCode()};$('supplierCodeAnna').value=generatedCodes.anna;$('supplierCodeAlina').value=generatedCodes.alina;$('supplierCodeAnatoly').value=generatedCodes.anatoly;$('supplierCodesJson').value=JSON.stringify(generatedCodes,null,2);$('supplierCodesDetails').hidden=false;$('supplierCopyCodes').disabled=false;status('✓ Коды созданы только в твоём браузере. Сохрани их и добавь JSON в Cloudflare → SUPPLIER_CODES.')}catch(e){status('Ошибка создания кодов: '+e.message)}});
+ $('supplierCopyCodes').addEventListener('click',async()=>{if(!generatedCodes)return;try{await navigator.clipboard.writeText(JSON.stringify(generatedCodes));status('✓ JSON кодов скопирован. Вставь его в секрет Cloudflare SUPPLIER_CODES; не отправляй никому весь JSON.')}catch(e){status('Не удалось скопировать. Нажми на поле JSON выше и выбери «Копировать».')}});
+ $('supplierWorkerLinks').addEventListener('click',async()=>{
+  links();const msg=[['Анна','supplierLinkAnna'],['Алина','supplierLinkAlina'],['Анатолий','supplierLinkAnatoly']].map(([n,id])=>n+': '+$(id).href).join('\n');
+  try{await navigator.clipboard.writeText(msg);status('Три ссылки скопированы. Коды доступа передай каждому поставщику отдельно.')}
+  catch(_){status('Скопируй каждую ссылку из адресной строки браузера, открыв форму.')}
+ });
+})();
+</script>
+<script src="./js/landa-control-center.js" defer></script>
+<script src="./js/landa-local-backups.js" defer></script>
+<script type="module" src="./js/landa-receiving-ui.mjs"></script>
+<script type="module" src="./js/landa-moysklad-ui.mjs"></script>
+</body></html>
+);
  return {items,goodsCost,deliveryCost,includeDelivery,total,listed};
 }
 function previewInvoice(){let t=$('invoicePreview'),f=$('invoiceForm');try{let v=invoiceTotalFromForm(f);t.textContent=`Товары: ${cashFmt(v.goodsCost,'USD')} · доставка: ${cashFmt(v.deliveryCost,'USD')} · долг после начисления: ${cashFmt(v.total,'USD')}. ${v.items.length?'Товарных строк: '+v.items.length+'.':''}${v.items.length&&Math.abs(v.listed-v.goodsCost)>0.009?' Сумма вручную отличается от суммы позиций.':''}`}catch(e){t.textContent=e.message}}
