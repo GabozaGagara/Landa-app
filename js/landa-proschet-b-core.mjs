@@ -71,6 +71,11 @@ export function duplicateSuggestions(rows){
 }
 export function checkBaseline(original,after){
  if(!original||!after||!Array.isArray(original.rows)||!Array.isArray(after.rows))return {ok:false,reason:'Данные отсутствуют'};
+ if(JSON.stringify(original.groups)!==JSON.stringify(after.groups))
+  return {ok:false,reason:'Изменены исходные финансовые группы'};
+ if(JSON.stringify(original.controlTotals)!==JSON.stringify(after.controlTotals))
+  return {ok:false,reason:'Изменены контрольные суммы'};
+ if(original.version!==after.version)return {ok:false,reason:'Изменена версия просчёта'};
  const ids=o=>(o.rows||[]).map(r=>r.id);
  if(JSON.stringify(ids(original))!==JSON.stringify(ids(after)))return {ok:false,reason:'Изменён порядок или состав строк'};
  if(JSON.stringify(original.snapshots)!==JSON.stringify(after.snapshots))return {ok:false,reason:'Изменены исторические периоды'};
