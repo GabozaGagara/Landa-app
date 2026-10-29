@@ -7,6 +7,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
  const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const num=x=>Number(x).toLocaleString('ru-RU',{maximumFractionDigits:4});
  const KEY='landa_moysklad_name_links_v1';
+ const OWNER_CODE_KEY='landa_moysklad_owner_code_v1';
  const isoDate=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
  let links={},payload=null,chosenDocs=new Set(),chosenInvoices=new Set(),busy=false;
  try{const parsed=JSON.parse(localStorage.getItem(KEY)||'{}');if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))links=parsed;}catch(_){}
@@ -45,6 +46,8 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
   '<label>По дату<input id="msTo" type="date"></label>',
   '<label>Код владельца Cloudflare<input id="msAdmin" type="password" autocomplete="off" placeholder="LANDA_MS_ADMIN_KEY"></label>',
   '</div>',
+  '<div class="msflex"><button class="msbtn" type="button" id="msRememberCode">🔒 Запомнить код</button><button class="msbtn" type="button" id="msForgetCode" hidden>Забыть код</button></div>',
+  '<p class="msinfo" id="msCodeInfo">Код не сохраняется автоматически. На личном устройстве его можно запомнить в браузере; другие программы и расширения с доступом к данным сайта могут его прочитать.</p>',
   '<div class="msflex"><button class="msbtn" id="msCheck" type="button">✓ Проверить подключение</button><button class="msbtn msprimary" id="msLoad" type="button">↻ Загрузить приёмки</button>',
   '<button class="msbtn" id="msCompare" type="button">Сверить выбранное</button>',
   '<button class="msbtn" id="msCSV" type="button">↓ Отчёт CSV</button></div>',
@@ -132,16 +135,46 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
    '<p class="msinfo">Это не обязательно излишек: проверьте, не включены ли в приёмку другие поставки.</p>'+
    data.unmatchedProducts.map(p=>'<div class="msrow">'+esc(p.name)+' · '+num(p.received)+' шт.</div>').join('')+'</div>':'');
  }
+ function storedCode(){
+  try{return localStorage.getItem(OWNER_CODE_KEY)||''}catch(_){return ''}
+ }
+ function codeState(note){
+  const saved=storedCode();
+  $('msForgetCode').hidden=!saved;
+  $('msCodeInfo').textContent=note||(
+   saved?'✓ Код владельца сохранён в этом браузере. Не используйте это на общем устройстве.':
+   'Код не сохраняется автоматически. Сохраняйте его только на своём личном устройстве.'
+  );
+ }
+ function rememberCode(){
+  const value=$('msAdmin').value.trim();
+  if(value.length<32||value.length>256){
+   codeState('Введите действующий код длиной от 32 до 256 символов, затем нажмите «Запомнить код».');
+   return;
+  }
+  if(!confirm('Сохранить код владельца в памяти ЭТОГО браузера? Он будет доступен другим программам и расширениям, имеющим доступ к данным сайта. Используйте только личное устройство.'))return;
+  try{
+   localStorage.setItem(OWNER_CODE_KEY,value);
+   codeState('✓ Код запомнен в этом браузере. Он не записан в финансовую базу и не отправлен в GitHub.');
+  }catch(_){codeState('Браузер запретил сохранение кода. Используйте ручной ввод.')}
+ }
+ function forgetCode(){
+  try{localStorage.removeItem(OWNER_CODE_KEY)}
+  catch(_){codeState('Браузер не разрешил удалить сохранённый код.');return}
+  $('msAdmin').value='';
+  codeState('✓ Сохранённый код удалён с этого устройства. Поле очищено.');
+ }
  function open(){
   $('msSupplier').innerHTML=(ops.suppliers||[]).map(s=>'<option value="'+esc(s.id)+'">'+esc(s.name||s.id)+'</option>').join('');
   if(!$('msTo').value){
    const d=new Date();$('msTo').value=isoDate(d);d.setDate(d.getDate()-14);$('msFrom').value=isoDate(d);
   }
   chosenInvoices.clear();chosenDocs.clear();payload=null;
-  $('msAdmin').value='';
+  $('msAdmin').value=storedCode();
+  codeState();
   if(typeof closeMobile==='function')closeMobile();
   dialog.showModal();renderInvoices();renderDocs();renderResult();
-  message('Сначала настройте серверные секреты в Cloudflare. Ключ владельца не сохраняется в браузере.');
+  message(storedCode()?'Сохранённый код подставлен. Нажмите «Проверить подключение».':'Введите код владельца и нажмите «Проверить подключение».');
  }
  function endpoint(route='moysklad-supplies'){
   if(!['moysklad-check','moysklad-supplies'].includes(route))throw Error('Неверная операция');
@@ -203,6 +236,8 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
  }
  btn.addEventListener('click',open);
  $('msClose').addEventListener('click',()=>dialog.close());
+ $('msRememberCode').addEventListener('click',rememberCode);
+ $('msForgetCode').addEventListener('click',forgetCode);
  dialog.addEventListener('close',()=>{$('msAdmin').value='';payload=null;chosenDocs.clear();});
  $('msCheck').addEventListener('click',checkConnection);
  $('msLoad').addEventListener('click',load);$('msCompare').addEventListener('click',renderResult);
