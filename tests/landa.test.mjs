@@ -252,3 +252,86 @@ test('reconciliation CSV retains negative numeric differences and guards formula
  assert.match(csv,/"'=HYPERLINK/);
  assert.match(csv,/"'\+unsafe formula"/);
 });
+
+import {validateRange,assortmentRef,loadSupplies} from '../cloudflare/moysklad-read.mjs';
+import {candidates,collectDelivered,compareSelected,productLinkKey} from '../js/landa-moysklad-match.mjs';
+
+test('MoySklad receiving dates accept inclusive dates and reject invalid or oversized ranges',()=>{
+ assert.deepEqual(validateRange('2026-10-01','2026-10-29'),{from:'2026-10-01',to:'2026-10-29'});
+ for(const dates of [['2026-02-30','2026-03-01'],['2026-10-29','2026-10-01'],['2026-01-01','2026-10-01']])
+  assert.throws(()=>validateRange(...dates));
+});
+test('MoySklad assortment references are limited to official API entity URLs',()=>{
+ const id='bb8eb29c-2a84-4a60-98c2-91241d89d140';
+ assert.deepEqual(assortmentRef({meta:{href:'https://api.moysklad.ru/api/remap/1.2/entity/product/'+id}}),{type:'product',id});
+ assert.equal(assortmentRef({meta:{href:'https://evil.test/api/remap/1.2/entity/product/'+id}}),null);
+ assert.equal(assortmentRef({meta:{href:'https://api.moysklad.ru/api/remap/1.2/entity/employee/'+id}}),null);
+});
+test('MoySklad admin endpoint blocks unknown owner key before any API request',async()=>{
+ const old=globalThis.fetch;let calls=0;globalThis.fetch=async()=>{calls++;throw Error('Network called unexpectedly')};
+ try{
+  const request=post('/admin/moysklad-supplies',{adminKey:'wrong',from:'2026-10-01',to:'2026-10-29'});
+  const result=await worker.fetch(request,{...env,LANDA_MS_ADMIN_KEY:'x'.repeat(40),MOYSKLAD_TOKEN:'test'});
+  assert.equal(result.status,403);assert.equal(calls,0);
+ }finally{globalThis.fetch=old}
+});
+test('MoySklad read-only API projects supplies and products without any writes',async()=>{
+ const productId='bb8eb29c-2a84-4a60-98c2-91241d89d140';
+ const docId='ac71830c-1a84-4a60-98c2-91241d89d150';
+ const original=globalThis.fetch,methods=[];
+ globalThis.fetch=async(url,options)=>{
+  methods.push(options.method);
+  const u=new URL(url);
+  if(u.pathname.endsWith('/entity/supply'))return new Response(JSON.stringify({
+   rows:[{id:docId,name:'TEST-SUPPLY',moment:'2026-10-29 12:00:00',applicable:true,agent:{name:'Поставщик'},store:{name:'Склад'}}],
+   meta:{} }),{status:200});
+  if(u.pathname.endsWith('/positions'))return new Response(JSON.stringify({rows:[{id:'line-1',quantity:3,assortment:{
+   meta:{href:'https://api.moysklad.ru/api/remap/1.2/entity/product/'+productId}
+  }}],meta:{}}),{status:200});
+  if(u.pathname.endsWith('/product/'+productId))return new Response(JSON.stringify({name:'Dyson TEST',article:'DYS-T',code:'TEST'}),{status:200});
+  throw Error('Unexpected endpoint '+u.pathname);
+ };
+ try{
+  const result=await loadSupplies({MOYSKLAD_TOKEN:'synthetic-token'},'2026-10-01','2026-10-29');
+  assert.deepEqual(methods,['GET','GET','GET']);
+  assert.equal(result.documents.length,1);
+  assert.equal(result.documents[0].positions[0].name,'Dyson TEST');
+  assert.equal(result.documents[0].positions[0].quantity,3);
+  assert.equal(JSON.stringify(result).includes('synthetic-token'),false);
+ }finally{globalThis.fetch=original}
+});
+test('MoySklad only delivered LANDA shipments are eligible for comparison',()=>{
+ const invoices=[
+  {id:'d',supplierId:'anna',date:'2026-10-01',status:'delivered',items:[{name:'Dyson',qty:2}]},
+  {id:'t',supplierId:'anna',date:'2026-10-02',status:'transit',items:[{name:'Dyson',qty:100}]},
+  {id:'o',supplierId:'alina',date:'2026-10-02',status:'delivered',items:[{name:'Dyson',qty:10}]}
+ ];
+ const before=JSON.stringify(invoices);
+ const rows=collectDelivered(invoices,'anna','2026-10-29');
+ assert.equal(rows.length,1);assert.equal(rows[0].qty,2);
+ assert.equal(JSON.stringify(invoices),before);
+});
+test('matching exact names is automatic; ambiguous names require confirmation',()=>{
+ const catalog=[{id:'p1',name:'Dyson Big Ball Multifloor 2',sku:''},{id:'p2',name:'Dyson Big Ball Multifloor',sku:''}];
+ const exact=candidates({name:'Dyson Big Ball Multifloor 2',sku:''},catalog);
+ assert.equal(exact.best.id,'p1');assert.equal(exact.automatic,true);
+ const fuzzy=candidates({name:'Dyson Big Ball',sku:''},catalog);
+ assert.equal(fuzzy.automatic,false);
+ const linked=candidates({name:'Dyson Big Ball',sku:''},catalog,'p2');
+ assert.equal(linked.best.id,'p2');assert.equal(linked.automatic,true);
+});
+test('reconciliation totals include shortages, unlinked and mixed-name shared products safely',()=>{
+ const rows=[{name:'Dyson A',sku:'A',qty:3,invoiceNumber:'TEST-1'}];
+ const docs=[{positions:[{productId:'p1',name:'Dyson A',sku:'A',quantity:2}]}];
+ let r=compareSelected(rows,docs,{},'anna');
+ assert.equal(r.results[0].state,'difference');
+ assert.equal(r.results[0].delta,-1);
+ const links={[productLinkKey('anna','Unknown X','Q')]:'p1'};
+ r=compareSelected([{name:'Unknown X',sku:'Q',qty:1,invoiceNumber:'TEST-1'}],docs,links,'anna');
+ assert.equal(r.results[0].state,'difference');
+ assert.equal(r.results[0].received,2);
+ r=compareSelected([{name:'Dyson A',sku:'A',qty:1,invoiceNumber:'TEST-1'},{name:'Unknown X',sku:'Q',qty:1,invoiceNumber:'TEST-2'}],docs,links,'anna');
+ assert.equal(r.results.every(x=>x.state==='shared'),true);
+ assert.equal(r.results[0].sharedExpected,2);
+ assert.equal(r.results[0].sharedDifference,0);
+});
