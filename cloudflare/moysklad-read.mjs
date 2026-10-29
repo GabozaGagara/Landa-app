@@ -47,7 +47,7 @@ export async function loadSupplies(env,from,to){
   if(!Array.isArray(page.rows))fail('МойСклад не прислал список приёмок');
   docs.push(...page.rows);
   if(docs.length>500)fail('Найдено более 500 приёмок. Уменьшите период.',422);
-  if(page.rows.length<100 && !(page.meta?.nextHref))break;
+  if(!page.meta?.nextHref)break;
   if(offset===400)fail('Слишком много приёмок за период. Уменьшите диапазон.',422);
  }
  const memo=new Map(),result=[];
@@ -60,7 +60,7 @@ export async function loadSupplies(env,from,to){
    if(!Array.isArray(page.rows))fail('Не удалось прочитать товары приёмки '+short(doc.name,60));
    for(const p of page.rows){
     const ref=assortmentRef(p.assortment);
-    if(!ref)continue;
+    if(!ref)fail('В приёмке '+short(doc.name,60)+' обнаружен товар без поддерживаемой ссылки. Сверка неполная.');
     const key=ref.type+':'+ref.id;
     let product=p.assortment;
     if(!product?.name){
@@ -74,7 +74,7 @@ export async function loadSupplies(env,from,to){
      sku:short(product?.article||product?.code||'',100),article:short(product?.article||'',100),
      code:short(product?.code||'',100),quantity:qty(p.quantity)});
    }
-   if(page.rows.length<1000&&!page.meta?.nextHref)break;
+   if(!page.meta?.nextHref)break;
    if(offset===1000)fail('В одной приёмке слишком много товарных строк.',422);
   }
   result.push({id:doc.id,name:short(doc.name,100),date:short(doc.moment,10),
