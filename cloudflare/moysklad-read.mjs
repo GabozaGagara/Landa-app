@@ -83,4 +83,10 @@ export async function loadSupplies(env,from,to){
  }
  return {from,to,documents:result,loadedAt:new Date().toISOString(),source:'MoySklad JSON API 1.2',mode:'read-only'};
 }
+// Connection check returns no supplier data and never modifies documents.
+export async function checkConnection(env){
+ const result=await msGet('entity/supply?limit=1',env);
+ if(!Array.isArray(result?.rows))fail('API МойСклад не вернул корректный список приёмок');
+ return {ok:true,service:'МойСклад',access:'read-only',checkedAt:new Date().toISOString()};
+}
 export const __test={dateOnly,assortmentRef};
