@@ -367,3 +367,34 @@ test('read-only MoySklad connection check returns only health metadata after a G
   assert.equal(requested[0].method,'GET');
  }finally{globalThis.fetch=previous}
 });
+
+test('MoySklad network failures show a safe diagnostic and never expose access tokens',async()=>{
+ const previous=globalThis.fetch;
+ globalThis.fetch=async()=>{throw new TypeError('network failure with confidential internals')};
+ try{
+  const res=await worker.fetch(post('/admin/moysklad-check',{adminKey:'x'.repeat(40)}),
+   {...env,LANDA_MS_ADMIN_KEY:'x'.repeat(40),MOYSKLAD_TOKEN:'secret-must-not-appear'});
+  assert.equal(res.status,503);
+  const data=await res.json();
+  assert.match(data.error,/NETWORK/);
+  assert.doesNotMatch(JSON.stringify(data),/secret-must-not-appear|confidential internals/);
+ }finally{globalThis.fetch=previous}
+});
+test('MoySklad API requests include gzip and never forward bearer tokens to redirects',async()=>{
+ const previous=globalThis.fetch;let n=0;
+ globalThis.fetch=async(url,options)=>{
+  n++;
+  assert.equal(options.method,'GET');
+  assert.equal(options.redirect,'manual');
+  assert.equal(options.headers['Accept-Encoding'],'gzip');
+  assert.equal(options.headers.Authorization,'Bearer local-fixture-token');
+  return new Response(null,{status:302,headers:{Location:'https://untrusted.example/'}}); 
+ };
+ try{
+  const response=await worker.fetch(post('/admin/moysklad-check',{adminKey:'x'.repeat(40)}),
+   {...env,LANDA_MS_ADMIN_KEY:'x'.repeat(40),MOYSKLAD_TOKEN:'local-fixture-token'});
+  assert.equal(response.status,502);
+  assert.match((await response.json()).error,/перенаправление/);
+  assert.equal(n,1);
+ }finally{globalThis.fetch=previous}
+});
