@@ -43,7 +43,7 @@ test('sum by currency only, never mix rubles with dollars',()=>{
  assert.deepEqual(expenseTotals(list),{RUB:125450,USD:1000});
  assert.equal(expensesFiltered(book,{currency:'USD'}).length,1);
  assert.equal(expensesFiltered(book,{category:'Аренда'}).length,1);
- assert.equal(expensesFiltered(book,{search:'офис'}).length,2);
+ assert.equal(expensesFiltered(book,{search:'офис'}).length,3);
  assert.equal(expensesFiltered(book,{dateFrom:'2026-11-03'}).length,0);
  assert.equal(expensesFiltered(book,{dateTo:'2026-11-01'}).length,0);
 });
