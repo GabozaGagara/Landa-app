@@ -77,7 +77,7 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
 <div class="mobiletop"><strong>◈ LANDA / УЧЁТ</strong><button id="menuToggle" type="button">☰ Разделы</button></div>
 <div class="overlay" id="overlay"></div>
 <div class="layout">
-<aside id="sidebar"><div class="brand"><div class="mark">≋</div><div><div class="brandname">LANDA</div><div class="branddesc">Деньги, поставки, расчёты</div></div></div><div class="sidelabel">Управление</div><nav class="op-nav"><button type="button" class="nav-btn core" data-page="dashboard"><span class="nav-icon">▦</span><span class="nav-text">Сводка</span></button><button type="button" class="nav-btn core" data-page="cash"><span class="nav-icon">₽</span><span class="nav-text">Деньги · касса / карты / Авито</span></button><button type="button" class="nav-btn core" data-page="suppliers"><span class="nav-icon">⇄</span><span class="nav-text">Поставщики · оплаты</span></button><button type="button" class="nav-btn core" data-page="invoices"><span class="nav-icon">▤</span><span class="nav-text">Накладные · СДЭК</span></button><button type="button" class="nav-btn core" data-page="proschet"><span class="nav-icon">∑</span><span class="nav-text">Финансовый просчёт</span></button></nav><hr class="op-divider"><div class="sidelabel" id="proschetNavLabel" hidden>Группы просчёта</div><nav id="nav" hidden></nav><div class="sidebar-bottom"><div class="offline"><span class="dot"></span> Локальное сохранение</div><p>Изменения хранятся в браузере. Можно включить автоматическую синхронизацию с приватным GitHub.</p><button class="btn" id="githubSyncSide" style="width:100%;color:#d1e1ff;background:#213b5b;border-color:#31506f;margin-bottom:8px" type="button">☁ Синхронизация GitHub</button><div id="githubStatusSide" style="padding:0 4px 10px;color:#b4c6e0;font-size:11px">☁ GitHub не настроен</div><button class="btn" id="pasteBackupSide" style="width:100%;color:#d1e1ff;background:#213b5b;border-color:#31506f;margin-bottom:8px" type="button">↑ Вставить JSON-копию</button><button class="btn" id="backupSide" style="width:100%;color:#d1e1ff;background:#213b5b;border-color:#31506f" type="button">⇩ Полная копия</button></div></aside>
+<aside id="sidebar"><div class="brand"><div class="mark">≋</div><div><div class="brandname">LANDA</div><div class="branddesc">Деньги, поставки, расчёты</div></div></div><div class="sidelabel">Управление</div><nav class="op-nav"><button type="button" class="nav-btn core" data-page="dashboard"><span class="nav-icon">▦</span><span class="nav-text">Сводка</span></button><button type="button" class="nav-btn core" data-page="cash"><span class="nav-icon">₽</span><span class="nav-text">Деньги · касса / карты / Авито</span></button><button type="button" class="nav-btn core" data-page="suppliers"><span class="nav-icon">⇄</span><span class="nav-text">Поставщики · оплаты</span></button><button type="button" class="nav-btn core" data-page="invoices"><span class="nav-icon">▤</span><span class="nav-text">Накладные · СДЭК</span></button><button type="button" class="nav-btn core" data-page="expenses"><span class="nav-icon">🧾</span><span class="nav-text">Расходы</span></button><button type="button" class="nav-btn core" data-page="proschet"><span class="nav-icon">∑</span><span class="nav-text">Финансовый просчёт</span></button></nav><hr class="op-divider"><div class="sidelabel" id="proschetNavLabel" hidden>Группы просчёта</div><nav id="nav" hidden></nav><div class="sidebar-bottom"><div class="offline"><span class="dot"></span> Локальное сохранение</div><p>Изменения хранятся в браузере. Можно включить автоматическую синхронизацию с приватным GitHub.</p><button class="btn" id="githubSyncSide" style="width:100%;color:#d1e1ff;background:#213b5b;border-color:#31506f;margin-bottom:8px" type="button">☁ Синхронизация GitHub</button><div id="githubStatusSide" style="padding:0 4px 10px;color:#b4c6e0;font-size:11px">☁ GitHub не настроен</div><button class="btn" id="pasteBackupSide" style="width:100%;color:#d1e1ff;background:#213b5b;border-color:#31506f;margin-bottom:8px" type="button">↑ Вставить JSON-копию</button><button class="btn" id="backupSide" style="width:100%;color:#d1e1ff;background:#213b5b;border-color:#31506f" type="button">⇩ Полная копия</button></div></aside>
 <main>
 <div id="launchStatus" data-state="pending" role="status"><strong>LANDA: проверка запуска…</strong> Если сообщение не исчезает, JavaScript не выполняется. Не вводите данные в этом просмотрщике: скачайте файл и откройте в Chrome или Edge.</div>
 <div id="runtimeErrorPanel" hidden role="alert"><strong>Ошибка выполнения программы:</strong> <span id="runtimeErrorText"></span><div>Сохраните полную резервную копию, не повторяйте ввод, пока не проверите журнал.</div></div>
@@ -92,6 +92,42 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
  <div class="filters"><div class="search-wrap"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m16.3 16.3 4.5 4.5"></path></svg><input class="textinput" id="search" type="search" placeholder="Поиск по названиям и категориям…" autocomplete="off" aria-label="Поиск позиций"></div><div class="pills" role="group" aria-label="Фильтр сумм"><button type="button" class="pill active" data-filter="active">Ненулевые</button><button type="button" class="pill" data-filter="all">Все</button><button type="button" class="pill" data-filter="changed">Изменения</button><button type="button" class="pill" data-filter="empty">Пустые</button></div><span class="filter-count" id="rowCount"></span></div>
  <div id="groups"></div>
  <div class="footnote">Источник: только лист <strong>«Подсчет»</strong> файла LANDA-Corporation(1).xlsx. Основные строки (5–287) включены в итог, дополнительные показатели и сверка — отдельно. Положительные и отрицательные значения считаются с исходным знаком; валюта строк не пересчитывается автоматически. В ячейках можно писать выражения: <strong>120000+35000-5000</strong>. Изменения сохраняются в этом браузере автоматически. Для переноса на другое устройство используйте резервную копию JSON.</div>
+</section>
+
+<!-- Standalone expenses journal: NEVER included in cash, supplier debt, invoices or proschet. -->
+<section id="expensesPage" class="page" hidden>
+ <div class="heading ops-head"><div><div class="eyebrow">ОТДЕЛЬНЫЙ УЧЁТ / ЖУРНАЛ</div><h1>Расходы</h1><p>Заносите любые расходы в отдельный журнал. Записи не меняют кассу, балансы, поставщиков и финансовый просчёт.</p></div><div class="actions"><button type="button" class="btn" id="exExportCSV">↓ CSV расходов</button><button type="button" class="btn" id="exExportJSON">↓ Резервная копия JSON</button><button type="button" class="btn" id="exImportJSON">↑ Загрузить JSON</button><input type="file" id="exImportFile" accept=".json,application/json" hidden></div></div>
+ <div class="ops-notice exp-info">Это <strong>независимый журнал расходов</strong>. Данные сохраняются только в браузере этого устройства и <strong>не синхронизируются с GitHub</strong>, не списываются из кассы и не входят в финансовый итог. Для переноса между компьютерами используйте JSON-копию.</div>
+ <div class="exp-layout">
+  <section class="ops-card exp-entry"><h2 id="exFormTitle">Новый расход</h2>
+   <form id="exForm" autocomplete="off">
+    <div class="exp-fields">
+     <label>Дата <input id="exDate" name="date" type="date" required></label>
+     <label>Сумма <input id="exAmount" name="amount" type="text" inputmode="decimal" placeholder="Например, 1250,50" required maxlength="20"></label>
+     <label>Валюта <select id="exCurrency" name="currency"><option value="RUB">₽ RUB</option><option value="USD">$ USD</option><option value="BYN">Br BYN</option><option value="EUR">€ EUR</option></select></label>
+     <label>Категория <input id="exCategory" name="category" list="exCategories" placeholder="Например, аренда" maxlength="90" required><datalist id="exCategories"><option value="Аренда"><option value="Транспорт"><option value="Доставка"><option value="Реклама"><option value="Зарплата"><option value="Офис"><option value="Связь и интернет"><option value="Закупки"><option value="Прочее"></datalist></label>
+     <label>Способ оплаты <select id="exMethod" name="method"><option value="cash">Наличные</option><option value="card">Карта</option><option value="transfer">Перевод</option><option value="other">Другое</option></select></label>
+     <label>Кому оплачено <input id="exPayee" name="payee" type="text" maxlength="180" placeholder="Человек или компания"></label>
+     <label class="exp-full">На что потрачено <input id="exDescription" name="description" type="text" maxlength="300" placeholder="Описание расхода"></label>
+     <label class="exp-full">Комментарий <textarea id="exNote" name="note" rows="3" maxlength="1200" placeholder="Необязательно: детали, номер документа и т. п."></textarea></label>
+    </div>
+    <div class="exp-form-actions"><button class="btn btn-primary" type="submit" id="exSave">＋ Записать расход</button><button class="btn" type="button" id="exCancel" hidden>Отменить редактирование</button></div>
+    <p id="exFeedback" class="exp-feedback" role="status" aria-live="polite"></p>
+   </form>
+  </section>
+  <section class="ops-card exp-journal">
+   <div class="exp-journal-head"><div><h2>Журнал расходов</h2><p class="ops-intro">Все отдельные записи. Можно искать, фильтровать, исправлять и удалять.</p></div><span id="exCount" class="exp-count"></span></div>
+   <div class="exp-filters">
+    <label>Поиск <input id="exSearch" type="search" placeholder="Категория, описание, кому…"></label>
+    <label>Категория <select id="exCategoryFilter"><option value="all">Все категории</option></select></label>
+    <label>Валюта <select id="exCurrencyFilter"><option value="all">Все валюты</option><option value="RUB">RUB</option><option value="USD">USD</option><option value="BYN">BYN</option><option value="EUR">EUR</option></select></label>
+    <label>С <input id="exFrom" type="date"></label>
+    <label>По <input id="exTo" type="date"></label>
+   </div>
+   <div id="exSummary" class="exp-summary" aria-label="Итоги расходов по валютам"></div>
+   <div id="exJournal" class="exp-list"></div>
+  </section>
+ </div>
 </section>
 <!-- Modules are intentionally separate: cash movements, supplier settlements and CDEK invoices. -->
 <section id="dashboardPage" class="page" hidden>
@@ -543,7 +579,7 @@ function renderInvoices(){
  $('invoiceTable').innerHTML=invoicesTable(records)
 }
 function renderOps(){renderDashboard();renderCash();renderSuppliers();renderInvoices()}
-function setPage(page){if(!['dashboard','cash','suppliers','invoices','proschet'].includes(page))return;currentPage=page;for(let key of ['dashboard','cash','suppliers','invoices','proschet']){$(key+'Page').hidden=key!==page}let isCalc=page==='proschet';$('nav').hidden=!isCalc;$('proschetNavLabel').hidden=!isCalc;document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));if(isCalc)render();else renderOps();closeMobile();window.scrollTo({top:0,behavior:'instant'})}
+function setPage(page){if(!['dashboard','cash','suppliers','invoices','expenses','proschet'].includes(page))return;currentPage=page;for(let key of ['dashboard','cash','suppliers','invoices','expenses','proschet']){$(key+'Page').hidden=key!==page}let isCalc=page==='proschet';$('nav').hidden=!isCalc;$('proschetNavLabel').hidden=!isCalc;document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));if(isCalc)render();else if(page!=='expenses')renderOps();closeMobile();window.scrollTo({top:0,behavior:'instant'})}
 function setSupplier(id){if(!ops.suppliers.some(s=>s.id===id))return;selectedSupplier=id;setPage('suppliers')}
 function formDate(form){form.elements.date.value=opDate()}
 function supplyOptions(selected){return ops.suppliers.map(s=>`<option value="${esc(s.id)}" ${s.id===selected?'selected':''}>${esc(s.name)}</option>`).join('')}
@@ -1355,4 +1391,5 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
 <script src="./js/landa-local-backups.js" defer></script>
 <script type="module" src="./js/landa-receiving-ui.mjs"></script>
 <script type="module" src="./js/landa-moysklad-ui.mjs"></script>
+<script type="module" src="./js/landa-expenses-ui.mjs"></script>
 </body></html>
