@@ -26,7 +26,7 @@
  <div id="supplierOverviewSummary"></div><div id="supplierOverviewBody"></div>
  <div class="overview-pagination" id="supplierOverviewPaging" hidden><button class="btn" type="button" id="supplierOverviewPrev">← Назад</button><span class="small" id="supplierOverviewPage"></span><button class="btn" type="button" id="supplierOverviewNext">Вперёд →</button></div>
  </section>
-<form id="invoice" autocomplete="on"><section class="panel"><h2>1. Отправление</h2><label>Поставщик<select id="supplier" required><option value="">Выберите поставщика</option><option value="anna">Анна</option><option value="alina">Алина</option><option value="anatoly">Анатолий</option></select></label><div class="two"><label>Номер накладной СДЭК<input id="tracking" required maxlength="35" inputmode="text" placeholder="Например, 10337904109" autocomplete="off"></label><label>Дата отправки<input id="date" type="date" required></label></div><div class="two"><label>Город отправления<input value="Брест" readonly title="Принимаются только отправления из Бреста"></label><label>Город назначения<input id="destination" required maxlength="80" value="Москва"></label></div><label>ФИО отправителя<input id="sender" maxlength="100" placeholder="Имя и фамилия отправителя"></label><div class="small">Для LANDA принимаются только отправления из Бреста. Текущий статус проверяется отдельно.</div></section>
+<form id="invoice" autocomplete="on"><section class="panel"><h2 id="supplierFormHeading">1. Отправление</h2><p id="editInvoiceHint" class="small" hidden>Вы исправляете существующую накладную. Владелец увидит историю изменений.</p><label>Поставщик<select id="supplier" required><option value="">Выберите поставщика</option><option value="anna">Анна</option><option value="alina">Алина</option><option value="anatoly">Анатолий</option></select></label><div class="two"><label>Номер накладной СДЭК<input id="tracking" required maxlength="35" inputmode="text" placeholder="Например, 10337904109" autocomplete="off"></label><label>Дата отправки<input id="date" type="date" required></label></div><div class="two"><label>Город отправления<input value="Брест" readonly title="Принимаются только отправления из Бреста"></label><label>Город назначения<input id="destination" required maxlength="80" value="Москва"></label></div><label>ФИО отправителя<input id="sender" maxlength="100" placeholder="Имя и фамилия отправителя"></label><div class="small">Для LANDA принимаются только отправления из Бреста. Текущий статус проверяется отдельно.</div></section>
 <section class="panel"><h2>2. Товары</h2><p class="hint">Внесите каждый товар отдельно. Цены в долларах, без пересчёта по курсу. Если цена пока неизвестна, оставьте её пустой.</p><div id="items"></div><button class="btn" type="button" id="addItem">＋ Добавить товар</button><div class="summary" id="total">Заполните состав накладной</div></section>
 <section class="panel"><h2>3. Доставка и комментарий</h2><label>Доставка, $ (оплачивает LANDA; если известна)<input id="delivery" type="number" min="0" max="99999999" step="0.01" inputmode="decimal" placeholder="Необязательно"></label><label>Комментарий<textarea id="note" maxlength="500" placeholder="Состав заказа, особенности, упаковка"></textarea></label><div class="notice warn">Указанные суммы — данные поставщика, подлежащие проверке. Передача этой формы не создаёт долг и не означает, что посылка уже вручена.</div><div class="panel" id="autoPanel" style="display:none;margin:14px 0;border:1px solid #c9d7ea;background:#f5faff;padding:14px;border-radius:12px"><strong>Автоматическая передача в LANDA</strong><p class="hint">Данные попадут сразу в приватную базу. Введите личный код поставщика, который выдал владелец LANDA. Пароль от GitHub или СДЭК не нужен.</p><label>Код поставщика<input id="supplierCode" type="password" autocomplete="off" spellcheck="false" placeholder="Личный код доступа" minlength="24"></label><label class="remember-code"><input id="rememberSupplierCode" type="checkbox">Запомнить код на этом устройстве после успешной отправки (только личное устройство)</label><button id="forgetSupplierCode" type="button" class="forget-code" style="display:none">Забыть сохранённый код</button><p id="codeInfo" class="small" role="status" aria-live="polite"></p><button class="btn primary" type="button" id="sendAuto" style="margin-top:10px">☁ Отправить прямо в LANDA</button></div><div class="actions"><button class="btn primary" type="button" id="share">Поделиться накладной</button><button class="btn" type="button" id="copy">Копировать данные</button><button class="btn" type="button" id="download">Скачать JSON</button></div><div id="status" class="status" role="status" aria-live="polite"></div><p class="small" id="shareHelp">Если прямая отправка недоступна, нажмите «Поделиться накладной» и передайте файл владельцу LANDA через мессенджер. Также можно скопировать данные или скачать JSON.</p><div class="next-invoice"><button class="btn primary next-invoice-btn" type="button" id="nextInvoice">＋ Следующая накладная</button><p class="small">Оформили отправление? Нажмите, чтобы заполнить следующую накладную, не открывая ссылку заново.</p></div></section></form><footer>LANDA · данные остаются на вашем устройстве до отправки · никаких паролей GitHub</footer></main>
 <script>
@@ -53,10 +53,17 @@ function calculate(){
 }
 function setStatus(message,err=false){$('status').textContent=message;$('status').className='status '+(err?'error':'ok')}
 let lastAcceptedTracking='';
+let editingInvoice=null,editableInvoices=new Map();
+function updateFormMode(){
+ $('supplierFormHeading').textContent=editingInvoice?'1. Исправление накладной':'1. Отправление';
+ $('editInvoiceHint').hidden=!editingInvoice;
+ $('sendAuto').textContent=editingInvoice?'✓ Сохранить исправления':'☁ Отправить прямо в LANDA';
+}
 function beginNewInvoice(){
  const tracking=$('tracking').value.trim().replace(/\s/g,'');
  const hasDraft=!!(tracking||$('delivery').value||$('note').value||Array.from(document.querySelectorAll('.item-name')).some(x=>x.value.trim()));
  if(hasDraft&&tracking!==lastAcceptedTracking&&!confirm('Текущая накладная ещё не подтверждена как отправленная. Очистить её и начать новую?'))return;
+ editingInvoice=null;updateFormMode();
  $('tracking').value='';$('date').value=localDate();$('delivery').value='';$('note').value='';
  $('items').replaceChildren();itemRow();calculate();setStatus('Новая накладная готова. Выберите товары и укажите новый номер СДЭК.');
  shareFallback(!workerURL);lastAcceptedTracking='';
@@ -112,13 +119,17 @@ try{const u=new URL(workerAddress);if(u.protocol==='https:'&&u.hostname.endsWith
 async function sendAuto(){
  if(!workerURL)throw Error('Адрес сервера отсутствует в ссылке. Получите актуальную ссылку у владельца LANDA.');
  const code=$('supplierCode').value.trim();if(code.length<24)throw Error('Введите личный код поставщика (не меньше 24 символов).');
- const {d}=data();$('sendAuto').disabled=true;setStatus('Отправляем накладную в закрытую базу…');
+ const {d}=data(),edit=editingInvoice;
+ if(edit&&d.supplierId!==edit.supplierId)throw Error('Нельзя изменить поставщика существующей накладной.');
+ $('sendAuto').disabled=true;setStatus(edit?'Сохраняем исправления и историю…':'Отправляем накладную в закрытую базу…');
  try{
-  const r=await fetch(workerURL+'/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({invoice:d,code})});
+  const r=await fetch(workerURL+(edit?'/supplier-edit':'/submit'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(edit?{invoice:d,code,invoiceId:edit.id,revision:edit.revision}:{invoice:d,code})});
   const result=await r.json().catch(()=>({}));
-  if(r.status===409&&result.duplicate){rememberCodeAfterAccepted(d.supplierId,code);lastAcceptedTracking=d.tracking;shareFallback(false);setStatus('Накладная '+d.tracking+' уже была добавлена в LANDA. Для следующей нажмите «Новая накладная».');return}
+  if(!edit&&r.status===409&&result.duplicate){rememberCodeAfterAccepted(d.supplierId,code);lastAcceptedTracking=d.tracking;shareFallback(false);setStatus('Накладная '+d.tracking+' уже была добавлена в LANDA. Для следующей нажмите «Следующая накладная».');return}
   if(!r.ok)throw Error(result.error||'Сервер вернул HTTP '+r.status);
-  rememberCodeAfterAccepted(d.supplierId,code);lastAcceptedTracking=d.tracking;shareFallback(false);setStatus('✓ Накладная '+d.tracking+' добавлена в LANDA. Для следующей нажмите «Новая накладная» внизу списка.');
+  if(edit){editingInvoice={...edit,revision:result.revision};updateFormMode();}
+  rememberCodeAfterAccepted(d.supplierId,code);lastAcceptedTracking=d.tracking;shareFallback(false);
+  setStatus(edit?(result.updated?'✓ Исправления сохранены. Владелец видит историю правок. Накладная ждёт повторной проверки.':'Изменений нет. Накладная не изменена.'):'✓ Накладная '+d.tracking+' добавлена в LANDA. Для следующей нажмите «Следующая накладная» внизу формы.');
   void loadSupplierOverview(1);
  }finally{$('sendAuto').disabled=false}
 }
@@ -131,7 +142,7 @@ const overviewMoney = n => Number(n||0).toLocaleString('ru-RU',{minimumFractionD
 const escapeView = x => String(x??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 let overviewPage=1;
 function clearOverview(){
- overviewPage=1;
+ overviewPage=1;editableInvoices=new Map();
  $('supplierOverviewBody').innerHTML='';
  $('supplierOverviewSummary').innerHTML='';
  $('supplierOverviewStatus').textContent='Нажмите «Обновить», чтобы посмотреть актуальные данные.';
@@ -148,13 +159,15 @@ function showOverview(data){
    <div class="overview-tile"><small>Не оплачено / свободный аванс</small><b>${escapeView(overviewMoney(b.open))} / ${escapeView(overviewMoney(b.advance))}</b></div>
  </div><p class="small">Не начислено: ${escapeView(String(b.pendingCount||0))} накладных на ${escapeView(overviewMoney(b.pendingAmount))}. До начисления они не влияют на баланс.</p><p class="small"><strong>Накладных в пути: ${escapeView(String(b.transitCount||0))} на ${escapeView(overviewMoney(b.transitAmount))} (включая доставку).</strong>${b.transitMissingDelivery?' Для '+escapeView(String(b.transitMissingDelivery))+' накладных доставка пока не указана.':''}</p>`;
  const invoices=data.invoices||[];
+ editableInvoices=new Map(invoices.filter(i=>i.editable&&i.id).map(i=>[i.id,i]));
  $('supplierOverviewBody').innerHTML=invoices.length?invoices.map(i=>{
    const items=(i.items||[]).map(t=>`<div>${escapeView(t.name)}${t.sku?' · '+escapeView(t.sku):''} — ${escapeView(t.qty)} × ${escapeView(overviewMoney(t.price))}</div>`).join('');
    return `<article class="overview-invoice"><div class="overview-head"><strong>${escapeView(i.number||i.tracking)}</strong><span class="overview-pill">${escapeView(i.statusLabel)}</span></div>
-     <p class="small">${escapeView(i.date)} · СДЭК: ${escapeView(i.tracking||'не указан')} · ${i.trackingVerified?'Статус подтверждён':'Статус в LANDA; не онлайн-проверка СДЭК'}${i.statusCheckedAt?' · обновлено '+escapeView(i.statusCheckedAt.slice(0,10)):''}</p><p class="small">${i.reviewStatus==='approved'?'✓ Проверена владельцем LANDA':'⏳ Ожидает проверки владельцем LANDA'}</p>
+     <p class="small">${escapeView(i.date)} · СДЭК: ${escapeView(i.tracking||'не указан')} · ${i.trackingVerified?'Статус подтверждён':'Статус в LANDA; не онлайн-проверка СДЭК'}${i.statusCheckedAt?' · обновлено '+escapeView(i.statusCheckedAt.slice(0,10)):''}</p><p class="small">${i.reviewStatus==='approved'?'✓ Проверена владельцем LANDA':'⏳ Ожидает проверки владельцем LANDA'}${i.editedAt?' · ✎ Отредактирована '+escapeView(new Date(i.editedAt).toLocaleString('ru-RU')):''}</p>
      <div>Товары: <b>${escapeView(overviewMoney(i.goodsCost))}</b> · Доставка: <b>${escapeView(overviewMoney(i.deliveryCost))}</b></div>
      <div class="small">${i.accrued?'Начислено: '+escapeView(overviewMoney(i.total))+' · Зачтено: '+escapeView(overviewMoney(i.allocated))+' · Осталось: '+escapeView(overviewMoney(i.due)):'Долг ещё не начислен'}</div>
      <details><summary>Состав (${(i.items||[]).length})</summary><div class="overview-items">${items||'Состав не указан'}</div></details>
+     ${i.editable?'<button type="button" class="btn" data-edit-supplier-invoice="'+escapeView(i.id)+'" style="margin-top:10px">✎ Изменить накладную</button>':'<p class="small">'+(i.status==='delivered'?'🔒 Вручена: исправить может только владелец LANDA.':'🔒 Исправления недоступны: обратитесь к владельцу LANDA.')+'</p>'}
    </article>`;
  }).join(''):'<p class="hint">Накладных на этой странице нет.</p>';
  const pages=data.pagination?.pages||0;
@@ -196,12 +209,28 @@ function showOverview(data){
  }
  finally{$('supplierOverviewRefresh').disabled=false}
 }
+function openSupplierEdit(invoiceId){
+ const i=editableInvoices.get(invoiceId);
+ if(!i||!i.editable){setStatus('Эта накладная больше недоступна для исправлений. Обновите список.',true);return}
+ const pending=$('tracking').value.trim()&&$('tracking').value.trim()!==lastAcceptedTracking;
+ if(pending&&!confirm('Текущая незавершённая накладная будет заменена выбранной. Продолжить?'))return;
+ editingInvoice={id:i.id,revision:i.editRevision,supplierId:currentSupplier()};updateFormMode();
+ $('tracking').value=i.tracking;$('date').value=i.date;
+ $('destination').value=String(i.route||'').replace(/^Брест\s*[→-]\s*/i,'')||'Москва';
+ $('sender').value=i.sender||'';$('delivery').value=i.deliveryMissing?'':String(i.deliveryCost??0);
+ $('note').value=i.supplierNote||'';
+ $('items').replaceChildren();for(const item of i.items||[])itemRow({name:item.name,qty:item.qty,price:item.priceMissing?'':item.price,sku:item.sku});
+ if(!i.items?.length)itemRow();calculate();shareFallback(false);
+ setStatus('Редактирование '+i.tracking+'. После сохранения владелец увидит дату и изменённые поля.');
+ $('invoice').scrollIntoView({behavior:'smooth',block:'start'});
+}
+$('supplierOverviewBody').addEventListener('click',e=>{const btn=e.target.closest('[data-edit-supplier-invoice]');if(btn)openSupplierEdit(btn.dataset.editSupplierInvoice)});
 $('supplierOverviewRefresh').onclick=()=>loadSupplierOverview(1);
 $('supplierOverviewPrev').onclick=()=>loadSupplierOverview(overviewPage-1);
 $('supplierOverviewNext').onclick=()=>loadSupplierOverview(overviewPage+1);
 $('nextInvoice').onclick=beginNewInvoice;
-$('supplier').addEventListener('change',clearOverview);
+$('supplier').addEventListener('change',()=>{editingInvoice=null;updateFormMode();clearOverview()});
 
-$('addItem').onclick=()=>{itemRow();calculate()};$('invoice').addEventListener('input',calculate);itemRow();calculate();
+$('addItem').onclick=()=>{itemRow();calculate()};$('invoice').addEventListener('input',calculate);itemRow();calculate();updateFormMode();
 })();
 </script></body></html>
