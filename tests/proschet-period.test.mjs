@@ -18,7 +18,7 @@ const rows=[
 test('CB parser preserves row IDs, ignores headers and excludes control rows from sum',()=>{
  const column=makeCB({values:{5:'1 250,50',8:'−50',9:900},control:'1 200,50'});
  const parsed=parseCBPaste(column),before=JSON.stringify(rows);
- assert.equal(parsed.values[4],1250.5);assert.equal(parsed.values[7],-50);
+ assert.equal(parsed.values[0],1250.5);assert.equal(parsed.values[3],-50);
  const result=previewCBBaseline(rows,column);
  assert.equal(result.match,true);assert.equal(result.calculated,1200.5);
  assert.equal(result.imported,3);assert.equal(result.values.b,-50);
