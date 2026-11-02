@@ -1,5 +1,5 @@
 // LANDA shipment reconciliation. Separate local-only physical count; financial operations remain read-only.
-import {collectShipmentRows,compareCount,aggregateProducts,receiptCSV,productIdentity,safeProductAliases,mergeProductAliases,unmergeProductAliases,renameProductAlias,csvCell} from './landa-receiving-core.mjs';
+import {collectShipmentRows,compareCount,aggregateProducts,receiptCSV,productIdentity,safeProductAliases,mergeProductAliases,unmergeProductAliases,renameProductAlias,filterProductSummary,csvCell} from './landa-receiving-core.mjs';
 
 if(typeof document!=='undefined' && typeof ops!=='undefined') {
  const id='landa_receiving_counts_v1', aliasStorageKey='landa_receiving_product_aliases_v1', $=x=>document.getElementById(x);
@@ -151,7 +151,20 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
  }
  function render(){
   if(!dialog.open)return;
-  const rows=selectedRows(),all=getRows(),names=supplierNames();
+  let rows=selectedRows(),all=getRows();const names=supplierNames();
+  let products=null;
+  if(tab==='products'){
+   // Search and status filters match whole canonical groups; calculate totals
+   // from all their source lines, never from just the matching sub-lines.
+   const source=collectShipmentRows(ops.invoices,{
+    supplier:$('rcSupplier').value,onlyPortal:$('rcOnlyPortal').checked,search:''
+   });
+   products=filterProductSummary(aggregateProducts(source,records,aliases),source,records,{
+    search:$('rcSearch').value,status:$('rcStatus').value
+   });
+   const keys=new Set(products.flatMap(p=>p.members));
+   all=source.filter(r=>keys.has(productIdentity(r)));rows=all;
+  }
   const done=all.filter(r=>['matched','difference'].includes(compareCount(r,records[r.key]).state));
   const discrepancies=done.filter(r=>compareCount(r,records[r.key]).state==='difference');
   const shipments=new Set(all.map(r=>r.invoiceId));
@@ -172,10 +185,8 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   $('rcMergePanel').hidden=tab!=='products'||!mergeMode;
   if(!rows.length){visibleProducts=[];selectedProducts.clear();if(mergeMode)refreshMergeSelection();$('rcResults').innerHTML='<p class="rc-report rc-hint">По выбранным фильтрам товаров нет. Проверьте фильтры и убедитесь, что актуальные накладные загружены из GitHub в LANDA.</p>';return}
   if(tab==='products'){
-   const products=aggregateProducts(rows,records,aliases);
    visibleProducts=products;
-   const visibleSource=all.filter(r=>compareCount(r,records[r.key]).state!=='pending').length;
-   $('rcResults').innerHTML='<p class="rc-hint">Позиции с одинаковыми артикулами и названиями группируются автоматически внутри поставщика. Разные названия, в том числе от разных поставщиков, можно объединить вручную. Если не все строки сверены, общий результат «Принято» не вычисляется.</p>'+
+   $('rcResults').innerHTML='<p class="rc-hint">Одинаковые позиции внутри поставщика группируются автоматически. Разные названия, в том числе разных поставщиков, объединяются вручную. Поиск и фильтр статуса показывают товар целиком; «Принято» не вычисляется, пока не сверены все входящие строки.</p>'+
     products.map(p=>{
      const combined=p.merged,source=p.variants.map(v=>
       '<li>'+esc(names[v.supplierId]||v.supplierId)+' · '+esc(v.name)+(v.sku?' ['+esc(v.sku)+']':'')+
@@ -247,7 +258,8 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   }catch(err){alert('Не удалось загрузить объединения: '+err.message)}
  });
  $('rcExportMerged').addEventListener('click',()=>{
-  const products=aggregateProducts(selectedRows(),records,aliases);
+  const source=collectShipmentRows(ops.invoices,{supplier:$('rcSupplier').value,onlyPortal:$('rcOnlyPortal').checked,search:''});
+  const products=filterProductSummary(aggregateProducts(source,records,aliases),source,records,{search:$('rcSearch').value,status:$('rcStatus').value});
   if(!products.length){alert('В сводке нет товаров для экспорта.');return}
   downloadNamed(summaryCSV(products,supplierNames()),'LANDA-сводка-объединённых-товаров-'+new Date().toISOString().slice(0,10)+'.csv','text/csv;charset=utf-8');
  });
