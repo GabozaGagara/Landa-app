@@ -70,9 +70,10 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
   '<div class="pl-box"><h3>Важно о сохранении</h3><p class="pl-muted">Приёмка сохраняется отдельно в браузере этого устройства. Она не помечает накладную вручённой и не изменяет старую сверку товаров, кассу, долги или платежи. Сохраняй JSON-архив для переноса на другое устройство и восстановления.</p></div>'
  ].join('');
  parent.append(panel);
- let book=palletEmpty(),currentId='',activeInvoice='',searchLimit=36,infoError='',editingEntry='';
+ let book=palletEmpty(),currentId='',activeInvoice='',searchLimit=36,infoError='',editingEntry='',savedRaw=null;
  try{
   const raw=localStorage.getItem(PALLET_STORAGE_KEY);
+  savedRaw=raw;
   if(raw)book=palletValidate(JSON.parse(raw));
  }catch(e){infoError='Не удалось прочитать журнал паллет: '+e.message+'. Не перезаписывайте повреждённые данные до восстановления из JSON.'}
  const current=()=>book.sessions.find(s=>s.id===currentId)||null;
@@ -80,12 +81,14 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
  const invoiceByKey=key=>getInvoices().find(i=>palletInvoiceKey(i)===key);
  const say=(message,error=false)=>{const slot=$('plInfo');slot.textContent=message;slot.style.color=error?'#b13746':'#17614b'};
  const blocked=()=>{if(!infoError)return false;say(infoError,true);return true};
- const persist=next=>{
+ const persist=(next,allowRecovery=false)=>{
   const raw=JSON.stringify(next);
   try{
+   if(!allowRecovery&&localStorage.getItem(PALLET_STORAGE_KEY)!==savedRaw)
+    throw Error('Журнал был изменён в другой вкладке. Не перезаписывайте его: перезагрузите LANDA, чтобы увидеть последние записи.');
    localStorage.setItem(PALLET_STORAGE_KEY,raw);
    if(localStorage.getItem(PALLET_STORAGE_KEY)!==raw)throw Error('Хранилище не подтвердило запись');
-   book=next;return true;
+   savedRaw=raw;book=next;return true;
   }catch(e){say('Не удалось сохранить приёмку: '+e.message+'. Проверь память браузера.',true);return false}
  };
  const download=(value,file,type)=>{
@@ -99,7 +102,12 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
    const tail=palletShortNumber(i);
    if((seen.get(tail)||0)<2)return '№ …'+tail;
    const all=String(i.number||i.tracking||i.key),digits=all.replace(/\D/g,'');
-   return '№ …'+(digits.slice(-8)||all.slice(-8))+' (…'+tail+')';
+   const extended=digits.slice(-8)||all.slice(-8);
+   const similar=items.filter(x=>{
+    const other=String(x.number||x.tracking||x.key),d=other.replace(/\D/g,'');
+    return (d.slice(-8)||other.slice(-8))===extended&&x.supplierId===i.supplierId;
+   });
+   return '№ …'+extended+(similar.length>1?' · ID '+String(i.key||palletInvoiceKey(i)).slice(-6):'');
   };
  };
  function listedInvoices(){
@@ -310,7 +318,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
    const data=palletValidate(JSON.parse(await file.text()));
    if(!confirm('ЗАМЕНИТЬ местный архив ('+book.sessions.length+' приёмок) на '+data.sessions.length+' приёмок из файла? Перед заменой сохраните свой архив JSON.'))return;
    // Allow a valid import to recover from a corrupted local file.
-   if(!persist(data))return;
+   if(!persist(data,true))return;
    infoError='';currentId=data.sessions.at(-1)?.id||'';activeInvoice='';editingEntry='';
    render();say('✓ Архив приёмок загружен. Действующие накладные и финансы не изменены.');
   }catch(err){say('Ошибка импорта: '+err.message,true)}
