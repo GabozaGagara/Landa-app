@@ -1,5 +1,6 @@
 // LANDA: supplier-only API. Deployed to Cloudflare Worker, NEVER as GitHub Pages JS.
 import {supplierOverview} from './supplier-view.mjs';
+import {applySupplierEdit} from './supplier-edit.mjs';
 import {loadSupplies,validateRange,checkConnection} from './moysklad-read.mjs';
 // Required secrets: GH_TOKEN (fine-grained PAT to private repo contents only),
 // SUPPLIER_CODES (JSON of three 24+ character random passwords for each supplier).
@@ -23,7 +24,7 @@ function normalizeInvoice(i){
   if(price!==null&&(!Number.isFinite(price)||price<0||price>99999999))fail('Некорректная стоимость товара');
   if(price==null)unknownPrices++;else totalCents+=Math.round(qty*Math.round(price*100));
   if(!Number.isSafeInteger(totalCents)||totalCents>1e15)fail('Слишком большая стоимость');
-  return {name,qty,price:price===null?0:Math.round(price*100)/100,sku:clean(row.sku,100)};
+  return {name,qty,price:price===null?0:Math.round(price*100)/100,priceMissing:price===null,sku:clean(row.sku,100)};
  });
  const delivery=i.deliveryCost==null?null:Number(i.deliveryCost);
  if(delivery!==null&&(!Number.isFinite(delivery)||delivery<0||delivery>99999999))fail('Некорректная доставка');
@@ -86,6 +87,26 @@ async function diagnose(request,env){
  if(file.status!==200)return {ok:false,step:'file',http:file.status,message:file.status===404?'Репозиторий доступен, но Contents API не видит backup.json. Проверь право Contents: Read and write.':'Ошибка доступа к файлу (HTTP '+file.status+').' };
  return {ok:true,step:'read',message:'Токен действителен. Приватный репозиторий и JSON доступны для чтения. Возможность записи проверяется при отправке накладной.'};
 }
+async function editSupplierInvoice(request,env){
+ const raw=await request.text();
+ if(te.encode(raw).length>50000)fail('Слишком большой запрос',413);
+ let data;try{data=JSON.parse(raw)}catch{fail('Неверный JSON')}
+ if(!data||typeof data!=='object')fail('Неверный запрос');
+ const normalized=normalizeInvoice(data.invoice);
+ validateSupplierAccess(normalized.supplierId,data.code,env);
+ const invoiceId=data.invoiceId,revision=data.revision;
+ if(typeof invoiceId!=='string'||invoiceId.length>160||!Number.isSafeInteger(revision)||revision<0)
+  fail('Неверная версия накладной',400);
+ for(let attempt=0;attempt<4;attempt++){
+  const {sha,backup}=await github(env);
+  const result=applySupplierEdit(backup.operations,normalized.supplierId,invoiceId,revision,normalized,
+   new Date().toISOString(),'evt-'+crypto.randomUUID());
+  if(!result.updated)return result;
+  const saved=await github(env,'PUT',sha,backup);
+  if(!saved.conflict)return result;
+ }
+ fail('База обновилась одновременно. Обновите список накладных.',409);
+}
 async function submit(request,env){
  const raw=await request.text();if(te.encode(raw).length>50000)fail('Слишком большой запрос',413);
  let data;try{data=JSON.parse(raw)}catch{fail('Неверный JSON')}
@@ -139,6 +160,11 @@ export default {async fetch(request,env){
    const {backup}=await github(env);
    return response(supplierOverview(backup,data.supplierId,page),200,origin);
   }
+  if(u.pathname==='/supplier-edit'&&request.method==='POST'){
+   if(origin!==ORIGIN)fail('Этот сервер принимает исправления только с сайта LANDA',403);
+   if((request.headers.get('Content-Type')||'').split(';')[0]!=='application/json')fail('Ожидается application/json');
+   return response(await editSupplierInvoice(request,env),200,origin);
+  }
   if(u.pathname==='/submit'&&request.method==='POST'){
    if(origin!==ORIGIN)fail('Этот сервер принимает накладные только с сайта LANDA',403);
    if((request.headers.get('Content-Type')||'').split(';')[0]!=='application/json')fail('Ожидается application/json');
@@ -148,4 +174,4 @@ export default {async fetch(request,env){
   return response({error:'Не найдено'},404,origin);
  }catch(e){return response({error:e.message},e.code||500,origin)}
 }};
-export const __test={normalizeInvoice,submit,github};
+export const __test={normalizeInvoice,submit,editSupplierInvoice,github};
