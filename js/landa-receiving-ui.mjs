@@ -60,6 +60,7 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   '<div class="rc-controls"><label>Поставщик<select id="rcSupplier"><option value="all">Все поставщики</option></select></label>',
   '<label>Товар / артикул / СДЭК<input type="search" id="rcSearch" placeholder="Найти товар или накладную"></label>',
   '<label>Результат сверки<select id="rcStatus"><option value="all">Все</option><option value="pending">Не сверено</option><option value="difference">Расхождения</option><option value="matched">Совпадает</option></select></label>',
+  '<label>Статус доставки<select id="rcDeliveryStatus"><option value="all">Все статусы</option><option value="created">Создана</option><option value="transit">В пути</option><option value="ready">Готова к выдаче</option><option value="delivered">Вручена</option></select></label>',
   '<label class="rc-check"><input type="checkbox" id="rcOnlyPortal"> Только из кабинетов поставщиков</label></div>',
   '<div class="rc-actions"><button class="rc-btn rc-btn-active" type="button" id="rcInvoices">По накладным</button><button class="rc-btn" type="button" id="rcProducts">Сводка товаров</button>',
   '<button class="rc-btn" type="button" id="rcExport">↓ Скачать CSV</button><button class="rc-btn" type="button" id="rcExportMerged" hidden>↓ CSV объединённой сводки</button>',
@@ -131,7 +132,7 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   return '\ufeff'+[header,...lines].map(line=>line.map(csvCell).join(';')).join('\r\n');
  }
  function getRows(){
-  return collectShipmentRows(ops.invoices,{supplier:$('rcSupplier').value,onlyPortal:$('rcOnlyPortal').checked,search:$('rcSearch').value});
+  return collectShipmentRows(ops.invoices,{supplier:$('rcSupplier').value,onlyPortal:$('rcOnlyPortal').checked,deliveryStatus:$('rcDeliveryStatus').value,search:$('rcSearch').value});
  }
  function selectedRows(){
   const status=$('rcStatus').value;
@@ -157,7 +158,7 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
    // Search and status filters match whole canonical groups; calculate totals
    // from all their source lines, never from just the matching sub-lines.
    const source=collectShipmentRows(ops.invoices,{
-    supplier:$('rcSupplier').value,onlyPortal:$('rcOnlyPortal').checked,search:''
+    supplier:$('rcSupplier').value,onlyPortal:$('rcOnlyPortal').checked,deliveryStatus:$('rcDeliveryStatus').value,search:''
    });
    products=filterProductSummary(aggregateProducts(source,records,aliases),source,records,{
     search:$('rcSearch').value,status:$('rcStatus').value
@@ -167,14 +168,15 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   }
   const done=all.filter(r=>['matched','difference'].includes(compareCount(r,records[r.key]).state));
   const discrepancies=done.filter(r=>compareCount(r,records[r.key]).state==='difference');
-  const shipments=new Set(all.map(r=>r.invoiceId));
+  const shipments=new Set(all.map(r=>JSON.stringify([r.supplierId,r.invoiceId])));
   const expectedQty=all.reduce((sum,r)=>sum+r.qty,0);
   $('rcSummary').innerHTML=[
    '<span>Накладных: <b>'+shipments.size+'</b></span>',
    '<span>Товарных строк: <b>'+all.length+'</b></span>',
    '<span>Заявлено единиц: <b>'+qty(expectedQty)+'</b></span>',
    '<span>Проверено: <b>'+done.length+'</b></span>',
-   '<span>Расхождений: <b>'+discrepancies.length+'</b></span>'
+   '<span>Расхождений: <b>'+discrepancies.length+'</b></span>',
+   '<span>Статус доставки: <b>'+esc($('rcDeliveryStatus').selectedOptions[0]?.textContent||'Все статусы')+'</b></span>'
   ].join('');
   $('rcInvoices').classList.toggle('rc-btn-active',tab==='invoices');
   $('rcProducts').classList.toggle('rc-btn-active',tab==='products');
@@ -186,7 +188,7 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   if(!rows.length){visibleProducts=[];selectedProducts.clear();if(mergeMode)refreshMergeSelection();$('rcResults').innerHTML='<p class="rc-report rc-hint">По выбранным фильтрам товаров нет. Проверьте фильтры и убедитесь, что актуальные накладные загружены из GitHub в LANDA.</p>';return}
   if(tab==='products'){
    visibleProducts=products;
-   $('rcResults').innerHTML='<p class="rc-hint">Одинаковые позиции внутри поставщика группируются автоматически. Разные названия, в том числе разных поставщиков, объединяются вручную. Поиск и фильтр статуса показывают товар целиком; «Принято» не вычисляется, пока не сверены все входящие строки.</p>'+
+   $('rcResults').innerHTML='<p class="rc-hint">Одинаковые позиции внутри поставщика группируются автоматически. Разные названия, в том числе разных поставщиков, объединяются вручную. Статус доставки ограничивает список накладных и суммы; поиск и результат сверки показывают товар целиком в рамках выбранного статуса. «Принято» не вычисляется, пока не сверены все строки.</p>'+
     products.map(p=>{
      const combined=p.merged,source=p.variants.map(v=>
       '<li>'+esc(names[v.supplierId]||v.supplierId)+' · '+esc(v.name)+(v.sku?' ['+esc(v.sku)+']':'')+
@@ -223,7 +225,7 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
  btn.addEventListener('click',open);
  $('rcInvoicesOpen')?.addEventListener('click',open);
  $('rcClose').addEventListener('click',()=>dialog.close());
- for(const key of ['rcSupplier','rcStatus','rcOnlyPortal'])$(key).addEventListener('change',()=>{selectedProducts.clear();$('rcMergeName').value='';render()});
+ for(const key of ['rcSupplier','rcStatus','rcDeliveryStatus','rcOnlyPortal'])$(key).addEventListener('change',()=>{selectedProducts.clear();$('rcMergeName').value='';render()});
  $('rcSearch').addEventListener('input',()=>{selectedProducts.clear();$('rcMergeName').value='';render()});
  $('rcInvoices').addEventListener('click',()=>{tab='invoices';selectedProducts.clear();render()});
  $('rcProducts').addEventListener('click',()=>{tab='products';render()});
@@ -258,7 +260,7 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   }catch(err){alert('Не удалось загрузить объединения: '+err.message)}
  });
  $('rcExportMerged').addEventListener('click',()=>{
-  const source=collectShipmentRows(ops.invoices,{supplier:$('rcSupplier').value,onlyPortal:$('rcOnlyPortal').checked,search:''});
+  const source=collectShipmentRows(ops.invoices,{supplier:$('rcSupplier').value,onlyPortal:$('rcOnlyPortal').checked,deliveryStatus:$('rcDeliveryStatus').value,search:''});
   const products=filterProductSummary(aggregateProducts(source,records,aliases),source,records,{search:$('rcSearch').value,status:$('rcStatus').value});
   if(!products.length){alert('В сводке нет товаров для экспорта.');return}
   downloadNamed(summaryCSV(products,supplierNames()),'LANDA-сводка-объединённых-товаров-'+new Date().toISOString().slice(0,10)+'.csv','text/csv;charset=utf-8');
