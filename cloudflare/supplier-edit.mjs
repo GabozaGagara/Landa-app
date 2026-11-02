@@ -16,6 +16,14 @@ function makeSnapshot(invoice){
   total:Number(invoice.total)||0,note:text(invoice.supplierNote??invoice.note,500)
  };
 }
+// Detect changes by the owner or another browser since the supplier loaded the list.
+export function supplierEditVersion(invoice){
+ const source=JSON.stringify({data:makeSnapshot(invoice),status:invoice.status,
+  accrued:invoice.accrued,reviewStatus:invoice.reviewStatus});
+ let a=2166136261,b=2246822519;
+ for(let k=0;k<source.length;k++){a=Math.imul(a^source.charCodeAt(k),16777619);b=Math.imul(b^(source.charCodeAt(k)+257),2246822519)}
+ return source.length.toString(16)+'-'+(a>>>0).toString(16)+'-'+(b>>>0).toString(16);
+}
 function itemDescription(item){
  return text(item.name,180)+' × '+Number(item.qty||0)+' × '+Number(item.price||0)+' $'+
    (item.priceMissing?' (цена не указана)':'')+(item.sku?' ['+text(item.sku,100)+']':'');
@@ -36,7 +44,7 @@ export function supplierEditable(i,supplierId,allocations=[]){
   &&!(i.accrued===undefined&&['transit','received'].includes(i.status))
   &&!allocations.some(a=>a.invoiceId===i.id));
 }
-export function applySupplierEdit(ops,supplierId,invoiceId,revision,normalized,now,eventId){
+export function applySupplierEdit(ops,supplierId,invoiceId,revision,editVersion,normalized,now,eventId){
  if(!ops||!Array.isArray(ops.invoices)||!Array.isArray(ops.allocations))throw Object.assign(Error('Некорректная база'),{code:502});
  if(typeof invoiceId!=='string'||invoiceId.length>160)throw Object.assign(Error('Неверный идентификатор накладной'),{code:400});
  const current=ops.invoices.find(i=>i.id===invoiceId&&i.supplierId===supplierId);
@@ -45,6 +53,8 @@ export function applySupplierEdit(ops,supplierId,invoiceId,revision,normalized,n
   throw Object.assign(Error('Редактирование запрещено: накладная вручена, начислена к оплате или уже имеет зачёты. Обратитесь к владельцу LANDA.'),{code:403});
  if(!Number.isSafeInteger(revision)||revision<0||revision!==Number(current.supplierEditRevision||0))
   throw Object.assign(Error('Накладная уже изменилась. Обновите список и повторите исправление.'),{code:409});
+ if(typeof editVersion!=='string'||editVersion!==supplierEditVersion(current))
+  throw Object.assign(Error('Накладная изменена в другом окне или владельцем. Обновите список перед сохранением.'),{code:409});
  if(normalized.supplierId!==supplierId)throw Object.assign(Error('Нельзя исправлять накладную другого поставщика'),{code:403});
  const wanted=String(normalized.tracking||'').toLowerCase();
  if(ops.invoices.some(x=>x.id!==current.id&&[x.number,x.tracking].some(v=>String(v||'').trim().toLowerCase()===wanted)))
