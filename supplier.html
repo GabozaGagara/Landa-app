@@ -123,11 +123,11 @@ async function sendAuto(){
  if(edit&&d.supplierId!==edit.supplierId)throw Error('Нельзя изменить поставщика существующей накладной.');
  $('sendAuto').disabled=true;setStatus(edit?'Сохраняем исправления и историю…':'Отправляем накладную в закрытую базу…');
  try{
-  const r=await fetch(workerURL+(edit?'/supplier-edit':'/submit'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(edit?{invoice:d,code,invoiceId:edit.id,revision:edit.revision}:{invoice:d,code})});
+  const r=await fetch(workerURL+(edit?'/supplier-edit':'/submit'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(edit?{invoice:d,code,invoiceId:edit.id,revision:edit.revision,editVersion:edit.editVersion}:{invoice:d,code})});
   const result=await r.json().catch(()=>({}));
   if(!edit&&r.status===409&&result.duplicate){rememberCodeAfterAccepted(d.supplierId,code);lastAcceptedTracking=d.tracking;shareFallback(false);setStatus('Накладная '+d.tracking+' уже была добавлена в LANDA. Для следующей нажмите «Следующая накладная».');return}
   if(!r.ok)throw Error(result.error||'Сервер вернул HTTP '+r.status);
-  if(edit){editingInvoice={...edit,revision:result.revision};updateFormMode();}
+  if(edit){editingInvoice={...edit,revision:result.revision,editVersion:result.editVersion};updateFormMode();}
   rememberCodeAfterAccepted(d.supplierId,code);lastAcceptedTracking=d.tracking;shareFallback(false);
   setStatus(edit?(result.updated?'✓ Исправления сохранены. Владелец видит историю правок. Накладная ждёт повторной проверки.':'Изменений нет. Накладная не изменена.'):'✓ Накладная '+d.tracking+' добавлена в LANDA. Для следующей нажмите «Следующая накладная» внизу формы.');
   void loadSupplierOverview(1);
@@ -214,7 +214,7 @@ function openSupplierEdit(invoiceId){
  if(!i||!i.editable){setStatus('Эта накладная больше недоступна для исправлений. Обновите список.',true);return}
  const pending=$('tracking').value.trim()&&$('tracking').value.trim()!==lastAcceptedTracking;
  if(pending&&!confirm('Текущая незавершённая накладная будет заменена выбранной. Продолжить?'))return;
- editingInvoice={id:i.id,revision:i.editRevision,supplierId:currentSupplier()};updateFormMode();
+ editingInvoice={id:i.id,revision:i.editRevision,editVersion:i.editVersion,supplierId:currentSupplier()};updateFormMode();
  $('tracking').value=i.tracking;$('date').value=i.date;
  $('destination').value=String(i.route||'').replace(/^Брест\s*[→-]\s*/i,'')||'Москва';
  $('sender').value=i.sender||'';$('delivery').value=i.deliveryMissing?'':String(i.deliveryCost??0);
