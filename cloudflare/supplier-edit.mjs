@@ -87,7 +87,7 @@ export function applySupplierEdit(ops,supplierId,invoiceId,revision,editVersion,
   supplierEditedAt:now,supplierEditedBy:supplierId,
   supplierEditRevision:Number(current.supplierEditRevision||0)+1,
   supplierEditHistory:newHistory,
-  reviewStatus:'pending'
+  reviewStatus:'pending',reviewedAt:null,reviewedBy:null
  });
  // Preserve owner's original submission and shipment status; force re-approval.
  if(!Array.isArray(ops.auditTrail))ops.auditTrail=[];
