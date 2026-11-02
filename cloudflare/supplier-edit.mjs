@@ -19,7 +19,8 @@ function makeSnapshot(invoice){
 // Detect changes by the owner or another browser since the supplier loaded the list.
 export function supplierEditVersion(invoice){
  const source=JSON.stringify({data:makeSnapshot(invoice),status:invoice.status,
-  accrued:invoice.accrued,reviewStatus:invoice.reviewStatus});
+  accrued:invoice.accrued,reviewStatus:invoice.reviewStatus,ownerNote:invoice.note,
+  reviewedAt:invoice.reviewedAt});
  let a=2166136261,b=2246822519;
  for(let k=0;k<source.length;k++){a=Math.imul(a^source.charCodeAt(k),16777619);b=Math.imul(b^(source.charCodeAt(k)+257),2246822519)}
  return source.length.toString(16)+'-'+(a>>>0).toString(16)+'-'+(b>>>0).toString(16);
