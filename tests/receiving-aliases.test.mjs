@@ -209,7 +209,7 @@ test('manual aliases sum only selected delivery status and never claim an unchec
 test('UI keeps shipping status separate from reconciliation status and applies it to CSV export',()=>{
  const ui=readFileSync(new URL('../js/landa-receiving-ui.mjs',import.meta.url),'utf8');
  assert.match(ui,/id="rcDeliveryStatus"/);
- for(const [code,label] of [['transit','В пути'],['ready','Готова к выдаче'],['delivered','Вручена']])
+ for(const [code,label] of [['transit','В пути'],['ready','Готов к выдаче'],['delivered','Вручен']])
   assert.ok(ui.includes('value="'+code+'">'+label),code);
  assert.match(ui,/id="rcStatus"/);
  assert.match(ui,/deliveryStatus:\$\('rcDeliveryStatus'\)\.value/);
