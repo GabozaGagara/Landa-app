@@ -4,10 +4,10 @@ import {readFileSync} from 'node:fs';
 import {parseCBValue,parseCBPaste,previewCBBaseline} from '../js/landa-cb-baseline.mjs';
 const source=()=>readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const makeCB=({values={},control=0}={})=>{
- const cols=Array(289).fill('');
+ const cols=Array(290).fill('');
  cols[0]='29 октября 2026';cols[1]='Финансовый расчёт';cols[2]='CB29';
  for(const [row,val] of Object.entries(values))cols[Number(row)-1]=String(val);
- cols[288]=String(control);
+ cols[287]=String(control);
  return cols.join('\n');
 };
 const rows=[
@@ -26,9 +26,9 @@ test('CB parser preserves row IDs, ignores headers and excludes control rows fro
  assert.equal(JSON.stringify(rows),before);
 });
 test('malformed CB input and mismatched source/control are rejected',()=>{
- assert.throws(()=>parseCBPaste('1\n2\n3'),/289/);
+ assert.throws(()=>parseCBPaste('1\n2\n3'),/288/);
  assert.throws(()=>parseCBPaste(makeCB({values:{5:'1.234,56'}})),/CB5/);
- assert.throws(()=>parseCBPaste(makeCB({control:''})),/CB289/);
+ assert.throws(()=>parseCBPaste(makeCB({control:''})),/CB288/);
  const result=previewCBBaseline(rows,makeCB({values:{5:99,8:12},control:100}));
  assert.equal(result.match,false);assert.equal(result.difference,11);
  assert.throws(()=>previewCBBaseline(rows,makeCB({values:{10:500},control:500})),/CB: 10/);
@@ -80,4 +80,30 @@ test('income and expense calculations are independent of cash and historic row v
  assert.equal(actual.adjustedTotal('new'),58);
  assert.deepEqual(actual.calcCompletion('new'),{filled:2,total:2});
  assert.equal(JSON.stringify(state),orig);
+});
+
+test('CB1 must identify 29 October, not the previous 26 October period',()=>{
+ const correct=makeCB({values:{5:50,8:20},control:70});
+ assert.equal(parseCBPaste(correct).control,70);
+ assert.throws(()=>parseCBPaste(correct.replace('29 октября 2026','26.10.2026')),/CB1 дата/);
+ assert.throws(()=>parseCBPaste(correct.replace('29 октября 2026','')),/CB1 пуста/);
+ assert.throws(()=>parseCBPaste(correct.replace('29 октября 2026','46321')),/CB1 дата/);
+ assert.equal(parseCBPaste(correct.replace('29 октября 2026','46324')).control,70);
+});
+test('source income expense rows 289 and 290 are read but not added to source row totals',()=>{
+ const full=makeCB({values:{5:25,8:35,9:999,289:50,290:15},control:60});
+ const parsed=parseCBPaste(full);
+ assert.equal(parsed.sourceExpense,50);
+ assert.equal(parsed.sourceIncome,15);
+ assert.equal(previewCBBaseline(rows,full).calculated,60);
+ assert.equal(previewCBBaseline(rows,full).match,true);
+});
+test('29 October baseline UI supports safe existing-period replacement and JSON backup',()=>{
+ const html=source();
+ assert.match(html,/const existing=state\.snapshots\.find\(s=>s\.date==='2026-10-29'\)/);
+ assert.match(html,/downloadBackup\(\)/);
+ assert.match(html,/existing\?\.id/);
+ assert.match(html,/delete row\.values\[id\]/);
+ assert.match(html,/CB288/);
+ assert.doesNotMatch(html,/CB289 — контрольный итог/);
 });
