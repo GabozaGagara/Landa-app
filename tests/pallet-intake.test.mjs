@@ -145,3 +145,28 @@ test('UI is integrated as third receiving tab without writes to financial ledger
  assert.doesNotMatch(ui,/\bsaveOps\s*\(|\bsave\s*\(|\bops\.invoices\s*=|GH_TOKEN|backup\.json/);
  assert.equal(PALLET_STORAGE_KEY,'landa_sdek_mixed_pallet_v1');
 });
+
+
+test('manifest highlights actual undeclared names without confusing different spellings or parcels',()=>{
+ let b=select(create(),first);
+ b=add(b,'p1',first,'Karcher Puzzi 10/1',1);
+ b=add(b,'p2',first,'Dyson Absolute red',1);
+ b=add(b,'p3',first,'Unknown product',2);
+ const v=palletSummary(b.sessions[0])[0];
+ assert.equal(v.hasManifest,true);
+ assert.deepEqual(v.notLoaded,[]);
+ assert.equal(v.unexpected.length,1);
+ assert.equal(v.unexpected[0].name,'Unknown product');
+ assert.equal(v.matchedPositions,2);
+ assert.equal(v.places,4);
+ assert.equal(v.expectedUnits,3);
+ assert.equal(v.actualUnits,null);
+});
+test('manifest reports still-unseen item names but does not claim missing physical places',()=>{
+ let b=select(create(),first);
+ b=add(b,'p1',first,'Karcher Puzzi 10/1',1);
+ const v=palletSummary(b.sessions[0])[0];
+ assert.deepEqual(v.notLoaded.map(x=>x.name),['Dyson Absolute Red']);
+ assert.equal(v.differencePlaces,null);
+ assert.equal(v.matchedPositions,1);
+});
