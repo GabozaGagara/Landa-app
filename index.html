@@ -263,9 +263,9 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
 <dialog id="editDialog"><div class="modal-hd" id="editTitle">Позиция</div><form id="editForm" class="modal-body" method="dialog" novalidate><label class="field"><span>Название строки</span><input class="textinput" name="name" maxlength="200" required></label><label class="field"><span>Основной раздел</span><select name="group" id="editGroup"></select></label><label class="field"><span>Подгруппа (можно изменить)</span><input class="textinput" name="subgroup" list="subgroups" maxlength="100" required><datalist id="subgroups"></datalist></label><label class="field"><span>Значение за выбранную дату, ₽</span><input class="textinput" name="amount" inputmode="decimal" placeholder="0 или 25000+3000"></label><div class="modal-info" id="sourceInfo">Сумма участвует в общем итоге, если строка находится в одном из основных разделов.</div><div class="modal-ft"><button class="btn btn-ghost danger" type="button" id="removeRow" hidden>Удалить</button><button class="btn" value="cancel" type="button" id="cancelEdit">Отмена</button><button type="submit" class="btn btn-primary">Сохранить</button></div></form></dialog>
 <dialog id="snapshotDialog"><div class="modal-hd">Новый расчёт</div><form id="snapshotForm" class="modal-body" method="dialog" novalidate><label class="field"><span>Дата нового расчёта</span><input class="textinput" type="date" name="date" required></label><label class="field"><span>Название (необязательно)</span><input class="textinput" name="label" placeholder="Например, еженедельный расчёт" maxlength="75"></label><div class="modal-info">Все суммы будут пустыми; названия и порядок строк сохранятся. Заполните их вручную. Доход и расход вводятся внизу. До завершения заполнения итог и отличие от прошлого расчёта будут предварительными.</div><div class="modal-ft"><button type="button" class="btn" id="cancelSnapshot">Отмена</button><button type="submit" class="btn btn-primary">Создать расчёт</button></div></form></dialog>
 <dialog id="cbImportDialog" aria-labelledby="cbImportTitle"><div class="modal-hd" id="cbImportTitle">Импорт основы за 29.10.2026 · Google Sheets</div><div class="modal-body">
- <div class="modal-info">В Google Sheets открой лист «просчет», выдели <strong>CB1:CB289</strong>, скопируй (Ctrl+C) и вставь сюда. Строки CB1–CB288 — значения, <strong>CB289 — контрольный итог</strong>. Названия и порядок позиций LANDA не изменяются. Если сопоставить строки не получится, импорт будет остановлен.</div>
- <label class="field"><span>Столбец CB, 289 строк</span><textarea class="textinput" id="cbImportText" rows="9" spellcheck="false" placeholder="Вставьте значения столбца CB из Google Sheets, включая контроль CB289" style="width:100%;font-family:monospace;resize:vertical"></textarea></label>
- <div id="cbImportReport" class="op-preview" role="status" aria-live="polite">Перед загрузкой проверь совпадение суммы CB1:CB288 с CB289.</div>
+ <div class="modal-info">По проверенному исходному Excel: <strong>CB1 — дата</strong>, <strong>CB5–CB287 — строки просчёта</strong>, <strong>CB288 — итог просчёта</strong>, CB289 — расход и CB290 — доход. Скопируй столбец CB1:CB288 (можно до CB290). Доход и расход вводятся отдельно вручную и не импортируются. Нужная дата в CB1: <strong>29.10.2026</strong>. Старые расчёты и порядок строк сохраняются.</div>
+ <label class="field"><span>Столбец CB · 288–290 строк</span><textarea class="textinput" id="cbImportText" rows="9" spellcheck="false" placeholder="Вставьте CB1:CB288 (или до CB290), включая дату в CB1 и итог CB288" style="width:100%;font-family:monospace;resize:vertical"></textarea></label>
+ <div id="cbImportReport" class="op-preview" role="status" aria-live="polite">Перед загрузкой проверяются дата CB1, сумма CB5:CB287 и контроль CB288.</div>
  <div class="modal-ft"><button type="button" class="btn" id="cbImportCancel">Отмена</button><button type="button" class="btn" id="cbImportCheck">Проверить данные</button><button type="button" class="btn btn-primary" id="cbImportApply" disabled>Загрузить основу</button></div>
  </div></dialog>
  <dialog id="exportDialog"><div class="modal-hd">Выгрузка и резервные копии</div><div class="modal-body"><p style="color:#61718b;margin-top:0;font-size:12px">Выберите формат. JSON сохраняет всю историю и группировку, CSV содержит текущий период и открывается в Excel.</p><button class="btn" id="downloadJson" style="width:100%;margin-bottom:11px" type="button">⇩ JSON — вся история и изменения</button><button class="btn" id="downloadCsv" style="width:100%;margin-bottom:16px" type="button">⇩ CSV — текущий период для Excel</button><button class="btn" id="pasteBackupFromExport" type="button" style="width:100%;margin-bottom:11px">↑ Вставить резервную копию из буфера</button><button class="btn" id="restoreEmbeddedFromExport" type="button" style="width:100%;margin-bottom:16px">↺ Восстановить встроенную копию от 27.10.2026</button><button type="button" class="btn btn-ghost" id="closeExport" style="width:100%">Закрыть</button></div></dialog>
@@ -431,34 +431,51 @@ async function cbPreview(){
 }
 function cbReport(info,isError=false){$('cbImportReport').textContent=info;$('cbImportReport').style.color=isError?'#a33343':'#1f6c54'}
 $('cbImportOpen').addEventListener('click',()=>{
- $('cbImportText').value='';$('cbImportApply').disabled=true;cbReport('Скопируй CB1:CB289 из листа «просчет».');$('cbImportDialog').showModal();
+ $('cbImportText').value='';$('cbImportApply').disabled=true;cbReport('Скопируй CB1:CB288 (можно до CB290) из листа «Подсчет». Дата в CB1 должна быть 29.10.2026.');$('cbImportDialog').showModal();
 });
 $('cbImportText').addEventListener('input',()=>{$('cbImportApply').disabled=true;cbReport('Нажми «Проверить данные».')});
 $('cbImportCancel').addEventListener('click',()=>$('cbImportDialog').close());
 $('cbImportCheck').addEventListener('click',async()=>{
  $('cbImportApply').disabled=true;
  try{
-  if(state.snapshots.some(s=>s.date==='2026-10-29'))throw Error('Расчёт за 29.10.2026 уже существует. Автоматически заменять исторические данные запрещено.');
   const v=await cbPreview();
-  if(!v.match)throw Error('Контроль не совпал: сумма строк '+fmtRub(v.calculated)+'; CB289 '+fmtRub(v.control)+'; разница '+fmtRub(v.difference)+'. Исправьте источник перед импортом.');
-  cbReport('✓ Контроль CB289 совпал: '+fmtRub(v.control)+'. Сопоставлено '+v.mapped+' позиций; чисел: '+v.imported+'; пустых ячеек в них: '+v.blank+'. Порядок строк сохранится.');
+  if(!v.match)throw Error('Контроль не совпал: сумма CB5:CB287 '+fmtRub(v.calculated)+'; CB288 '+fmtRub(v.control)+'; разница '+fmtRub(v.difference)+'. Исправь источник перед импортом.');
+  const old=state.snapshots.find(s=>s.date==='2026-10-29');
+  const prior=old?state.rows.filter(r=>r.sourceRow>=5&&r.sourceRow<=287&&hasval(r,old.id)).length:0;
+  cbReport('✓ Дата 29.10.2026 подтверждена. Сумма совпала с CB288: '+fmtRub(v.control)+'. Исходных строк сопоставлено: '+v.mapped+'; сумм: '+v.imported+'; пустых ячеек: '+v.blank+'. '+(old?'Существующий расчёт 29.10 содержит '+prior+' значений, они будут заменены после подтверждения.':'Будет создан отдельный расчёт за 29.10.')+' Другие даты и порядок строк не изменятся.');
   $('cbImportApply').disabled=false;
  }catch(err){cbReport('⚠ '+err.message,true)}
 });
 $('cbImportApply').addEventListener('click',async()=>{
  $('cbImportApply').disabled=true;
  try{
-  if(state.snapshots.some(s=>s.date==='2026-10-29'))throw Error('Основа 29.10.2026 уже существует. Импорт остановлен.');
-  const v=await cbPreview();if(!v.match)throw Error('Контроль CB289 не совпадает. Импорт остановлен.');
-  if(!await askConfirmAsync('Импортировать проверенную основу 29.10.2026 на '+fmtRub(v.control)+'? Это создаст новый период, НЕ удалит старые расчёты и НЕ переставит строки.'))return;
-  const id='cb-2026-10-29-'+Date.now(),before=deep(state);pushUndo();
-  state.snapshots.push({id,date:'2026-10-29',label:'29.10.2026 · Основа CB',source:'Google Sheets · лист просчет · CB1:CB289'});
-  for(const row of state.rows)if(Object.prototype.hasOwnProperty.call(v.values,row.id))row.values[id]=v.values[row.id];
+  const v=await cbPreview();if(!v.match)throw Error('Сумма строк не совпала с CB288. Импорт остановлен.');
+  const existing=state.snapshots.find(s=>s.date==='2026-10-29');
+  const original=deep(state);
+  const id=existing?.id||'cb-2026-10-29-'+Date.now();
+  // Prevent overwriting unrelated custom finance lines as part of a spreadsheet-only baseline.
+  const unrelated=state.rows.filter(r=>(r.sourceRow==null||r.sourceRow<5||r.sourceRow>287)&&included(r)&&hasval(r,id));
+  if(unrelated.length)throw Error('В расчёте 29.10 уже есть значения в дополнительных строках, отсутствующих в CB5:CB287. Для безопасности импорт остановлен: '+unrelated.length+' позиций.');
+  const msg=existing?
+   'ВНИМАНИЕ: расчёт 29.10.2026 уже существует. Заменить ТОЛЬКО его исходные значения на проверенный столбец CB (итог '+fmtRub(v.control)+')? Остальные даты не изменятся; перед записью скачается JSON-копия.':
+   'Создать основу 29.10.2026 из проверенного CB с итогом '+fmtRub(v.control)+'? Существующие даты и порядок строк не изменятся; перед записью скачается JSON-копия.';
+  if(!await askConfirmAsync(msg))return;
+  downloadBackup(); // Recoverable snapshot of the full old proschet before mutation.
+  pushUndo();
+  if(!existing)state.snapshots.push({id,date:'2026-10-29',label:'29.10.2026 · Основа CB',source:'Google Sheets · лист Подсчет · CB1:CB288'});
+  else {existing.source='Google Sheets · лист Подсчет · CB1:CB288, проверено';existing.label='29.10.2026 · Основа CB'}
+  for(const row of state.rows){
+   if(row.sourceRow==null||row.sourceRow<5||row.sourceRow>287)continue;
+   delete row.values[id]; // A blank cell stays BLANK, not an inherited zero.
+   if(Object.prototype.hasOwnProperty.call(v.values,row.id))row.values[id]=v.values[row.id];
+  }
   if(!state.controlTotals)state.controlTotals={};state.controlTotals[id]=v.control;
-  if(Math.round((total(id)-v.control)*100)!==0){state=before;undo.pop();throw Error('Внутренняя проверка не совпала. Ничего не записано.')}
-  if(!save()){state=before;undo.pop();throw Error('Не удалось сохранить основу в браузере.')}
+  if(Math.round((total(id)-v.control)*100)!==0){
+   state=original;undo.pop();throw Error('Внутренняя сверка с CB288 не совпала. Изменения отменены.');
+  }
+  if(!save()){state=original;undo.pop();throw Error('Не удалось сохранить основу в браузере.')}
   snap=id;filter='all';activeGroup='all';searchText='';$('search').value='';render();
-  $('cbImportDialog').close();toast('✓ Основа за 29.10 импортирована с проверкой CB289. Проверь синхронизацию GitHub.');
+  $('cbImportDialog').close();toast('✓ Основа 29.10.2026 загружена и сверена с CB288. Проверь синхронизацию GitHub.');
  }catch(err){cbReport('⚠ '+err.message,true)}
 });
 $('newSnap').addEventListener('click',()=>{let f=$('snapshotForm');let today=new Date();let d=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');f.elements.date.value=d;f.elements.label.value='';$('snapshotDialog').showModal()});
