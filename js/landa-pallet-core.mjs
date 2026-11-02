@@ -21,7 +21,7 @@ export const palletInvoiceKey=invoice=>JSON.stringify([
 ]);
 export function palletShortNumber(invoice){
  const full=String(invoice?.number||invoice?.tracking||invoice?.id||'').trim(),digits=full.replace(/\D/g,'');
- return digits?digits.slice(-4).padStart(4,'0'):full.slice(-4)||'????';
+ return digits?digits.slice(-4):full.slice(-4)||'????';
 }
 export function palletInvoiceSnapshot(invoice){
  if(!invoice||invoice.isOpening||!invoice.supplierId||!(invoice.id||invoice.number||invoice.tracking))
