@@ -1,13 +1,18 @@
 // LANDA shipment reconciliation. Separate local-only physical count; financial operations remain read-only.
-import {collectShipmentRows,compareCount,aggregateProducts,receiptCSV} from './landa-receiving-core.mjs';
+import {collectShipmentRows,compareCount,aggregateProducts,receiptCSV,productIdentity,safeProductAliases,mergeProductAliases,unmergeProductAliases,renameProductAlias,csvCell} from './landa-receiving-core.mjs';
 
 if(typeof document!=='undefined' && typeof ops!=='undefined') {
- const id='landa_receiving_counts_v1', $=x=>document.getElementById(x);
+ const id='landa_receiving_counts_v1', aliasStorageKey='landa_receiving_product_aliases_v1', $=x=>document.getElementById(x);
  const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const qty=x=>Number(x).toLocaleString('ru-RU',{maximumFractionDigits:4});
  const statusLabels={created:'Создано',transit:'В пути',ready:'Готов к выдаче',delivered:'Вручено',received:'Вручено'};
  const comparisonLabels={pending:'Не сверено',matched:'Совпадает',difference:'Расхождение',invalid:'Ошибка ввода'};
  let records={},loadError='',tab='invoices';
+ let aliases={version:1,groups:[]},mergeMode=false,selectedProducts=new Set(),visibleProducts=[];
+ try{
+  const raw=localStorage.getItem(aliasStorageKey);
+  if(raw){const data=JSON.parse(raw);if(!data||data.version!==1||!Array.isArray(data.groups))throw Error('Неверный формат объединений');aliases=safeProductAliases(data);}
+ }catch(e){loadError='Не удалось загрузить объединения товаров: '+e.message+'. Старые накладные и сверка не затронуты.'}
  try{
   const raw=localStorage.getItem(id);
   if(raw){const d=JSON.parse(raw);if(d&&d.version===1&&d.entries&&typeof d.entries==='object'&&!Array.isArray(d.entries))records=d.entries;else loadError='Неверный формат локального журнала сверки.'}
@@ -34,6 +39,15 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   '.rc-note{max-width:260px}.rc-report{background:#f6f9fd;border-radius:11px;padding:13px;margin:10px 0}',
   '.rc-aggregate{display:grid;grid-template-columns: minmax(170px,1fr) 90px 90px 90px;gap:10px;align-items:center;border-bottom:1px solid #e4eaf3;padding:12px 0;font-size:13px}',
   '.rc-warning{background:#fff7e8;padding:11px 13px;border-radius:8px;color:#765521;font-size:12px;margin:11px 0}',
+  '.rc-merge-panel{border:1px solid #bed0e9;background:#f5f8ff;border-radius:12px;padding:13px;margin:12px 0;display:grid;gap:10px}',
+  '.rc-merge-panel[hidden]{display:none}.rc-merge-panel label{font-weight:600;font-size:12px;display:grid;gap:5px}',
+  '.rc-merge-panel .rc-btn:disabled{opacity:.5;cursor:not-allowed}.rc-merge-actions{display:flex;flex-wrap:wrap;gap:7px}',
+  '.rc-aggregate .rc-merge-check{display:inline-flex;align-items:center;gap:6px;margin-right:8px;cursor:pointer}',
+  '.rc-alias-tag{display:inline-block;font-size:11px;font-weight:700;color:#145d7c;background:#e1f5fa;border-radius:6px;padding:2px 6px;margin-top:5px}',
+  '.rc-alias-variants{font-size:12px;color:#516780;margin-top:5px}.rc-alias-variants summary{cursor:pointer}',
+  '.rc-alias-variants ul{padding-left:17px;margin:6px 0;line-height:1.6}.rc-aggregate .rc-alias-manage{margin:5px 6px 0 0;font-size:11px;padding:4px 7px}',
+  '.rc-merge-panel .rc-hint{margin:0}',
+
   '@media(max-width:700px){.rc-modal header{padding:14px}.rc-body{padding:14px}.rc-item{grid-template-columns:1fr 1fr;gap:7px}.rc-item-title{grid-column:1/-1}.rc-note{max-width:100%}.rc-aggregate{grid-template-columns:1fr 75px 75px}.rc-aggregate .rc-last{grid-column:1/-1}.rc-controls label{flex:1 1 100%}}'
  ].join('');
  document.head.append(styles);
@@ -48,7 +62,15 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   '<label>Результат сверки<select id="rcStatus"><option value="all">Все</option><option value="pending">Не сверено</option><option value="difference">Расхождения</option><option value="matched">Совпадает</option></select></label>',
   '<label class="rc-check"><input type="checkbox" id="rcOnlyPortal"> Только из кабинетов поставщиков</label></div>',
   '<div class="rc-actions"><button class="rc-btn rc-btn-active" type="button" id="rcInvoices">По накладным</button><button class="rc-btn" type="button" id="rcProducts">Сводка товаров</button>',
-  '<button class="rc-btn" type="button" id="rcExport">↓ Скачать CSV</button><button class="rc-btn" type="button" id="rcRefresh">↻ Обновить</button></div>',
+  '<button class="rc-btn" type="button" id="rcExport">↓ Скачать CSV</button><button class="rc-btn" type="button" id="rcExportMerged" hidden>↓ CSV объединённой сводки</button>',
+  '<button class="rc-btn" type="button" id="rcMergeToggle" hidden>⇄ Объединить позиции</button><button class="rc-btn" type="button" id="rcRefresh">↻ Обновить</button></div>',
+  '<div id="rcMergePanel" class="rc-merge-panel" hidden><strong>Ручное объединение названий</strong>',
+  '<p class="rc-hint">Отметьте 2 или больше позиций ниже, даже от разных поставщиков. Задайте общее название: исходные строки, артикула и поставщики сохраняются, суммы и сверка пересчитываются только в сводке.</p>',
+  '<div id="rcMergeSelected" class="rc-hint">Выбрано: 0</div><label>Общее название товара<input id="rcMergeName" maxlength="180" placeholder="Например: Karcher Puzzi 10/1"></label>',
+  '<div class="rc-merge-actions"><button class="rc-btn rc-btn-primary" type="button" id="rcMergeSave" disabled>Объединить выбранные</button><button class="rc-btn" type="button" id="rcMergeClear">Снять выделение</button>',
+  '<button class="rc-btn" type="button" id="rcAliasDownload">↓ Сохранить объединения JSON</button><button class="rc-btn" type="button" id="rcAliasUpload">↑ Загрузить объединения JSON</button></div>',
+  '<p class="rc-hint">Правила объединения хранятся в этом браузере, не в финансовой базе. Для переноса на другой компьютер или телефон используйте JSON-файл.</p>',
+  '<input type="file" id="rcAliasFile" accept=".json,application/json" hidden></div>',
   '<div id="rcSummary" class="rc-stats"></div><p id="rcMessage" class="rc-hint" role="status" aria-live="polite"></p><div id="rcResults"></div>',
   '</div>'
  ].join('');
