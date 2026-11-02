@@ -123,6 +123,8 @@ test('CSV shows chronological records then summary with full numbers and prevent
  assert.match(csv,/'=HYPERLINK/);
  assert.match(csv,/СВОДКА/);
  assert.match(csv,/Мест фактически/);
+ assert.match(csv,/ПО ТОВАРАМ/);
+ assert.match(csv,/HYPERLINK/);
  assert.equal(csv.startsWith('\ufeff'),true);
 });
 test('UI is integrated as third receiving tab without writes to financial ledgers',()=>{
@@ -140,6 +142,8 @@ test('UI is integrated as third receiving tab without writes to financial ledger
  assert.match(ui,/plExpected/);
  assert.match(ui,/data-pl-suggest/);
  assert.match(ui,/data-pl-edit/);
+ assert.match(ui,/plActiveInvoices/);
+ assert.match(ui,/savedRaw/);
  assert.match(ui,/data-pl-delete/);
  assert.match(ui,/PALLET_STORAGE_KEY/);
  assert.doesNotMatch(ui,/\bsaveOps\s*\(|\bsave\s*\(|\bops\.invoices\s*=|GH_TOKEN|backup\.json/);
