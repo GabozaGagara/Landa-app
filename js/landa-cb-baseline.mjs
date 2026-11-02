@@ -5,7 +5,11 @@ const asCents=n=>Math.round(n*100);
 export function parseCBValue(value,rowNumber){
  const v=String(value??'').trim().replace(/[\s\u00a0\u202f]/g,'').replace(/[₽р]/gi,'').replace(/\u2212/g,'-');
  if(!v)return null;
- if(!/^-?(?:\d+(?:[.,]\d{1,2})?|[.,]\d{1,2})$/.test(v))throw Error('Не удалось прочитать число в CB'+rowNumber+': '+String(value).slice(0,60));
+ if(!/^-?(?:\d+(?:[.,]\d{1,2})?|[.,]\d{1,2})$/.test(v)){
+  // Headings can appear in CB1:CB4; source financial entries start below the sheet header.
+  if(rowNumber<=4)return null;
+  throw Error('Не удалось прочитать число в CB'+rowNumber+': '+String(value).slice(0,60));
+ }
  const amount=Number(v.replace(',','.'));
  if(!Number.isFinite(amount)||!Number.isSafeInteger(asCents(amount)))throw Error('Слишком большая сумма в CB'+rowNumber);
  return asCents(amount)/100;
@@ -35,6 +39,7 @@ export function previewCBBaseline(rows,text){
  for(let row=1;row<=288;row++){
   const value=parsed.values[row-1],item=mapping.get(row);
   if(!item){
+   if(row<=4)continue; // spreadsheet headers, not financial positions
    if(value!==null)unmapped.push(row);
    continue;
   }
