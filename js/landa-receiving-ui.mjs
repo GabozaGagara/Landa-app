@@ -97,6 +97,39 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   try{localStorage.setItem(id,JSON.stringify({version:1,entries:records}));$('rcMessage').textContent='✓ Сверка сохранена только на этом устройстве. Для переноса скачайте CSV.';return true}
   catch(e){$('rcMessage').textContent='Не удалось сохранить сверку: '+e.message+'. Не закрывайте страницу, экспортируйте CSV.';return false}
  }
+ function storeAliases(next){
+  const cleaned=safeProductAliases(next);
+  if(cleaned.groups.length!==next.groups.length)throw Error('Некорректное правило объединения.');
+  const raw=JSON.stringify(cleaned);
+  try{
+   localStorage.setItem(aliasStorageKey,raw);
+   if(localStorage.getItem(aliasStorageKey)!==raw)throw Error('Браузер не подтвердил запись');
+  }catch(e){throw Error('Не удалось сохранить объединения: '+e.message)}
+  aliases=cleaned;
+  $('rcMessage').textContent='✓ Правила объединения сохранены только в этом браузере. Финансовые данные и накладные не изменены.';
+ }
+ function refreshMergeSelection(){
+  const valid=new Set(visibleProducts.map(p=>p.key));
+  for(const k of selectedProducts)if(!valid.has(k))selectedProducts.delete(k);
+  const chosen=visibleProducts.filter(p=>selectedProducts.has(p.key));
+  $('rcMergeSelected').textContent='Выбрано: '+chosen.length+(chosen.length?' · '+chosen.map(p=>p.name).join(' + ').slice(0,300):'');
+  $('rcMergeSave').disabled=chosen.length<2;
+  if(chosen.length>=2&&!$('rcMergeName').value.trim())$('rcMergeName').value=chosen[0].name;
+ }
+ function downloadNamed(data,name,mime){
+  const u=URL.createObjectURL(new Blob([data],{type:mime}));
+  const a=document.createElement('a');a.href=u;a.download=name;document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),1200);
+ }
+ function summaryCSV(products,names){
+  const header=['Общий товар','Исходные названия и артикулы','Поставщики','Накладных','Заявлено, шт.','Принято, шт.','Разница, шт.','Сверено строк','Всего строк'];
+  const lines=products.map(g=>[
+   g.name,g.variants.map(v=>v.name+(v.sku?' ['+v.sku+']':'')+' ('+(names[v.supplierId]||v.supplierId)+')').join(' / '),
+   g.suppliers.map(id=>names[id]||id).join(', '),g.invoices.length,
+   g.expected,g.received??'',g.delta??'',g.done,g.lines
+  ]);
+  return '\ufeff'+[header,...lines].map(line=>line.map(csvCell).join(';')).join('\r\n');
+ }
  function getRows(){
   return collectShipmentRows(ops.invoices,{supplier:$('rcSupplier').value,onlyPortal:$('rcOnlyPortal').checked,search:$('rcSearch').value});
  }
@@ -132,14 +165,34 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   ].join('');
   $('rcInvoices').classList.toggle('rc-btn-active',tab==='invoices');
   $('rcProducts').classList.toggle('rc-btn-active',tab==='products');
+  $('rcMergeToggle').hidden=tab!=='products';
+  $('rcExportMerged').hidden=tab!=='products';
+  $('rcMergeToggle').classList.toggle('rc-btn-active',mergeMode);
+  $('rcMergeToggle').textContent=mergeMode?'✓ Завершить объединение':'⇄ Объединить позиции';
+  $('rcMergePanel').hidden=tab!=='products'||!mergeMode;
   if(!rows.length){$('rcResults').innerHTML='<p class="rc-report rc-hint">По выбранным фильтрам товаров нет. Проверьте фильтры и убедитесь, что актуальные накладные загружены из GitHub в LANDA.</p>';return}
   if(tab==='products'){
-   const products=aggregateProducts(rows,records);
-   $('rcResults').innerHTML='<p class="rc-hint">Сводка объединяет одинаковые артикулы и названия внутри одного поставщика. Если часть накладных не сверена, итоговое «Принято» пока не рассчитывается.</p>'+
-    products.map(p=>'<div class="rc-aggregate"><div><b>'+esc(p.name||'Без названия')+'</b><div class="rc-sub">'+esc(names[p.supplierId]||p.supplierId)+(p.sku?' · '+esc(p.sku):'')+' · накладных: '+p.invoices.length+'</div></div>'+
-    '<div><div class="rc-label">Заявлено</div><b>'+esc(qty(p.expected))+'</b></div>'+
-    '<div><div class="rc-label">Принято</div><b>'+(p.received===null?'—':esc(qty(p.received)))+'</b></div>'+
-    '<div class="rc-last"><div class="rc-label">Разница / сверено</div><b>'+(p.delta===null?'—':esc((p.delta>0?'+':'')+qty(p.delta)))+'</b> · '+p.done+'/'+p.lines+'</div></div>').join('');
+   const products=aggregateProducts(rows,records,aliases);
+   visibleProducts=products;
+   const visibleSource=all.filter(r=>compareCount(r,records[r.key]).state!=='pending').length;
+   $('rcResults').innerHTML='<p class="rc-hint">Позиции с одинаковыми артикулами и названиями группируются автоматически внутри поставщика. Разные названия, в том числе от разных поставщиков, можно объединить вручную. Если не все строки сверены, общий результат «Принято» не вычисляется.</p>'+
+    products.map(p=>{
+     const combined=p.merged,source=p.variants.map(v=>
+      '<li>'+esc(names[v.supplierId]||v.supplierId)+' · '+esc(v.name)+(v.sku?' ['+esc(v.sku)+']':'')+
+      ' · '+v.lines+' строк</li>').join('');
+     const selection=mergeMode?'<label class="rc-merge-check"><input type="checkbox" data-rc-select="'+esc(p.key)+'" '+(selectedProducts.has(p.key)?'checked':'')+' aria-label="Выбрать '+esc(p.name)+' для объединения"></label>':'';
+     const supplierLabels=p.suppliers.map(id=>names[id]||id).join(', ');
+     return '<div class="rc-aggregate"><div>'+selection+'<b>'+esc(p.name||'Без названия')+'</b>'+
+      (combined?'<div class="rc-alias-tag">✓ Объединено вручную · '+p.variants.length+' названий</div>':'')+
+      '<div class="rc-sub">'+esc(supplierLabels)+(p.skus.length===1?' · '+esc(p.skus[0]):'')+' · накладных: '+p.invoices.length+'</div>'+
+      (combined?'<details class="rc-alias-variants"><summary>Исходные названия / поставщики ('+p.variants.length+')</summary><ul>'+source+'</ul></details>':'')+
+      (combined?'<button type="button" class="rc-btn rc-alias-manage" data-rc-rename="'+esc(p.aliasId)+'">Переименовать</button>'+
+       '<button type="button" class="rc-btn rc-alias-manage" data-rc-unmerge="'+esc(p.aliasId)+'">Разъединить</button>':'')+
+      '</div><div><div class="rc-label">Заявлено</div><b>'+esc(qty(p.expected))+'</b></div>'+
+      '<div><div class="rc-label">Принято</div><b>'+(p.received===null?'—':esc(qty(p.received)))+'</b></div>'+
+      '<div class="rc-last"><div class="rc-label">Разница / сверено</div><b>'+(p.delta===null?'—':esc((p.delta>0?'+':'')+qty(p.delta)))+'</b> · '+p.done+'/'+p.lines+'</div></div>';
+    }).join('');
+   if(mergeMode)refreshMergeSelection();
    return;
   }
   const groups=new Map();
