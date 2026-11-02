@@ -77,7 +77,7 @@ export function applySupplierEdit(ops,supplierId,invoiceId,revision,editVersion,
   const readable=v=>key==='items'?itemsDescription(v):key==='deliveryMissing'?(v?'не указана':'указана'):String(v);
   return [{field:key,label,before:readable(before[key]),after:readable(after[key])}];
  });
- if(!changes.length)return {updated:false,invoiceId,revision:current.supplierEditRevision||0};
+ if(!changes.length)return {updated:false,invoiceId,revision:current.supplierEditRevision||0,editVersion:supplierEditVersion(current)};
  const history=(Array.isArray(current.supplierEditHistory)?current.supplierEditHistory:[]).slice(-19);
  const event={at:now,by:'supplier:'+supplierId,changes};
  const newHistory=[...history,event];
@@ -94,5 +94,5 @@ export function applySupplierEdit(ops,supplierId,invoiceId,revision,editVersion,
   source:'supplier:'+supplierId,
   summary:'Поставщик '+supplierId+' изменил накладную '+current.number+': '+changes.map(c=>c.label).join(', ').slice(0,250)});
  ops.auditTrail=ops.auditTrail.slice(-900);
- return {updated:true,invoiceId,revision:current.supplierEditRevision,editedAt:now,changedFields:changes.map(c=>c.label)};
+ return {updated:true,invoiceId,revision:current.supplierEditRevision,editVersion:supplierEditVersion(current),editedAt:now,changedFields:changes.map(c=>c.label)};
 }
