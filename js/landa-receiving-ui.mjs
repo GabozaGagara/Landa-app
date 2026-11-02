@@ -170,7 +170,7 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   $('rcMergeToggle').classList.toggle('rc-btn-active',mergeMode);
   $('rcMergeToggle').textContent=mergeMode?'✓ Завершить объединение':'⇄ Объединить позиции';
   $('rcMergePanel').hidden=tab!=='products'||!mergeMode;
-  if(!rows.length){$('rcResults').innerHTML='<p class="rc-report rc-hint">По выбранным фильтрам товаров нет. Проверьте фильтры и убедитесь, что актуальные накладные загружены из GitHub в LANDA.</p>';return}
+  if(!rows.length){visibleProducts=[];selectedProducts.clear();if(mergeMode)refreshMergeSelection();$('rcResults').innerHTML='<p class="rc-report rc-hint">По выбранным фильтрам товаров нет. Проверьте фильтры и убедитесь, что актуальные накладные загружены из GitHub в LANDA.</p>';return}
   if(tab==='products'){
    const products=aggregateProducts(rows,records,aliases);
    visibleProducts=products;
@@ -212,13 +212,54 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
  btn.addEventListener('click',open);
  $('rcInvoicesOpen')?.addEventListener('click',open);
  $('rcClose').addEventListener('click',()=>dialog.close());
- for(const key of ['rcSupplier','rcStatus','rcOnlyPortal'])$(key).addEventListener('change',render);
- $('rcSearch').addEventListener('input',render);
- $('rcInvoices').addEventListener('click',()=>{tab='invoices';render()});
+ for(const key of ['rcSupplier','rcStatus','rcOnlyPortal'])$(key).addEventListener('change',()=>{selectedProducts.clear();render()});
+ $('rcSearch').addEventListener('input',()=>{selectedProducts.clear();render()});
+ $('rcInvoices').addEventListener('click',()=>{tab='invoices';selectedProducts.clear();render()});
  $('rcProducts').addEventListener('click',()=>{tab='products';render()});
+ $('rcMergeToggle').addEventListener('click',()=>{mergeMode=!mergeMode;selectedProducts.clear();$('rcMergeName').value='';render()});
+ $('rcMergeClear').addEventListener('click',()=>{selectedProducts.clear();$('rcMergeName').value='';render()});
+ $('rcMergeSave').addEventListener('click',()=>{
+  const chosen=visibleProducts.filter(p=>selectedProducts.has(p.key));
+  if(chosen.length<2){alert('Выберите как минимум две позиции для объединения.');return}
+  const name=$('rcMergeName').value.trim();
+  if(!name){alert('Укажите общее название товара.');$('rcMergeName').focus();return}
+  const description=chosen.map(p=>p.name+' ('+p.suppliers.map(supplierId=>supplierNames()[supplierId]||supplierId).join(', ')+')').join(' + ');
+  if(!confirm('Объединить '+chosen.length+' позиции как «'+name+'»?\n'+description.slice(0,650)+'\nИсходные накладные и значения сверки не изменятся.'))return;
+  try{
+   const next=mergeProductAliases(aliases,chosen,name,'rc-'+crypto.randomUUID());
+   storeAliases(next);selectedProducts.clear();$('rcMergeName').value='';render();
+  }catch(e){alert(e.message)}
+ });
+ $('rcAliasDownload').addEventListener('click',()=>{
+  downloadNamed(JSON.stringify(aliases,null,2),'LANDA-объединения-товаров-'+new Date().toISOString().slice(0,10)+'.json','application/json;charset=utf-8');
+ });
+ $('rcAliasUpload').addEventListener('click',()=>$('rcAliasFile').click());
+ $('rcAliasFile').addEventListener('change',async e=>{
+  const file=e.target.files?.[0];e.target.value='';if(!file)return;
+  try{
+   if(file.size>250000)throw Error('Файл объединений слишком большой.');
+   const data=JSON.parse(await file.text());
+   if(!data||data.version!==1||!Array.isArray(data.groups))throw Error('Неверный формат файла объединений.');
+   const next=safeProductAliases(data);
+   if(next.groups.length!==data.groups.length)throw Error('В файле есть повреждённые или повторяющиеся правила.');
+   if(!confirm('Заменить локальные правила объединения ('+aliases.groups.length+') правилами из файла ('+next.groups.length+')? Финансовые данные не изменятся.'))return;
+   storeAliases(next);selectedProducts.clear();render();
+  }catch(err){alert('Не удалось загрузить объединения: '+err.message)}
+ });
+ $('rcExportMerged').addEventListener('click',()=>{
+  const products=aggregateProducts(selectedRows(),records,aliases);
+  if(!products.length){alert('В сводке нет товаров для экспорта.');return}
+  downloadNamed(summaryCSV(products,supplierNames()),'LANDA-сводка-объединённых-товаров-'+new Date().toISOString().slice(0,10)+'.csv','text/csv;charset=utf-8');
+ });
  $('rcRefresh').addEventListener('click',()=>{refreshSuppliers();render()});
  $('rcResults').addEventListener('change',e=>{
   const el=e.target;
+  const select=el.getAttribute('data-rc-select');
+  if(select!==null){
+   if(!mergeMode)return;
+   if(el.checked)selectedProducts.add(select);else selectedProducts.delete(select);
+   refreshMergeSelection();return;
+  }
   const count=el.getAttribute('data-rc-count'),note=el.getAttribute('data-rc-note');
   if(count===null&&note===null)return;
   const key=count??note,old=records[key]||{received:'',note:''},value=el.value;
@@ -229,6 +270,20 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   store();render();
  });
  $('rcResults').addEventListener('click',e=>{
+  const unmerge=e.target.closest('[data-rc-unmerge]');
+  if(unmerge){
+   const rule=aliases.groups.find(g=>g.id===unmerge.dataset.rcUnmerge);
+   if(!rule||!confirm('Разъединить «'+rule.name+'»? Исходные товары снова будут отображаться отдельно; сверка не изменится.'))return;
+   try{storeAliases(unmergeProductAliases(aliases,rule.id));selectedProducts.clear();render()}catch(err){alert(err.message)}
+   return;
+  }
+  const rename=e.target.closest('[data-rc-rename]');
+  if(rename){
+   const rule=aliases.groups.find(g=>g.id===rename.dataset.rcRename);if(!rule)return;
+   const name=prompt('Новое общее название товара:',rule.name);if(name===null)return;
+   try{storeAliases(renameProductAlias(aliases,rule.id,name));selectedProducts.clear();render()}catch(err){alert(err.message)}
+   return;
+  }
   const el=e.target.closest('[data-rc-clear]');if(!el)return;
   if(!confirm('Удалить результат ручной сверки для этой товарной строки?'))return;
   delete records[el.dataset.rcClear];store();render();
