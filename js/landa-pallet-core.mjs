@@ -153,10 +153,21 @@ export function palletSummary(session){
    groups.set(key,g);
   }
   const places=entries.reduce((x,e)=>x+e.places,0),expectedUnits=i.items.reduce((x,e)=>x+e.qty,0);
+  const actual=[...groups.values()].map(g=>({...g,units:g.unitsKnown?g.units:null}));
+  const plannedNames=new Map();
+  for(const item of i.items){
+   const key=item.name.trim().toLocaleLowerCase('ru-RU');
+   if(!key)continue;
+   if(!plannedNames.has(key))plannedNames.set(key,{name:item.name,qty:0});
+   plannedNames.get(key).qty+=item.qty;
+  }
+  const notLoaded=[...plannedNames.entries()].filter(([key])=>!groups.has(key)).map(([,v])=>v);
+  const unexpected=actual.filter(g=>!plannedNames.has(g.name.toLocaleLowerCase('ru-RU').trim()));
   return {...i,entries:entries.length,places,positions:groups.size,expectedUnits,
    actualUnits:entries.length&&entries.every(e=>e.units!==null)?entries.reduce((x,e)=>x+e.units,0):null,
    differencePlaces:i.expectedPlaces===null?null:places-i.expectedPlaces,
-   products:[...groups.values()].map(g=>({...g,units:g.unitsKnown?g.units:null}))};
+   hasManifest:plannedNames.size>0,notLoaded,unexpected,matchedPositions:plannedNames.size-notLoaded.length,
+   products:actual};
  });
 }
 export function palletSuggestions(book,invoices=[],invoiceKey='',query=''){
