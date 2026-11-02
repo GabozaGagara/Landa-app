@@ -84,7 +84,7 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
 <div id="persistenceWarning" hidden role="alert"><strong>⚠ Сохранение недоступно в этом режиме браузера.</strong> Откройте HTML-файл напрямую в Chrome / Edge (не во встроенном просмотрщике мессенджера), разрешите хранение данных и скачайте полную JSON-копию. Пока это сообщение видно, после закрытия страницы изменения могут пропасть.</div>
 <section id="proschetPage" class="page" hidden>
  <div class="heading"><div><div class="eyebrow">Управление финансовыми остатками</div><h1>Финансовый просчёт</h1><p>Считайте, обновляйте и сравнивайте данные по разделам — без Excel и интернета.</p></div><div class="actions"><button type="button" class="btn" id="undoBtn" title="Отменить последнее изменение">↶ Отменить</button><button type="button" class="btn" id="openBackup">⇩ Выгрузить</button><button type="button" class="btn btn-primary" id="newSnap">＋ Новый расчёт</button></div></div>
- <div class="toolbar"><div class="select-wrap"><label for="snapSelect">Дата</label><select id="snapSelect" aria-label="Период расчета"></select></div><span class="spacer"></span><button class="btn btn-ghost" id="importJson" type="button">↑ Восстановить копию</button><button class="btn btn-ghost" id="pasteBackupToolbar" type="button">⇧ Вставить JSON</button><div class="saved" id="saved"><span>●</span> Данные загружены</div></div>
+ <div class="toolbar"><div class="select-wrap"><label for="snapSelect">Дата</label><select id="snapSelect" aria-label="Период расчета"></select></div><span class="spacer"></span><button class="btn btn-ghost" id="cbImportOpen" type="button">↑ Основа 29.10 · CB</button><button class="btn btn-ghost" id="importJson" type="button">↑ Восстановить копию</button><button class="btn btn-ghost" id="pasteBackupToolbar" type="button">⇧ Вставить JSON</button><div class="saved" id="saved"><span>●</span> Данные загружены</div></div>
  <section class="kpis" id="kpis" aria-label="Итоги расчета"></section>
  <div class="insight" id="reconcile"></div>
  <section class="overview" aria-label="Динамика и распределение"><div class="panel"><div class="panel-hd"><span>Структура по разделам</span><span>5 основных групп</span></div><div id="barList"></div></div><div class="panel"><div class="panel-hd"><span>История общего итога</span><span>последние 16 периодов</span></div><div class="trendwrap" id="trendChart"></div><div class="trend-foot" id="trendDates"></div></div></section>
@@ -262,7 +262,13 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
 
 <dialog id="editDialog"><div class="modal-hd" id="editTitle">Позиция</div><form id="editForm" class="modal-body" method="dialog" novalidate><label class="field"><span>Название строки</span><input class="textinput" name="name" maxlength="200" required></label><label class="field"><span>Основной раздел</span><select name="group" id="editGroup"></select></label><label class="field"><span>Подгруппа (можно изменить)</span><input class="textinput" name="subgroup" list="subgroups" maxlength="100" required><datalist id="subgroups"></datalist></label><label class="field"><span>Значение за выбранную дату, ₽</span><input class="textinput" name="amount" inputmode="decimal" placeholder="0 или 25000+3000"></label><div class="modal-info" id="sourceInfo">Сумма участвует в общем итоге, если строка находится в одном из основных разделов.</div><div class="modal-ft"><button class="btn btn-ghost danger" type="button" id="removeRow" hidden>Удалить</button><button class="btn" value="cancel" type="button" id="cancelEdit">Отмена</button><button type="submit" class="btn btn-primary">Сохранить</button></div></form></dialog>
 <dialog id="snapshotDialog"><div class="modal-hd">Новый расчёт</div><form id="snapshotForm" class="modal-body" method="dialog" novalidate><label class="field"><span>Дата нового расчёта</span><input class="textinput" type="date" name="date" required></label><label class="field"><span>Название (необязательно)</span><input class="textinput" name="label" placeholder="Например, еженедельный расчёт" maxlength="75"></label><div class="modal-info">Все суммы будут пустыми; названия и порядок строк сохранятся. Заполните их вручную. Доход и расход вводятся внизу. До завершения заполнения итог и отличие от прошлого расчёта будут предварительными.</div><div class="modal-ft"><button type="button" class="btn" id="cancelSnapshot">Отмена</button><button type="submit" class="btn btn-primary">Создать расчёт</button></div></form></dialog>
-<dialog id="exportDialog"><div class="modal-hd">Выгрузка и резервные копии</div><div class="modal-body"><p style="color:#61718b;margin-top:0;font-size:12px">Выберите формат. JSON сохраняет всю историю и группировку, CSV содержит текущий период и открывается в Excel.</p><button class="btn" id="downloadJson" style="width:100%;margin-bottom:11px" type="button">⇩ JSON — вся история и изменения</button><button class="btn" id="downloadCsv" style="width:100%;margin-bottom:16px" type="button">⇩ CSV — текущий период для Excel</button><button class="btn" id="pasteBackupFromExport" type="button" style="width:100%;margin-bottom:11px">↑ Вставить резервную копию из буфера</button><button class="btn" id="restoreEmbeddedFromExport" type="button" style="width:100%;margin-bottom:16px">↺ Восстановить встроенную копию от 27.10.2026</button><button type="button" class="btn btn-ghost" id="closeExport" style="width:100%">Закрыть</button></div></dialog>
+<dialog id="cbImportDialog" aria-labelledby="cbImportTitle"><div class="modal-hd" id="cbImportTitle">Импорт основы за 29.10.2026 · Google Sheets</div><div class="modal-body">
+ <div class="modal-info">В Google Sheets открой лист «просчет», выдели <strong>CB1:CB289</strong>, скопируй (Ctrl+C) и вставь сюда. Строки CB1–CB288 — значения, <strong>CB289 — контрольный итог</strong>. Названия и порядок позиций LANDA не изменяются. Если сопоставить строки не получится, импорт будет остановлен.</div>
+ <label class="field"><span>Столбец CB, 289 строк</span><textarea class="textinput" id="cbImportText" rows="9" spellcheck="false" placeholder="Вставьте значения столбца CB из Google Sheets, включая контроль CB289" style="width:100%;font-family:monospace;resize:vertical"></textarea></label>
+ <div id="cbImportReport" class="op-preview" role="status" aria-live="polite">Перед загрузкой проверь совпадение суммы CB1:CB288 с CB289.</div>
+ <div class="modal-ft"><button type="button" class="btn" id="cbImportCancel">Отмена</button><button type="button" class="btn" id="cbImportCheck">Проверить данные</button><button type="button" class="btn btn-primary" id="cbImportApply" disabled>Загрузить основу</button></div>
+ </div></dialog>
+ <dialog id="exportDialog"><div class="modal-hd">Выгрузка и резервные копии</div><div class="modal-body"><p style="color:#61718b;margin-top:0;font-size:12px">Выберите формат. JSON сохраняет всю историю и группировку, CSV содержит текущий период и открывается в Excel.</p><button class="btn" id="downloadJson" style="width:100%;margin-bottom:11px" type="button">⇩ JSON — вся история и изменения</button><button class="btn" id="downloadCsv" style="width:100%;margin-bottom:16px" type="button">⇩ CSV — текущий период для Excel</button><button class="btn" id="pasteBackupFromExport" type="button" style="width:100%;margin-bottom:11px">↑ Вставить резервную копию из буфера</button><button class="btn" id="restoreEmbeddedFromExport" type="button" style="width:100%;margin-bottom:16px">↺ Восстановить встроенную копию от 27.10.2026</button><button type="button" class="btn btn-ghost" id="closeExport" style="width:100%">Закрыть</button></div></dialog>
 <dialog id="pasteBackupDialog" aria-labelledby="pasteBackupTitle" style="width:min(730px,calc(100vw - 24px));max-height:92vh;">
  <div class="modal-hd" id="pasteBackupTitle">Восстановление копии из текста JSON</div>
  <div class="modal-body">
@@ -418,6 +424,42 @@ $('removeRow').addEventListener('click',()=>{
  askConfirm(`Удалить строку «${name}» из ВСЕХ дат просчёта? ${original?'Это строка из исходного Excel. ':''}Суммы прошлых расчётов тоже изменятся. Действие можно отменить кнопкой «Отменить».`,()=>{
   pushUndo();state.rows=state.rows.filter(x=>x.id!==r.id);save();$('editDialog').close();render();toast('Строка удалена из просчёта. Для восстановления нажмите «Отменить».')
  });
+});
+async function cbPreview(){
+ const {previewCBBaseline}=await import('./js/landa-cb-baseline.mjs');
+ return previewCBBaseline(state.rows,$('cbImportText').value);
+}
+function cbReport(info,isError=false){$('cbImportReport').textContent=info;$('cbImportReport').style.color=isError?'#a33343':'#1f6c54'}
+$('cbImportOpen').addEventListener('click',()=>{
+ $('cbImportText').value='';$('cbImportApply').disabled=true;cbReport('Скопируй CB1:CB289 из листа «просчет».');$('cbImportDialog').showModal();
+});
+$('cbImportText').addEventListener('input',()=>{$('cbImportApply').disabled=true;cbReport('Нажми «Проверить данные».')});
+$('cbImportCancel').addEventListener('click',()=>$('cbImportDialog').close());
+$('cbImportCheck').addEventListener('click',async()=>{
+ $('cbImportApply').disabled=true;
+ try{
+  if(state.snapshots.some(s=>s.date==='2026-10-29'))throw Error('Расчёт за 29.10.2026 уже существует. Автоматически заменять исторические данные запрещено.');
+  const v=await cbPreview();
+  if(!v.match)throw Error('Контроль не совпал: сумма строк '+fmtRub(v.calculated)+'; CB289 '+fmtRub(v.control)+'; разница '+fmtRub(v.difference)+'. Исправьте источник перед импортом.');
+  cbReport('✓ Контроль CB289 совпал: '+fmtRub(v.control)+'. Сопоставлено '+v.mapped+' позиций; чисел: '+v.imported+'; пустых ячеек в них: '+v.blank+'. Порядок строк сохранится.');
+  $('cbImportApply').disabled=false;
+ }catch(err){cbReport('⚠ '+err.message,true)}
+});
+$('cbImportApply').addEventListener('click',async()=>{
+ $('cbImportApply').disabled=true;
+ try{
+  if(state.snapshots.some(s=>s.date==='2026-10-29'))throw Error('Основа 29.10.2026 уже существует. Импорт остановлен.');
+  const v=await cbPreview();if(!v.match)throw Error('Контроль CB289 не совпадает. Импорт остановлен.');
+  if(!await askConfirmAsync('Импортировать проверенную основу 29.10.2026 на '+fmtRub(v.control)+'? Это создаст новый период, НЕ удалит старые расчёты и НЕ переставит строки.'))return;
+  const id='cb-2026-10-29-'+Date.now(),before=deep(state);pushUndo();
+  state.snapshots.push({id,date:'2026-10-29',label:'29.10.2026 · Основа CB',source:'Google Sheets · лист просчет · CB1:CB289'});
+  for(const row of state.rows)if(Object.prototype.hasOwnProperty.call(v.values,row.id))row.values[id]=v.values[row.id];
+  if(!state.controlTotals)state.controlTotals={};state.controlTotals[id]=v.control;
+  if(Math.round((total(id)-v.control)*100)!==0){state=before;undo.pop();throw Error('Внутренняя проверка не совпала. Ничего не записано.')}
+  if(!save()){state=before;undo.pop();throw Error('Не удалось сохранить основу в браузере.')}
+  snap=id;filter='all';activeGroup='all';searchText='';$('search').value='';render();
+  $('cbImportDialog').close();toast('✓ Основа за 29.10 импортирована с проверкой CB289. Проверь синхронизацию GitHub.');
+ }catch(err){cbReport('⚠ '+err.message,true)}
 });
 $('newSnap').addEventListener('click',()=>{let f=$('snapshotForm');let today=new Date();let d=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');f.elements.date.value=d;f.elements.label.value='';$('snapshotDialog').showModal()});
 $('snapshotForm').addEventListener('submit',e=>{e.preventDefault();changeSnapshotDate()});$('cancelSnapshot').addEventListener('click',()=>$('snapshotDialog').close());
