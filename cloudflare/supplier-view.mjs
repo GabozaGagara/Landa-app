@@ -1,5 +1,5 @@
 // Supplier-scoped read-only projection: never return the private database.
-import {supplierEditable} from './supplier-edit.mjs';
+import {supplierEditable,supplierEditVersion} from './supplier-edit.mjs';
 const CDEK_STATUS={created:'Создан',transit:'В пути',ready:'Готов к выдаче',delivered:'Вручен'};
 const cents=n=>Math.round((Number.isFinite(Number(n))?Number(n):0)*100);
 const money=n=>Math.round(n)/100;
@@ -39,6 +39,7 @@ export function supplierOverview(backup,supplierId,page=1){
     id:i.submittedAt?String(i.id||'').slice(0,160):null,
     editable:supplierEditable(i,supplierId,ops.allocations),
     editRevision:Number(i.supplierEditRevision)||0,
+    editVersion:supplierEditable(i,supplierId,ops.allocations)?supplierEditVersion(i):null,
     editedAt:String(i.supplierEditedAt||'').slice(0,40),
     editedBy:i.supplierEditedBy===supplierId?'Поставщик':'',
     sender:String(i.sender||'').slice(0,100),route:String(i.route||'').slice(0,120),
