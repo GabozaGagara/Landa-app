@@ -41,21 +41,90 @@ export function compareCount(row,record) {
  return {state:Math.abs(delta)<0.000001?'matched':'difference',received,delta};
 }
 
-export function aggregateProducts(rows,counts={}) {
+// Stable product identity is independent of invoice, price and quantity.
+// Mappings affect only how the read-only reconciliation summary is displayed.
+export const productIdentity = row => JSON.stringify([
+ String(row?.supplierId??''),normalized(row?.sku),normalized(row?.name)
+]);
+
+const aliasName = value => String(value??'').trim().slice(0,180);
+export function safeProductAliases(input){
+ const clean={version:1,groups:[]},seen=new Set(),ids=new Set();
+ if(!input||input.version!==1||!Array.isArray(input.groups)||input.groups.length>500)return clean;
+ for(const group of input.groups){
+  if(!group||typeof group.id!=='string'||!group.id||group.id.length>100||ids.has(group.id)||
+     typeof group.name!=='string'||!aliasName(group.name)||
+     !Array.isArray(group.members)||group.members.length<2||group.members.length>200)continue;
+  const members=[];
+  for(const key of group.members){
+   if(typeof key!=='string'||key.length>550||seen.has(key)||members.includes(key))continue;
+   try{
+    const parsed=JSON.parse(key);
+    if(!Array.isArray(parsed)||parsed.length!==3||parsed.some(x=>typeof x!=='string'||x.length>180))continue;
+   }catch(_){continue}
+   members.push(key);
+  }
+  if(members.length<2)continue;
+  ids.add(group.id);members.forEach(k=>seen.add(k));
+  clean.groups.push({id:group.id,name:aliasName(group.name),members});
+ }
+ return clean;
+}
+export function mergeProductAliases(input,selections,name,id){
+ const aliases=safeProductAliases(input),label=aliasName(name);
+ if(!label||!Array.isArray(selections)||selections.length<2||selections.length>150||
+    typeof id!=='string'||!id||id.length>100)throw new Error('Укажите название и выберите хотя бы две позиции.');
+ const selected=new Set();
+ for(const group of selections){
+  if(!group||!Array.isArray(group.members))throw new Error('Обновите сводку и попробуйте ещё раз.');
+  for(const key of group.members)selected.add(key);
+ }
+ // Full member sets are provided for existing merged groups, even under filters.
+ for(const g of aliases.groups)if(g.members.some(k=>selected.has(k)))g.members.forEach(k=>selected.add(k));
+ if(selected.size<2||selected.size>200)throw new Error('Для объединения выберите от 2 до 200 разных товаров.');
+ const next={version:1,groups:aliases.groups.filter(g=>!g.members.some(k=>selected.has(k)))};
+ if(next.groups.some(g=>g.id===id))throw new Error('Повторный ID объединения.');
+ next.groups.push({id,name:label,members:[...selected]});
+ return safeProductAliases(next);
+}
+export function unmergeProductAliases(input,id){
+ const aliases=safeProductAliases(input);
+ return {version:1,groups:aliases.groups.filter(g=>g.id!==id)};
+}
+export function renameProductAlias(input,id,name){
+ const aliases=safeProductAliases(input),label=aliasName(name);
+ if(!label)throw new Error('Укажите название общего товара.');
+ const group=aliases.groups.find(g=>g.id===id);
+ if(!group)throw new Error('Объединение не найдено.');
+ group.name=label;return aliases;
+}
+export function aggregateProducts(rows,counts={},aliases={version:1,groups:[]}) {
+ const associations=new Map(),aliasMap=new Map();
+ for(const g of safeProductAliases(aliases).groups)for(const key of g.members)aliasMap.set(key,g);
  const groups=new Map();
  for(const row of rows) {
-  // Keep supplier, SKU and product description separate to prevent false matches.
-  const key=JSON.stringify([row.supplierId,normalized(row.sku),normalized(row.name)]);
-  if(!groups.has(key))groups.set(key,{key,supplierId:row.supplierId,sku:row.sku,name:row.name,expected:0,received:0,done:0,lines:0,invoices:new Set()});
+  const sourceKey=productIdentity(row),rule=aliasMap.get(sourceKey);
+  const key=rule?'merged:'+rule.id:sourceKey;
+  if(!groups.has(key))groups.set(key,{
+   key,aliasId:rule?.id||null,merged:!!rule,
+   supplierId:row.supplierId,sku:row.sku,name:rule?.name||row.name,
+   expected:0,received:0,done:0,lines:0,invoices:new Set(),
+   members:rule?[...rule.members]:[sourceKey],suppliers:new Set(),variants:new Map(),skus:new Set()
+  });
   const g=groups.get(key),comparison=compareCount(row,counts[row.key]);
-  g.expected=round(g.expected+row.qty);g.lines++;g.invoices.add(row.invoice);
+  g.expected=round(g.expected+row.qty);g.lines++;
+  g.invoices.add(JSON.stringify([row.supplierId,row.invoiceId]));
+  g.suppliers.add(row.supplierId);if(row.sku)g.skus.add(row.sku);
+  if(!g.variants.has(sourceKey))g.variants.set(sourceKey,{supplierId:row.supplierId,name:row.name,sku:row.sku,key:sourceKey,lines:0});
+  g.variants.get(sourceKey).lines++;
   if(comparison.state==='matched'||comparison.state==='difference'){g.received=round(g.received+comparison.received);g.done++}
  }
  return Array.from(groups.values()).map(g=>({
-  ...g,invoices:Array.from(g.invoices),
+  ...g,invoices:Array.from(g.invoices),suppliers:Array.from(g.suppliers),
+  variants:Array.from(g.variants.values()),skus:Array.from(g.skus),
   received:g.done===g.lines?g.received:null,
   delta:g.done===g.lines?round(g.received-g.expected):null
- })).sort((a,b)=>a.supplierId.localeCompare(b.supplierId)||a.name.localeCompare(b.name,'ru'));
+ })).sort((a,b)=>a.name.localeCompare(b.name,'ru')||a.supplierId.localeCompare(b.supplierId));
 }
 
 export function csvCell(value){
