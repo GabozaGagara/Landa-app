@@ -94,12 +94,12 @@ async function editSupplierInvoice(request,env){
  if(!data||typeof data!=='object')fail('Неверный запрос');
  const normalized=normalizeInvoice(data.invoice);
  validateSupplierAccess(normalized.supplierId,data.code,env);
- const invoiceId=data.invoiceId,revision=data.revision;
+ const invoiceId=data.invoiceId,revision=data.revision,editVersion=data.editVersion;
  if(typeof invoiceId!=='string'||invoiceId.length>160||!Number.isSafeInteger(revision)||revision<0)
   fail('Неверная версия накладной',400);
  for(let attempt=0;attempt<4;attempt++){
   const {sha,backup}=await github(env);
-  const result=applySupplierEdit(backup.operations,normalized.supplierId,invoiceId,revision,normalized,
+  const result=applySupplierEdit(backup.operations,normalized.supplierId,invoiceId,revision,editVersion,normalized,
    new Date().toISOString(),'evt-'+crypto.randomUUID());
   if(!result.updated)return result;
   const saved=await github(env,'PUT',sha,backup);
