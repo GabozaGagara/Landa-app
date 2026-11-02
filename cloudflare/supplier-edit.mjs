@@ -56,7 +56,10 @@ export function applySupplierEdit(ops,supplierId,invoiceId,revision,normalized,n
   items:normalized.items,goodsCost:normalized.goodsCost,deliveryCost:normalized.deliveryCost,
   deliveryMissing:normalized.deliveryMissing,includeDelivery:true,
   total:Math.round(cents(normalized.goodsCost)+cents(normalized.deliveryCost))/100,
-  supplierNote:normalized.note
+  supplierNote:normalized.note,
+  note:('Исправлена поставщиком '+now+'. '+(normalized.deliveryMissing?'Доставка не указана. ':'')+
+   (normalized.unknownPrices?'Цены не указаны: '+normalized.unknownPrices+'. ':'')+
+   normalized.note).slice(0,490)
  };
  const after=makeSnapshot({...current,...newValues});
  const changes=fields.flatMap(([key,label])=>{
