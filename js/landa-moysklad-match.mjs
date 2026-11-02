@@ -23,15 +23,26 @@ export function candidates(line,products,knownId=''){
  const automatic=!!best&&(best.method==='manual'||(best.score>=100&&(!second||best.score-second.score>=15)));
  return {best,automatic,suggestions:found.slice(0,12)};
 }
-export function collectDelivered(invoices,supplierId,to){
+// No financial writes. 'all' supplier and delivery-status scopes are explicit opt-ins.
+// Legacy status "received" and current "delivered" both mean handed over.
+export const msDeliveryStatus = status => status==='received'?'delivered':String(status||'created');
+export const msInvoiceKey = (supplierId,invoiceId) => JSON.stringify([String(supplierId),String(invoiceId)]);
+export function isMoyskladInvoiceEligible(invoice,supplierId,to,statusFilter='delivered'){
+ if(!invoice||invoice.isOpening||!invoice.id)return false;
+ if(supplierId!=='all'&&String(invoice.supplierId)!==String(supplierId))return false;
+ if(statusFilter!=='all'&&msDeliveryStatus(invoice.status)!==statusFilter)return false;
+ if(String(invoice.date||'').slice(0,10)>String(to||''))return false;
+ return true;
+}
+export function collectDelivered(invoices,supplierId,to,statusFilter='delivered'){
  const rows=[];
  for(const invoice of invoices||[]){
-  if(!invoice||invoice.isOpening||invoice.supplierId!==supplierId)continue;
-  if(!['delivered','received'].includes(invoice.status))continue;
-  if(String(invoice.date||'').slice(0,10)>to)continue;
+  if(!isMoyskladInvoiceEligible(invoice,supplierId,to,statusFilter))continue;
   for(const [index,item] of (invoice.items||[]).entries()){
    if(!item?.name||!Number.isFinite(Number(item.qty))||Number(item.qty)<=0)continue;
-   rows.push({invoiceId:String(invoice.id),invoiceNumber:String(invoice.number||invoice.tracking||invoice.id),
+   rows.push({invoiceId:String(invoice.id),supplierId:String(invoice.supplierId),
+    selectionKey:msInvoiceKey(invoice.supplierId,invoice.id),
+    invoiceNumber:String(invoice.number||invoice.tracking||invoice.id),
     date:String(invoice.date||'').slice(0,10),tracking:String(invoice.tracking||''),
     index,name:String(item.name).trim(),sku:String(item.sku||'').trim(),qty:Number(item.qty)});
   }
@@ -42,10 +53,12 @@ export function aggregateLines(rows){
  const groups=new Map();
  for(const r of rows){
   const key=productLinkKey('selected',r.name,r.sku);
-  if(!groups.has(key))groups.set(key,{key,name:r.name,sku:r.sku,expected:0,invoices:new Set()});
-  const g=groups.get(key);g.expected+=r.qty;g.invoices.add(r.invoiceNumber);
+  if(!groups.has(key))groups.set(key,{key,name:r.name,sku:r.sku,expected:0,invoices:new Set(),supplierIds:new Set()});
+  const g=groups.get(key);g.expected+=r.qty;
+  g.invoices.add(r.invoiceNumber);
+  if(r.supplierId!==undefined)g.supplierIds.add(r.supplierId);
  }
- return [...groups.values()].map(x=>({...x,invoices:[...x.invoices]}));
+ return [...groups.values()].map(x=>({...x,invoices:[...x.invoices],supplierIds:[...x.supplierIds]}));
 }
 export function receivedByProduct(docs){
  const map=new Map();
