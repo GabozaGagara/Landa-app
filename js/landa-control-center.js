@@ -179,13 +179,15 @@ function renderMetrics(){
  ].map(x=>'<div class="lc-metric"><small>'+esc(x[0])+'</small><b>'+esc(x[1])+'</b><small>'+esc(x[2])+'</small></div>').join('');
  const warnings=[];
  if(review.length)warnings.push('Поставщики отправили '+review.length+' накладных, которые ещё не подтверждены владельцем.');
+  const editedForReview=review.filter(i=>i.supplierEditedAt).length;
+  if(editedForReview)warnings.push('Поставщики исправили '+editedForReview+' накладных. Проверьте изменения перед повторным подтверждением.');
  if(deliveredUnbilled.length)warnings.push('Вручены, но не начислены: '+deliveredUnbilled.length+'. Перед начислением проверь стоимость и товары.');
  if(issues.length)warnings.push(...issues.slice(0,8));
  const gh=$('ghMessage')?.textContent||'';
  if(/конфликт|не синхрониз|отключён|различают|ошибка/i.test(gh))warnings.push('GitHub: '+gh.slice(0,200));
  $('lcWarnings').innerHTML=warnings.length?warnings.map(x=>'<p class="lc-warning">⚠ '+esc(x)+'</p>').join(''):'<p class="lc-muted lc-good">✓ По доступным данным дополнительных предупреждений нет.</p>';
  $('lcReview').innerHTML=review.length?review.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map(i=>
- '<div class="lc-row"><div><b>'+esc(i.number||i.tracking)+'</b> · '+esc(supplierName(i.supplierId))+' · '+esc(usd(cents(i.total)))+
+ '<div class="lc-row"><div><b>'+esc(i.number||i.tracking)+'</b> · '+esc(supplierName(i.supplierId))+' · '+esc(usd(cents(i.total)))+(i.supplierEditedAt?' · ✎ ИЗМЕНЕНА ПОСТАВЩИКОМ '+esc(String(i.supplierEditedAt).slice(0,19)):'')+
  '</div><div><span class="lc-pills">'+esc(labels[i.status]||i.status)+'</span> <button type="button" class="lc-btn primary" data-lc-approve="'+esc(i.id)+'">Проверено, подтвердить</button></div>'+
  '<p style="flex-basis:100%">Состав: '+esc((i.items||[]).map(x=>x.name+' × '+x.qty).join(' / ').slice(0,350))+'</p></div>'
  ).join(''):'<p class="lc-muted lc-good">✓ Накладных, ожидающих проверки, нет.</p>';
