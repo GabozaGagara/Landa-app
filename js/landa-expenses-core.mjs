@@ -97,6 +97,22 @@ export function expenseTotals(entries){
  }
  return totals;
 }
+// Graph-ready totals by calendar day or month. Keep currencies separate.
+export function expenseSeries(entries,period='month'){
+ if(period!=='day'&&period!=='month')throw new Error('Неизвестная группировка графика.');
+ const series=new Map();
+ for(const row of entries||[]){
+  if(!EXPENSE_CURRENCIES.includes(row.currency)||!Number.isSafeInteger(row.amountCents)||row.amountCents<0)
+   throw new Error('Некорректный расход для графика.');
+  const date=expenseDate(row.date),key=period==='month'?date.slice(0,7):date;
+  const seriesKey=JSON.stringify([row.currency,key]);
+  const prior=series.get(seriesKey)||{currency:row.currency,date:key,amountCents:0,count:0};
+  prior.amountCents+=row.amountCents;prior.count++;
+  if(!Number.isSafeInteger(prior.amountCents))throw new Error('Слишком большая сумма для графика.');
+  series.set(seriesKey,prior);
+ }
+ return [...series.values()].sort((a,b)=>a.currency.localeCompare(b.currency)||a.date.localeCompare(b.date));
+}
 export function expenseCSVCell(value){
  const s=String(value??'');
  const protectedValue=/^\s*[=+\-@]/.test(s)?"'"+s:s;
