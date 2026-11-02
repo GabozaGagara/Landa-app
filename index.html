@@ -94,32 +94,29 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
  <div class="footnote">Источник: только лист <strong>«Подсчет»</strong> файла LANDA-Corporation(1).xlsx. Основные строки (5–287) включены в итог, дополнительные показатели и сверка — отдельно. Положительные и отрицательные значения считаются с исходным знаком; валюта строк не пересчитывается автоматически. В ячейках можно писать выражения: <strong>120000+35000-5000</strong>. Изменения сохраняются в этом браузере автоматически. Для переноса на другое устройство используйте резервную копию JSON.</div>
 </section>
 
-<!-- Standalone expenses journal: NEVER included in cash, supplier debt, invoices or proschet. -->
+<!-- Standalone expenses journal: separate from cash, suppliers, invoices and financial proschet. -->
 <section id="expensesPage" class="page" hidden>
- <div class="heading ops-head"><div><div class="eyebrow">ОТДЕЛЬНЫЙ УЧЁТ / ЖУРНАЛ</div><h1>Расходы</h1><p>Заносите любые расходы в отдельный журнал. Записи не меняют кассу, балансы, поставщиков и финансовый просчёт.</p></div><div class="actions"><button type="button" class="btn" id="exExportCSV">↓ CSV расходов</button><button type="button" class="btn" id="exExportJSON">↓ Резервная копия JSON</button><button type="button" class="btn" id="exImportJSON">↑ Загрузить JSON</button><input type="file" id="exImportFile" accept=".json,application/json" hidden></div></div>
- <div class="ops-notice exp-info">Это <strong>независимый журнал расходов</strong>. Данные сохраняются только в браузере этого устройства и <strong>не синхронизируются с GitHub</strong>, не списываются из кассы и не входят в финансовый итог. Для переноса между компьютерами используйте JSON-копию.</div>
+ <div class="heading ops-head"><div><div class="eyebrow">ЛИЧНЫЙ ЖУРНАЛ / РАСХОДЫ</div><h1>Расходы</h1><p>Быстрая запись расхода, история и график по дням или месяцам — отдельно от остальных расчётов LANDA.</p></div><div class="actions"><button type="button" class="btn" id="exExportCSV">↓ CSV</button><button type="button" class="btn" id="exExportJSON">↓ Копия JSON</button><button type="button" class="btn" id="exImportJSON">↑ Загрузить JSON</button><input type="file" id="exImportFile" accept=".json,application/json" hidden></div></div>
+ <div class="ops-notice exp-info">Новые расходы записываются в <strong>рублях (₽)</strong>. Старые записи в других валютах сохраняются и показываются отдельно. Этот журнал не меняет кассу, поставщиков, накладные или финансовый просчёт и пока хранится только в данном браузере.</div>
  <div class="exp-layout">
   <section class="ops-card exp-entry"><h2 id="exFormTitle">Новый расход</h2>
    <form id="exForm" autocomplete="off">
     <div class="exp-fields">
      <label>Дата <input id="exDate" name="date" type="date" required></label>
-     <label>Сумма <input id="exAmount" name="amount" type="text" inputmode="decimal" placeholder="Например, 1250,50" required maxlength="20"></label>
-     <label>Валюта <select id="exCurrency" name="currency"><option value="RUB">₽ RUB</option><option value="USD">$ USD</option><option value="BYN">Br BYN</option><option value="EUR">€ EUR</option></select></label>
-     <label>Категория <input id="exCategory" name="category" list="exCategories" placeholder="Например, аренда" maxlength="90" required><datalist id="exCategories"><option value="Аренда"><option value="Транспорт"><option value="Доставка"><option value="Реклама"><option value="Зарплата"><option value="Офис"><option value="Связь и интернет"><option value="Закупки"><option value="Прочее"></datalist></label>
-     <label>Способ оплаты <select id="exMethod" name="method"><option value="cash">Наличные</option><option value="card">Карта</option><option value="transfer">Перевод</option><option value="other">Другое</option></select></label>
-     <label>Кому оплачено <input id="exPayee" name="payee" type="text" maxlength="180" placeholder="Человек или компания"></label>
-     <label class="exp-full">На что потрачено <input id="exDescription" name="description" type="text" maxlength="300" placeholder="Описание расхода"></label>
-     <label class="exp-full">Комментарий <textarea id="exNote" name="note" rows="3" maxlength="1200" placeholder="Необязательно: детали, номер документа и т. п."></textarea></label>
+     <label>Сумма, ₽ <input id="exAmount" name="amount" type="text" inputmode="decimal" placeholder="Например, 1250,50" required maxlength="20"></label>
+     <label class="exp-full">На что потрачено <textarea id="exDescription" name="description" rows="3" maxlength="300" required placeholder="Например: доставка, бензин, аренда офиса…"></textarea></label>
     </div>
     <div class="exp-form-actions"><button class="btn btn-primary" type="submit" id="exSave">＋ Записать расход</button><button class="btn" type="button" id="exCancel" hidden>Отменить редактирование</button></div>
     <p id="exFeedback" class="exp-feedback" role="status" aria-live="polite"></p>
    </form>
   </section>
+  <section class="ops-card exp-chart"><div class="exp-chart-head"><div><h2>График расходов</h2><p class="ops-intro">По дням или месяцам. Валюты учитываются отдельно.</p></div><div class="exp-periods" role="group" aria-label="Группировка расходов"><button type="button" data-exp-period="day">По дням</button><button type="button" data-exp-period="month" class="active">По месяцам</button></div></div>
+   <div id="exChart" aria-live="polite"></div>
+  </section>
   <section class="ops-card exp-journal">
-   <div class="exp-journal-head"><div><h2>Журнал расходов</h2><p class="ops-intro">Все отдельные записи. Можно искать, фильтровать, исправлять и удалять.</p></div><span id="exCount" class="exp-count"></span></div>
+   <div class="exp-journal-head"><div><h2>Журнал расходов</h2><p class="ops-intro">Все расходы, с возможностью поиска и исправления записей.</p></div><span id="exCount" class="exp-count"></span></div>
    <div class="exp-filters">
-    <label>Поиск <input id="exSearch" type="search" placeholder="Категория, описание, кому…"></label>
-    <label>Категория <select id="exCategoryFilter"><option value="all">Все категории</option></select></label>
+    <label>Поиск <input id="exSearch" type="search" placeholder="По описанию расхода…"></label>
     <label>Валюта <select id="exCurrencyFilter"><option value="all">Все валюты</option><option value="RUB">RUB</option><option value="USD">USD</option><option value="BYN">BYN</option><option value="EUR">EUR</option></select></label>
     <label>С <input id="exFrom" type="date"></label>
     <label>По <input id="exTo" type="date"></label>
