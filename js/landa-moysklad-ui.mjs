@@ -1,6 +1,6 @@
 // Read-only integration UI. Only manual mapping preferences are stored locally.
 // Never changes ops, financial backups, MoySklad documents, or warehouse quantities.
-import {collectDelivered,productLinkKey,compareSelected,candidates,aggregateLines} from './landa-moysklad-match.mjs';
+import {collectDelivered,productLinkKey,compareSelected,candidates,aggregateLines,msInvoiceKey,isMoyskladInvoiceEligible} from './landa-moysklad-match.mjs';
 
 if(typeof document!=='undefined'&&typeof ops!=='undefined'){
  const $=id=>document.getElementById(id);
@@ -38,10 +38,11 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
  dialog.setAttribute('aria-label','Сверка приёмок МойСклад с накладными LANDA');
  dialog.innerHTML=[
   '<header><h2>↔ Сверка приёмок «МойСклад»</h2><button class="msbtn" id="msClose" type="button">Закрыть ×</button></header>',
-  '<div class="msbody"><p class="msinfo">Выберите период приёмок, поставщика LANDA и конкретные документы. Сравниваются только накладные с текущим статусом «Вручен». Дата отправки не является подтверждением фактической даты вручения.</p>',
+  '<div class="msbody"><p class="msinfo">Выберите одного поставщика или всех сразу, период приёмок и документы. По умолчанию показываются вручённые накладные; при необходимости включите остальные статусы.</p>',
   '<div class="mswarn">Только чтение из «МоегоСклада». Сопоставления товаров хранятся локально в этом браузере; финансовые данные LANDA и приёмки не изменяются. Для доступа нужен отдельный серверный код владельца.</div>',
   '<div class="mscontrols">',
   '<label>Поставщик LANDA<select id="msSupplier"></select></label>',
+  '<label>Статус накладных LANDA<select id="msInvoiceStatus"><option value="delivered">Вручены</option><option value="all">Все статусы</option><option value="created">Созданы</option><option value="transit">В пути</option><option value="ready">Готовы к выдаче</option></select></label>',
   '<label>Приёмки с<input id="msFrom" type="date"></label>',
   '<label>По дату<input id="msTo" type="date"></label>',
   '<label>Код владельца Cloudflare<input id="msAdmin" type="password" autocomplete="off" placeholder="LANDA_MS_ADMIN_KEY"></label>',
@@ -52,8 +53,9 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
   '<button class="msbtn" id="msCompare" type="button">Сверить выбранное</button>',
   '<button class="msbtn" id="msCSV" type="button">↓ Отчёт CSV</button></div>',
   '<p id="msMessage" class="msinfo" role="status" aria-live="polite"></p>',
-  '<div class="mscols"><div class="msbox"><h3>Накладные LANDA · Вручены</h3><p class="msinfo">Отметьте отправления, которые действительно принимали в выбранных приёмках.</p><div id="msInvoices"></div></div>',
-  '<div class="msbox"><h3>Проведённые приёмки «МойСклад»</h3><p class="msinfo">Отметьте соответствующие документы приёмки. Они могут быть оформлены позже доставки СДЭК.</p><div id="msDocuments"><p class="msinfo">Загрузите данные после настройки Cloudflare.</p></div></div></div>',
+  '<p class="mswarn" id="msStatusWarning" hidden>Накладные без подтверждённого вручения можно сверить предварительно, но результат не подтверждает фактическую доставку и не меняет статус СДЭК.</p>',
+  '<div class="mscols"><div class="msbox"><h3 id="msInvoicesTitle">Накладные LANDA · Вручены</h3><p class="msinfo">Выберите одну, несколько или все накладные.</p><div class="msflex"><button class="msbtn" id="msSelectAllInvoices" type="button">✓ Выбрать все накладные</button><button class="msbtn" id="msClearInvoices" type="button">Снять выбор</button></div><div id="msInvoices"></div></div>',
+  '<div class="msbox"><h3>Проведённые приёмки «МойСклад»</h3><p class="msinfo">Выберите нужные приёмки за период.</p><div class="msflex"><button class="msbtn" id="msSelectAllDocs" type="button">✓ Выбрать все приёмки</button><button class="msbtn" id="msClearDocs" type="button">Снять выбор</button></div><div id="msDocuments"><p class="msinfo">Загрузите данные после настройки Cloudflare.</p></div></div></div>',
   '<div id="msSummary" class="msmetrics"></div><div id="msResults"></div>',
   '</div>'
  ].join('');
@@ -64,12 +66,14 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
  nav?.querySelector('#rcNavOpen')?.after(btn);
  if(!btn.parentNode)nav?.append(btn);
  function currentSupplier(){return $('msSupplier').value;}
+ function currentInvoiceStatus(){return $('msInvoiceStatus').value;}
+ function supplierName(id){return (ops.suppliers||[]).find(s=>String(s.id)===String(id))?.name||String(id);}
  function invoices(){
-  return (ops.invoices||[]).filter(i=>!i.isOpening&&i.supplierId===currentSupplier()&&['delivered','received'].includes(i.status)
-   &&String(i.date||'').slice(0,10)<=$('msTo').value);
+  return (ops.invoices||[]).filter(i=>isMoyskladInvoiceEligible(i,currentSupplier(),$('msTo').value,currentInvoiceStatus()));
  }
  function validInvoiceRows(){
-  return collectDelivered(ops.invoices||[],currentSupplier(),$('msTo').value).filter(r=>chosenInvoices.has(r.invoiceId));
+  return collectDelivered(ops.invoices||[],currentSupplier(),$('msTo').value,currentInvoiceStatus())
+   .filter(r=>chosenInvoices.has(r.selectionKey));
  }
  function selectedDocs(){return (payload?.documents||[]).filter(d=>chosenDocs.has(d.id));}
  function availableProducts(){
