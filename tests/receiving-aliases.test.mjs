@@ -137,3 +137,82 @@ test('reconciliation UI provides manual merge, unmerge, rename and portable alia
  assert.doesNotMatch(ui,/\bops\.invoices\s*=/);
  assert.match(ui,/landa_receiving_product_aliases_v1/);
 });
+
+
+test('shipment delivery status filters created, transit, ready and delivered including legacy received',()=>{
+ const invoices=[
+  {id:'1',supplierId:'anna',status:'created',items:[{name:'Puzzi 10/1',qty:1}]},
+  {id:'2',supplierId:'anna',status:'transit',items:[{name:'Puzzi 10/1',qty:2}]},
+  {id:'3',supplierId:'anna',status:'ready',items:[{name:'Puzzi 10/1',qty:3}]},
+  {id:'4',supplierId:'anna',status:'delivered',items:[{name:'Puzzi 10/1',qty:4}]},
+  {id:'5',supplierId:'anna',status:'received',items:[{name:'Puzzi 10/1',qty:5}]},
+  {id:'6',supplierId:'alina',status:'ready',items:[{name:'Puzzi 10/1',qty:10}]},
+ ];
+ const original=JSON.stringify(invoices);
+ const quantities={all:25,created:1,transit:2,ready:13,delivered:9};
+ for(const [deliveryStatus,expected] of Object.entries(quantities)){
+  const rows=collectShipmentRows(invoices,{deliveryStatus});
+  assert.equal(rows.reduce((sum,r)=>sum+r.qty,0),expected,deliveryStatus);
+ }
+ assert.equal(collectShipmentRows(invoices,{supplier:'anna',deliveryStatus:'ready'}).length,1);
+ assert.equal(collectShipmentRows(invoices,{supplier:'alina',deliveryStatus:'ready'}).length,1);
+ assert.equal(collectShipmentRows(invoices,{deliveryStatus:'all'}).length,6);
+ assert.equal(JSON.stringify(invoices),original,'Filtering never updates invoice statuses');
+});
+
+test('manual aliases sum only selected delivery status and never claim an unchecked status complete',()=>{
+ const invoices=[
+  {id:'transit-a',supplierId:'anna',number:'TRANSIT',status:'transit',
+   items:[{name:'Karcher Puzzi 10/1',qty:4}]},
+  {id:'ready-a',supplierId:'anna',number:'READY',status:'ready',
+   items:[{name:'Karcher Puzzi 10/1',qty:2}]},
+  {id:'ready-b',supplierId:'anatoly',number:'READY2',status:'ready',
+   items:[{name:'Моющий пылесос Puzzi 10/1',qty:3}]},
+  {id:'delivered-a',supplierId:'anatoly',number:'DELIVERED',status:'delivered',
+   items:[{name:'Моющий пылесос Puzzi 10/1',qty:5}]},
+ ];
+ const all=collectShipmentRows(invoices);
+ const counts={};
+ for(const r of all.filter(r=>r.status==='transit'||r.invoice==='READY'))
+  counts[r.key]={received:r.qty};
+ const original=JSON.stringify({invoices,counts});
+ const originalGroups=aggregateProducts(all,counts);
+ const aliases=joinByNames({version:1,groups:[]},originalGroups,
+  'Karcher Puzzi 10/1','Моющий пылесос Puzzi 10/1','Karcher Puzzi 10/1','puzzi-all');
+ const byStatus=(deliveryStatus,filter={})=>{
+  const rows=collectShipmentRows(invoices,{deliveryStatus});
+  return filterProductSummary(aggregateProducts(rows,counts,aliases),rows,counts,filter)
+    .find(g=>g.aliasId==='puzzi-all');
+ };
+ const transit=byStatus('transit');
+ assert.equal(transit.expected,4);
+ assert.equal(transit.received,4);
+ assert.equal(transit.delta,0);
+ assert.equal(transit.done,transit.lines);
+ const ready=byStatus('ready');
+ assert.equal(ready.expected,5);
+ assert.equal(ready.received,null);
+ assert.equal(ready.done,1);
+ assert.equal(ready.lines,2);
+ const delivered=byStatus('delivered');
+ assert.equal(delivered.expected,5);
+ assert.equal(delivered.received,null);
+ assert.equal(delivered.done,0);
+ const allStatus=byStatus('all');
+ assert.equal(allStatus.expected,14);
+ assert.equal(allStatus.received,null);
+ assert.equal(byStatus('ready',{search:'Karcher'}).expected,5,'Search must preserve all ready lines');
+ assert.equal(byStatus('ready',{status:'pending'}).expected,5,'Reconciliation status must preserve all ready lines');
+ assert.equal(JSON.stringify({invoices,counts}),original);
+});
+
+test('UI keeps shipping status separate from reconciliation status and applies it to CSV export',()=>{
+ const ui=readFileSync(new URL('../js/landa-receiving-ui.mjs',import.meta.url),'utf8');
+ assert.match(ui,/id="rcDeliveryStatus"/);
+ for(const [code,label] of [['transit','В пути'],['ready','Готова к выдаче'],['delivered','Вручена']])
+  assert.ok(ui.includes('value="'+code+'">'+label),code);
+ assert.match(ui,/id="rcStatus"/);
+ assert.match(ui,/deliveryStatus:\$\('rcDeliveryStatus'\)\.value/);
+ assert.match(ui,/rcExportMerged[\s\S]*?deliveryStatus:\$\('rcDeliveryStatus'\)\.value/);
+ assert.match(ui,/rcSupplier','rcStatus','rcDeliveryStatus','rcOnlyPortal/);
+});
