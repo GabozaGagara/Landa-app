@@ -103,7 +103,7 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
    <form id="exForm" autocomplete="off">
     <div class="exp-fields">
      <label>Дата <input id="exDate" name="date" type="date" required></label>
-     <label>Сумма, ₽ <input id="exAmount" name="amount" type="text" inputmode="decimal" placeholder="Например, 1250,50" required maxlength="20"></label>
+     <label><span id="exAmountLabel">Сумма, ₽</span><input id="exAmount" name="amount" type="text" inputmode="decimal" placeholder="Например, 1250,50" required maxlength="20"></label>
      <label class="exp-full">На что потрачено <textarea id="exDescription" name="description" rows="3" maxlength="300" required placeholder="Например: доставка, бензин, аренда офиса…"></textarea></label>
     </div>
     <div class="exp-form-actions"><button class="btn btn-primary" type="submit" id="exSave">＋ Записать расход</button><button class="btn" type="button" id="exCancel" hidden>Отменить редактирование</button></div>
