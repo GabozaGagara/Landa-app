@@ -2,14 +2,17 @@
 const number = x => Number(x);
 const normalized = x => String(x ?? '').trim().toLocaleLowerCase('ru-RU');
 const round = x => Math.round(x * 10000) / 10000;
+// LANDA historically calls some delivered shipments "received".
+export const shipmentStatusCode = status => String(status||'created').toLowerCase()==='received'?'delivered':String(status||'created').toLowerCase();
 
 export function collectShipmentRows(invoices, filters = {}) {
- const {supplier='all', onlyPortal=false, search=''} = filters;
+ const {supplier='all', onlyPortal=false, search='', deliveryStatus='all'} = filters;
  const query=normalized(search);
  const rows=[];
  for(const inv of (Array.isArray(invoices)?invoices:[])) {
   if(!inv || inv.isOpening || (onlyPortal&&!inv.submittedAt))continue;
   if(supplier!=='all' && inv.supplierId!==supplier)continue;
+  if(deliveryStatus!=='all' && shipmentStatusCode(inv.status)!==deliveryStatus)continue;
   const items=Array.isArray(inv.items)?inv.items:[];
   const invoiceId=String(inv.id||inv.tracking||inv.number||[inv.supplierId,inv.date].join(':'));
   items.forEach((item,index)=>{
