@@ -62,7 +62,7 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   '<label>Результат сверки<select id="rcStatus"><option value="all">Все</option><option value="pending">Не сверено</option><option value="difference">Расхождения</option><option value="matched">Совпадает</option></select></label>',
   '<label>Статус доставки<select id="rcDeliveryStatus"><option value="all">Все статусы</option><option value="created">Создан</option><option value="transit">В пути</option><option value="ready">Готов к выдаче</option><option value="delivered">Вручен</option></select></label>',
   '<label class="rc-check"><input type="checkbox" id="rcOnlyPortal"> Только из кабинетов поставщиков</label></div>',
-  '<div class="rc-actions"><button class="rc-btn rc-btn-active" type="button" id="rcInvoices">По накладным</button><button class="rc-btn" type="button" id="rcProducts">Сводка товаров</button>',
+  '<div class="rc-actions"><button class="rc-btn rc-btn-active" type="button" id="rcInvoices">По накладным</button><button class="rc-btn" type="button" id="rcProducts">Сводка товаров</button><button class="rc-btn" type="button" id="rcPallet">🚚 Приёмка паллета</button>',
   '<button class="rc-btn" type="button" id="rcExport">↓ Скачать CSV</button><button class="rc-btn" type="button" id="rcExportMerged" hidden>↓ CSV объединённой сводки</button>',
   '<button class="rc-btn" type="button" id="rcMergeToggle" hidden>⇄ Объединить позиции</button><button class="rc-btn" type="button" id="rcRefresh">↻ Обновить</button></div>',
   '<div id="rcMergePanel" class="rc-merge-panel" hidden><strong>Ручное объединение названий</strong>',
@@ -152,6 +152,20 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
  }
  function render(){
   if(!dialog.open)return;
+  const isPallet=tab==='pallet';
+  $('rcInvoices').classList.toggle('rc-btn-active',tab==='invoices');
+  $('rcProducts').classList.toggle('rc-btn-active',tab==='products');
+  $('rcPallet').classList.toggle('rc-btn-active',isPallet);
+  $('rcResults').hidden=isPallet;
+  $('rcSummary').hidden=isPallet;
+  $('rcMessage').hidden=isPallet;
+  dialog.querySelector('.rc-controls').hidden=isPallet;
+  $('rcExport').hidden=isPallet;
+  $('rcExportMerged').hidden=tab!=='products';
+  $('rcMergeToggle').hidden=tab!=='products';
+  $('rcMergePanel').hidden=tab!=='products'||!mergeMode;
+  if(isPallet){window.LANDA_PALLET?.open();return}
+  window.LANDA_PALLET?.hide();
   let rows=selectedRows(),all=getRows();const names=supplierNames();
   let products=null;
   if(tab==='products'){
@@ -178,13 +192,8 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
    '<span>Расхождений: <b>'+discrepancies.length+'</b></span>',
    '<span>Статус доставки: <b>'+esc($('rcDeliveryStatus').selectedOptions[0]?.textContent||'Все статусы')+'</b></span>'
   ].join('');
-  $('rcInvoices').classList.toggle('rc-btn-active',tab==='invoices');
-  $('rcProducts').classList.toggle('rc-btn-active',tab==='products');
-  $('rcMergeToggle').hidden=tab!=='products';
-  $('rcExportMerged').hidden=tab!=='products';
   $('rcMergeToggle').classList.toggle('rc-btn-active',mergeMode);
   $('rcMergeToggle').textContent=mergeMode?'✓ Завершить объединение':'⇄ Объединить позиции';
-  $('rcMergePanel').hidden=tab!=='products'||!mergeMode;
   if(!rows.length){visibleProducts=[];selectedProducts.clear();if(mergeMode)refreshMergeSelection();$('rcResults').innerHTML='<p class="rc-report rc-hint">По выбранным фильтрам товаров нет. Проверьте фильтры и убедитесь, что актуальные накладные загружены из GitHub в LANDA.</p>';return}
   if(tab==='products'){
    visibleProducts=products;
@@ -229,6 +238,7 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
  $('rcSearch').addEventListener('input',()=>{selectedProducts.clear();$('rcMergeName').value='';render()});
  $('rcInvoices').addEventListener('click',()=>{tab='invoices';selectedProducts.clear();render()});
  $('rcProducts').addEventListener('click',()=>{tab='products';render()});
+ $('rcPallet').addEventListener('click',()=>{tab='pallet';selectedProducts.clear();render()});
  $('rcMergeToggle').addEventListener('click',()=>{mergeMode=!mergeMode;selectedProducts.clear();$('rcMergeName').value='';render()});
  $('rcMergeClear').addEventListener('click',()=>{selectedProducts.clear();$('rcMergeName').value='';render()});
  $('rcMergeSave').addEventListener('click',()=>{
