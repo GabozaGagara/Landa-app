@@ -223,8 +223,8 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
  btn.addEventListener('click',open);
  $('rcInvoicesOpen')?.addEventListener('click',open);
  $('rcClose').addEventListener('click',()=>dialog.close());
- for(const key of ['rcSupplier','rcStatus','rcOnlyPortal'])$(key).addEventListener('change',()=>{selectedProducts.clear();render()});
- $('rcSearch').addEventListener('input',()=>{selectedProducts.clear();render()});
+ for(const key of ['rcSupplier','rcStatus','rcOnlyPortal'])$(key).addEventListener('change',()=>{selectedProducts.clear();$('rcMergeName').value='';render()});
+ $('rcSearch').addEventListener('input',()=>{selectedProducts.clear();$('rcMergeName').value='';render()});
  $('rcInvoices').addEventListener('click',()=>{tab='invoices';selectedProducts.clear();render()});
  $('rcProducts').addEventListener('click',()=>{tab='products';render()});
  $('rcMergeToggle').addEventListener('click',()=>{mergeMode=!mergeMode;selectedProducts.clear();$('rcMergeName').value='';render()});
@@ -252,7 +252,7 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
    const data=JSON.parse(await file.text());
    if(!data||data.version!==1||!Array.isArray(data.groups))throw Error('Неверный формат файла объединений.');
    const next=safeProductAliases(data);
-   if(next.groups.length!==data.groups.length)throw Error('В файле есть повреждённые или повторяющиеся правила.');
+   if(next.groups.length!==data.groups.length||next.groups.some((g,i)=>g.members.length!==data.groups[i].members.length))throw Error('В файле есть повреждённые или повторяющиеся правила.');
    if(!confirm('Заменить локальные правила объединения ('+aliases.groups.length+') правилами из файла ('+next.groups.length+')? Финансовые данные не изменятся.'))return;
    storeAliases(next);selectedProducts.clear();render();
   }catch(err){alert('Не удалось загрузить объединения: '+err.message)}
