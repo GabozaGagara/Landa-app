@@ -58,6 +58,14 @@ test('supplier can correct own undelivered, uncharged invoice; prices and shippi
  assert.equal(view.editVersion,result.editVersion);
  assert.equal('auditTrail' in view,false);
 });
+test('saving unchanged invoice does not create revision or invalidate existing owner approval',()=>{
+ const b=fixture(),before=JSON.stringify(b.operations);
+ const result=call(b,bridge.normalizeInvoice(incoming()));
+ assert.equal(result.updated,false);
+ assert.equal(result.revision,0);
+ assert.equal(b.operations.invoices[0].reviewStatus,'approved');
+ assert.equal(JSON.stringify(b.operations),before);
+});
 test('stale revision or owner changes reject supplier edit rather than overwrite',()=>{
  const b=fixture(),version=supplierEditVersion(b.operations.invoices[0]);
  call(b);
