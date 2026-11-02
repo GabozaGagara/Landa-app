@@ -487,6 +487,22 @@ function supplierCard(id,clickable=false){
  <div class="ops-sub">Включая доставку${s.pendingDelivery?' · ⚠ для '+s.pendingDelivery+' накладных доставка не указана':''}. Сумма справочная и не добавляется повторно в долг.</div>
  </div>`;
 }
+function supplierEditMarkup(i){
+ if(!i.supplierEditedAt)return '';
+ const history=Array.isArray(i.supplierEditHistory)?i.supplierEditHistory:[];
+ const revisions=history.slice().reverse().map((event,n)=>{
+  const fields=(Array.isArray(event.changes)?event.changes:[]).map(c=>
+   '<div style="margin:6px 0;border-top:1px solid #edf0f5;padding-top:5px"><b>'+esc(c.label||c.field)+
+   '</b><small>Было: '+esc(String(c.before??'').slice(0,4000))+'</small><small>Стало: '+esc(String(c.after??'').slice(0,4000))+'</small></div>').join('');
+  return '<div><b>Правка '+esc(String(history.length-n))+' · '+esc(String(event.at||'').replace('T',' ').slice(0,19))+
+   ' · '+esc(event.by||'поставщик')+'</b>'+fields+'</div>';
+ }).join('');
+ return '<div style="margin-top:7px"><strong class="negative">✎ Изменена поставщиком · '+
+  esc(String(i.supplierEditedAt).replace('T',' ').slice(0,19))+
+  '</strong>'+((i.submittedAt&&i.reviewStatus!=='approved')?'<small class="negative">Требует повторной проверки</small>':'')+
+  (revisions?'<details><summary>История исправлений ('+history.length+')</summary><div class="op-help" style="max-height:360px;overflow:auto">'+revisions+'</div></details>':'')+
+  '</div>';
+}
 function invoiceRow(i,compact=false){
  const charged=invoiceAccrued(i),p=invoicePaid(i.id),due=invoiceDue(i),avail=supplierTotals(i.supplierId).advance;
  const canApply=charged&&due>0&&avail>0,items=Array.isArray(i.items)?i.items:[],status=statusCode(i),good=Number.isFinite(i.goodsCost)?i.goodsCost:Math.max(0,(Number(i.total)||0)-(i.includeDelivery?(Number(i.deliveryCost)||0):0)),legacyShipping=!i.isOpening&&!i.includeDelivery&&Number(i.deliveryCost)>0;
@@ -494,7 +510,7 @@ function invoiceRow(i,compact=false){
  const actions=i.isOpening?'':`${charged?`<button class="ops-mini" data-uncharge="${esc(i.id)}" type="button">Отменить начисление</button>`:status==='delivered'?`<button class="ops-mini" data-charge="${esc(i.id)}" type="button">Начислить поставщику</button>`:''}`;
  const trackActions=(!i.isOpening&&i.tracking)?`<button type="button" class="ops-mini" data-copy-track="${esc(i.tracking)}" title="Скопировать номер отслеживания">Копировать трек</button><a class="ops-mini" data-cdek-open="${esc(i.tracking)}" href="https://www.cdek.ru/ru/tracking/" target="_blank" rel="noopener noreferrer" title="Скопировать номер накладной и открыть отслеживание СДЭК">СДЭК ↗</a>`:'';
  return `<tr><td class="nowrap"><strong>${esc(dateText(i.date))}</strong><small>${esc(supName(i.supplierId))}</small></td>
- <td><strong>${i.isOpening?'Начальный долг':esc(i.number)}</strong><small>${i.isOpening?'Начальный долг без накладной СДЭК':'СДЭК: '+esc(i.tracking||'не указан')+(i.sender?' · '+esc(i.sender):'')+(i.route?' · '+esc(i.route):'')+(i.moysklad?' · МойСклад: '+esc(i.moysklad):'')}</small>${i.note?`<small>${esc(i.note)}</small>`:''}<div style="margin-top:7px">${selectStatus}</div></td>
+ <td><strong>${i.isOpening?'Начальный долг':esc(i.number)}</strong><small>${i.isOpening?'Начальный долг без накладной СДЭК':'СДЭК: '+esc(i.tracking||'не указан')+(i.sender?' · '+esc(i.sender):'')+(i.route?' · '+esc(i.route):'')+(i.moysklad?' · МойСклад: '+esc(i.moysklad):'')}</small>${i.note?`<small>${esc(i.note)}</small>`:''}${supplierEditMarkup(i)}<div style="margin-top:7px">${selectStatus}</div></td>
  <td>${items.length?`<details><summary class="op-linklike">${items.length} тов. · состав</summary><div class="op-help">${items.map(it=>`<div>${esc(it.name)}${it.sku?' ['+esc(it.sku)+']':''} — ${fmt.format(it.qty)} × ${cashFmt(it.price,'USD')}</div>`).join('')}</div></details>`:'<span class="ops-smallnote">Укажи товары в редакторе</span>'}</td>
  <td class="right nowrap"><strong>${cashFmt(i.total,'USD')}</strong><small>Товар: ${cashFmt(good,'USD')}</small><small>Доставка: ${cashFmt(i.deliveryCost||0,'USD')}${legacyShipping?' · ⚠ не включена в старую сумму':' · включена в сумму'}</small>${legacyShipping?`<small class="negative">С доставкой: ${cashFmt(fromCents(shipmentTotalCents(i)),'USD')}. Для обновления долга откройте «Изменить».</small>`:''}<small>${charged?'Начислено':'Ожидает начисления'}</small></td>
  <td>${moneyStatus(i)}<small>${!charged?'На баланс не влияет':due>0?'Долг: '+cashFmt(due,'USD'):'Закрыта полностью'}</small>${charged?`<small>Зачтено: ${cashFmt(p,'USD')}</small>`:''}</td>
