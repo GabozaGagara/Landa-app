@@ -84,13 +84,19 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
  }
  function message(s,bad=false){$('msMessage').textContent=s;$('msMessage').style.color=bad?'#b13c45':'#506780';}
  function renderInvoices(){
-  $('msInvoices').innerHTML=invoices().map(i=>
-   '<div class="msrow"><input id="ms-inv-'+esc(i.id)+'" type="checkbox" data-invoice="'+esc(i.id)+'" '+(chosenInvoices.has(String(i.id))?'checked':'')+'>'+
-   '<label for="ms-inv-'+esc(i.id)+'"><b>'+esc(i.number||i.tracking||i.id)+'</b> · '+esc(i.date||'')+
-   '<small>'+esc((i.items||[]).map(x=>x.name+' × '+x.qty).join(' / ').slice(0,200))+'</small></label></div>'
-  ).join('')||'<p class="msinfo">В текущих данных LANDA нет вручённых накладных этого поставщика с датой отправки не позднее выбранного дня. Проверьте статус и обновление облачной копии.</p>';
+  const list=invoices();
+  $('msInvoicesTitle').textContent='Накладные LANDA · '+($('msInvoiceStatus').selectedOptions[0]?.textContent||'');
+  $('msStatusWarning').hidden=currentInvoiceStatus()==='delivered';
+  $('msSelectAllInvoices').disabled=!list.length;
+  $('msInvoices').innerHTML=list.map(i=>{
+   const key=msInvoiceKey(i.supplierId,i.id);
+   return '<label class="msrow"><input type="checkbox" data-invoice="'+esc(key)+'" '+(chosenInvoices.has(key)?'checked':'')+'>'+
+    '<span style="flex:1;min-width:0"><b>'+esc(i.number||i.tracking||i.id)+'</b> · '+esc(i.date||'')+
+    ' · '+esc(supplierName(i.supplierId))+'<small>'+esc((i.items||[]).map(x=>x.name+' × '+x.qty).join(' / ').slice(0,200))+'</small></span></label>';
+  }).join('')||'<p class="msinfo">Накладные по выбранным поставщикам, статусам и дате не найдены. Проверьте фильтры и обновите облачную копию LANDA.</p>';
  }
  function renderDocs(){
+  $('msSelectAllDocs').disabled=!(payload?.documents||[]).length;
   $('msDocuments').innerHTML=(payload?.documents||[]).map(d=>{
    const total=(d.positions||[]).reduce((n,p)=>n+Number(p.quantity||0),0);
    return '<div class="msrow"><input id="ms-doc-'+esc(d.id)+'" type="checkbox" data-doc="'+esc(d.id)+'" '+(chosenDocs.has(d.id)?'checked':'')+'>'+
@@ -107,7 +113,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
   const good=data.results.filter(r=>r.state==='matched').length,bad=data.results.filter(r=>r.state==='difference'||r.state==='shared').length,
    pending=data.results.filter(r=>r.state==='unmatched').length;
   $('msSummary').innerHTML=[
-   '<span class="msmetric">Накладных: <b>'+chosenInvoices.size+'</b></span>',
+   '<span class="msmetric">Накладных: <b>'+invoices().filter(i=>chosenInvoices.has(msInvoiceKey(i.supplierId,i.id))).length+'</b></span>',
    '<span class="msmetric">Приёмок: <b>'+docs.length+'</b></span>',
    '<span class="msmetric">Совпадает: <b>'+good+'</b></span>',
    '<span class="msmetric">Расхождения: <b>'+bad+'</b></span>',
@@ -169,10 +175,11 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
   codeState('✓ Сохранённый код удалён с этого устройства. Поле очищено.');
  }
  function open(){
-  $('msSupplier').innerHTML=(ops.suppliers||[]).map(s=>'<option value="'+esc(s.id)+'">'+esc(s.name||s.id)+'</option>').join('');
+  $('msSupplier').innerHTML='<option value="all">Все поставщики</option>'+(ops.suppliers||[]).map(s=>'<option value="'+esc(s.id)+'">'+esc(s.name||s.id)+'</option>').join('');
   if(!$('msTo').value){
    const d=new Date();$('msTo').value=isoDate(d);d.setDate(d.getDate()-14);$('msFrom').value=isoDate(d);
   }
+  $('msSupplier').value='all';$('msInvoiceStatus').value='delivered';
   chosenInvoices.clear();chosenDocs.clear();payload=null;
   $('msAdmin').value=storedCode();
   codeState();
@@ -230,9 +237,9 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
   return '"'+s.replace(/"/g,'""')+'"';
  }
  function exportCSV(){
-  const res=report(),rows=[['Товар LANDA','Артикул LANDA','Заявлено, шт.','Товар МойСклад','Принято, шт.','Разница','Результат','Накладные']];
-  for(const g of res.results)rows.push([g.name,g.sku,g.expected,g.match?.name||'',g.received??'',g.delta??'',g.state,g.invoices.join('; ')]);
-  for(const p of res.unmatchedProducts)rows.push(['','','',p.name,p.received,'','Товар приёмки не сопоставлен','']);
+  const res=report(),rows=[['Товар LANDA','Артикул LANDA','Поставщики LANDA','Заявлено, шт.','Товар МойСклад','Принято, шт.','Разница','Результат','Накладные']];
+  for(const g of res.results)rows.push([g.name,g.sku,g.supplierIds.map(supplierName).join(', '),g.expected,g.match?.name||'',g.received??'',g.delta??'',g.state,g.invoices.join('; ')]);
+  for(const p of res.unmatchedProducts)rows.push(['','','','',p.name,p.received,'','Товар приёмки не сопоставлен','']);
   if(rows.length===1){message('Нет данных для экспорта.',true);return}
   const blob=new Blob(['\ufeff'+rows.map(x=>x.map(csvCell).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}),
    url=URL.createObjectURL(blob),a=document.createElement('a');
@@ -247,6 +254,15 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
  $('msLoad').addEventListener('click',load);$('msCompare').addEventListener('click',renderResult);
  $('msCSV').addEventListener('click',exportCSV);
  $('msSupplier').addEventListener('change',()=>{chosenInvoices.clear();renderInvoices();renderResult()});
+ $('msInvoiceStatus').addEventListener('change',()=>{chosenInvoices.clear();renderInvoices();renderResult()});
+ $('msSelectAllInvoices').addEventListener('click',()=>{
+  chosenInvoices=new Set(invoices().map(i=>msInvoiceKey(i.supplierId,i.id)));renderInvoices();renderResult();
+ });
+ $('msClearInvoices').addEventListener('click',()=>{chosenInvoices.clear();renderInvoices();renderResult()});
+ $('msSelectAllDocs').addEventListener('click',()=>{
+  chosenDocs=new Set((payload?.documents||[]).map(d=>d.id));renderDocs();renderResult();
+ });
+ $('msClearDocs').addEventListener('click',()=>{chosenDocs.clear();renderDocs();renderResult()});
  $('msTo').addEventListener('change',()=>{chosenInvoices.clear();chosenDocs.clear();payload=null;renderInvoices();renderDocs();renderResult()});
  $('msFrom').addEventListener('change',()=>{chosenDocs.clear();payload=null;renderDocs();renderResult()});
  $('msInvoices').addEventListener('change',e=>{
