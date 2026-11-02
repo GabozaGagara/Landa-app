@@ -199,7 +199,14 @@ export function palletCSV(session){
  }
  rows.push([]);
  rows.push(['СВОДКА','Накладная','Последние 4 цифры','Поставщик','Записей','Мест фактически','Ожидается мест','Разница мест','Разных позиций']);
- for(const i of palletSummary(s))
+ const report=palletSummary(s);
+ for(const i of report)
   rows.push(['',i.number,palletShortNumber(i),i.supplierId,i.entries,i.places,i.expectedPlaces??'',i.differencePlaces??'',i.positions]);
+ rows.push([]);
+ rows.push(['ПО ТОВАРАМ','Накладная','Последние 4 цифры','Поставщик','Товар','Мест','Штук (если указано)','Записей','В исходной накладной']);
+ for(const i of report)for(const g of i.products){
+  const unexpected=i.hasManifest&&i.unexpected.some(x=>x.name===g.name);
+  rows.push(['',i.number,palletShortNumber(i),i.supplierId,g.name,g.places,g.units??'',g.entries,unexpected?'Нет точного совпадения':'']);
+ }
  return '\ufeff'+rows.map(row=>row.map(quote).join(';')).join('\r\n');
 }
