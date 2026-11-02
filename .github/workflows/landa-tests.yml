@@ -37,6 +37,7 @@ jobs:
         run: |
           node --check cloudflare/worker.mjs
           node --check cloudflare/supplier-view.mjs
+          node --check cloudflare/supplier-edit.mjs
           node --check js/landa-control-center.js
           node --check js/landa-local-backups.js
           node --check js/landa-receiving-core.mjs
@@ -47,7 +48,7 @@ jobs:
           node --check js/landa-proschet-b-core.mjs
           node --check js/landa-proschet-b.mjs
       - name: Supplier, accounting and historical proschet invariance tests
-        run: node --test tests/landa.test.mjs tests/proschet-b.test.mjs
+        run: node --test tests/landa.test.mjs tests/proschet-b.test.mjs tests/supplier-edit.test.mjs
       - name: D1 schema syntax and foreign keys (test only)
         run: |
           python3 - <<'PY'
