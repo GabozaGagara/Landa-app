@@ -99,7 +99,7 @@ export function renameProductAlias(input,id,name){
  group.name=label;return aliases;
 }
 export function aggregateProducts(rows,counts={},aliases={version:1,groups:[]}) {
- const associations=new Map(),aliasMap=new Map();
+ const aliasMap=new Map();
  for(const g of safeProductAliases(aliases).groups)for(const key of g.members)aliasMap.set(key,g);
  const groups=new Map();
  for(const row of rows) {
@@ -125,6 +125,22 @@ export function aggregateProducts(rows,counts={},aliases={version:1,groups:[]}) 
   received:g.done===g.lines?g.received:null,
   delta:g.done===g.lines?round(g.received-g.expected):null
  })).sort((a,b)=>a.name.localeCompare(b.name,'ru')||a.supplierId.localeCompare(b.supplierId));
+}
+
+// Filters select whole product groups so a partial search or status filter cannot
+// incorrectly make an unfinished shipment appear fully received.
+export function filterProductSummary(groups,rows,counts={},filters={}){
+ const search=normalized(filters.search),status=String(filters.status||'all');
+ return groups.filter(g=>{
+  const keys=new Set(g.members),source=rows.filter(r=>keys.has(productIdentity(r)));
+  if(search){
+   const terms=[g.name,...g.variants.flatMap(v=>[v.name,v.sku,v.supplierId]),
+    ...source.flatMap(r=>[r.invoice,r.tracking,r.supplierId])];
+   if(!normalized(terms.join(' ')).includes(search))return false;
+  }
+  if(status!=='all'&&!source.some(r=>compareCount(r,counts[r.key]).state===status))return false;
+  return true;
+ });
 }
 
 export function csvCell(value){
