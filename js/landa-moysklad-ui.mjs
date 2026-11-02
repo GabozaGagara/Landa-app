@@ -119,7 +119,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
    '<span class="msmetric">Расхождения: <b>'+bad+'</b></span>',
    '<span class="msmetric">Не сопоставлено: <b>'+pending+'</b></span>'
   ].join('');
-  if(!rows.length||!docs.length){$('msResults').innerHTML='<p class="mswarn">Выберите хотя бы одну вручённую накладную LANDA и одну проведённую приёмку «МоегоСклада».</p>';return}
+  if(!rows.length||!docs.length){$('msResults').innerHTML='<p class="mswarn">Выберите хотя бы одну накладную LANDA и одну проведённую приёмку «МоегоСклада».</p>';return}
   $('msResults').innerHTML='<h3>Сравнение товаров</h3>'+data.results.map(g=>{
    const key=productLinkKey(currentSupplier(),g.name,g.sku);
    const mapped=links[key]||'';
@@ -136,7 +136,8 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
    const amount=g.state==='shared'?'Ожидалось по общему товару: '+num(g.sharedExpected)+'; общее расхождение: '+num(g.sharedDifference):
     'Фактически: '+(g.received===null?'—':num(g.received))+' · Разница: '+(g.delta===null?'—':(g.delta>0?'+':'')+num(g.delta));
    return '<div class="msline"><div class="msline-top"><div><div class="msline-title">'+esc(g.name)+'</div>'+
-    '<div class="msinfo">'+esc(g.sku||'без артикула')+' · накладные: '+esc(g.invoices.join(', '))+'</div></div>'+
+    '<div class="msinfo">'+esc(g.sku||'без артикула')+' · накладные: '+esc(g.invoices.join(', '))+
+    (currentSupplier()==='all'?' · поставщики: '+esc(g.supplierIds.map(supplierName).join(', ')):'')+'</div></div>'+
     '<div><b>Заявлено: '+num(g.expected)+' шт.</b><div class="msstate '+style+'">'+status+'</div></div></div>'+
     '<p class="msinfo">'+esc(suggested)+' · '+esc(amount)+'</p><label class="msinfo">Связать с товаром «МоегоСклада»'+
     '<select data-ms-map="'+encodeURIComponent(key)+'">'+options.join('')+'</select></label></div>';
@@ -277,7 +278,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
   if(!e.target.matches('[data-ms-map]'))return;
   let key;try{key=decodeURIComponent(e.target.dataset.msMap)}catch(_){return}
   const newId=e.target.value,old=links[key]||'';
-  if(newId&&!confirm('Подтвердить связь товара поставщика с выбранным товаром из «МоегоСклада»?')){e.target.value=old;return}
+  if(newId&&!confirm(currentSupplier()==='all'?'Связать товар с выбранным товаром «МоегоСклада» для общей сверки? Индивидуальные соответствия поставщиков не изменятся.':'Подтвердить связь товара поставщика с выбранным товаром из «МоегоСклада»?')){e.target.value=old;return}
   if(newId)links[key]=newId;else delete links[key];
   try{localStorage.setItem(KEY,JSON.stringify(links));message('Соответствие сохранено локально. Финансовые данные не изменены.')}
   catch(e){if(old)links[key]=old;else delete links[key];message('Не удалось сохранить связь: '+e.message,true)}
