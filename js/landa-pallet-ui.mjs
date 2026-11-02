@@ -34,6 +34,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
   '.pl-entry-fields label{font-size:12px;color:#496481;font-weight:600;display:grid;gap:4px}',
   '.pl-entry-fields .pl-action{align-self:end}.pl-entry-fields .rc-btn{width:100%}',
   '.pl-shortcuts{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}.pl-shortcuts button{font-size:11px;padding:6px 8px}',
+  '.pl-active-invoices{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 12px}.pl-active-invoices button.active{background:#315ed2;color:white;border-color:#315ed2}',
   '.pl-table{width:100%;border-collapse:collapse;min-width:500px;font-size:12px}.pl-table td,.pl-table th{padding:9px 7px;text-align:left;border-bottom:1px solid #e5ebf3;vertical-align:top}',
   '.pl-table th{font-weight:700;color:#47617e;background:#f5f8fd}.pl-table strong{font-size:13px}',
   '.pl-scroll{overflow-x:auto;max-width:100%}.pl-warning{color:#926015}.pl-good{color:#167852}.pl-alert{color:#ad3a44}',
@@ -55,6 +56,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
   '<label>Статус доставки<select id="plStatus"><option value="ready">Готов к выдаче</option><option value="all">Все статусы</option><option value="transit">В пути</option><option value="delivered">Вручен</option><option value="created">Создан</option></select></label></div>',
   '<div id="plInvoices" class="pl-invoice-list"></div><div id="plInvoicesMessage" class="pl-muted"></div><button type="button" class="rc-btn" id="plMore" hidden>Показать ещё</button></div>',
   '<div class="pl-box" id="plEnterBlock"><h3>2. Записывай фактические места по мере погрузки</h3>',
+  '<div id="plActiveInvoices" class="pl-active-invoices"></div>',
   '<form id="plEntryForm"><div class="pl-entry-fields">',
   '<label class="pl-wide">Накладная<select id="plCurrentInvoice" required></select></label>',
   '<label class="pl-wide">Что фактически забрал<input id="plProduct" type="text" list="plProductHints" maxlength="180" required placeholder="Например, Karcher Puzzi 10/1" autocomplete="off"></label><datalist id="plProductHints"></datalist>',
@@ -160,6 +162,10 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
    esc(label(i))+' · '+esc(n[i.supplierId]||i.supplierId)+'</option>').join('')||
    '<option value="">Сначала отметьте накладную</option>';
   $('plSaveEntry').disabled=!s||s.closed||!s.invoices.length;
+  $('plActiveInvoices').innerHTML=(s?.invoices||[]).map(i=>
+   '<button type="button" class="rc-btn '+(i.key===activeInvoice?'active':'')+
+   '" data-pl-activate="'+esc(i.key)+'" '+(s?.closed?'disabled':'')+'>'+
+   esc(label(i))+'</button>').join('');
   if(s){
    const summary=palletSummary(s),total=summary.reduce((v,x)=>v+x.places,0);
    const expected=summary.filter(x=>x.expectedPlaces!==null);
@@ -208,8 +214,12 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
    }).join('')+'</tbody></table></div><div class="pl-final-list">'+summaries.map(v=>
     '<details class="pl-final"><summary>'+esc(lookup(v))+' · '+esc(n[v.supplierId]||v.supplierId)+' — '+fmt(v.places)+' мест / '+v.positions+' позиций</summary>'+
     '<ul>'+(v.products.length?v.products.map(g=>
-     '<li><strong>'+esc(g.name)+'</strong> · '+fmt(g.places)+' мест'+(g.units===null?'':' · '+fmt(g.units)+' шт.')+'</li>').join(''):
-     '<li>Пока нет фактически забранных мест</li>')+'</ul></details>').join('')+'</div>':
+     '<li><strong>'+esc(g.name)+'</strong> · '+fmt(g.places)+' мест'+(g.units===null?'':' · '+fmt(g.units)+' шт.')+
+     (v.hasManifest&&v.unexpected.some(x=>x.name===g.name)?' <span class="pl-warning">· нет точного совпадения в накладной</span>':'')+'</li>').join(''):
+     '<li>Пока нет фактически забранных мест</li>')+'</ul>'+
+    (v.notLoaded.length?'<div class="pl-muted pl-warning" style="margin-top:8px">Позиции из накладной, ещё не отмеченные при погрузке: '+v.notLoaded.map(x=>esc(x.name)).join(', ')+
+      '. Названия сверяются буквально, с игнорированием регистра — похожие написания могут считаться разными.</div>':'')+
+    '</details>').join('')+'</div>':
     '<p class="pl-muted">Пока не выбраны накладные для приёмки.</p>';
  }
  function render(){
@@ -259,7 +269,11 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
    render();say(t.checked?'Накладная добавлена в список приёмки.':'Накладная исключена.');
   }catch(err){say(err.message,true);renderInvoices()}
  });
- $('plCurrentInvoice').addEventListener('change',e=>{activeInvoice=e.target.value;renderSuggestions();$('plProduct').focus()});
+ $('plCurrentInvoice').addEventListener('change',e=>{activeInvoice=e.target.value;renderSuggestions();renderSessions();$('plProduct').focus()});
+ $('plActiveInvoices').addEventListener('click',e=>{
+  const t=e.target.closest('[data-pl-activate]');if(!t)return;
+  activeInvoice=t.dataset.plActivate;renderSessions();$('plProduct').focus();
+ });
  $('plProduct').addEventListener('input',renderSuggestions);
  $('plSuggestions').addEventListener('click',e=>{
   const t=e.target.closest('[data-pl-suggest]');if(!t)return;
