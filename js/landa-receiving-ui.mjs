@@ -60,7 +60,7 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   '<div class="rc-controls"><label>Поставщик<select id="rcSupplier"><option value="all">Все поставщики</option></select></label>',
   '<label>Товар / артикул / СДЭК<input type="search" id="rcSearch" placeholder="Найти товар или накладную"></label>',
   '<label>Результат сверки<select id="rcStatus"><option value="all">Все</option><option value="pending">Не сверено</option><option value="difference">Расхождения</option><option value="matched">Совпадает</option></select></label>',
-  '<label>Статус доставки<select id="rcDeliveryStatus"><option value="all">Все статусы</option><option value="created">Создана</option><option value="transit">В пути</option><option value="ready">Готова к выдаче</option><option value="delivered">Вручена</option></select></label>',
+  '<label>Статус доставки<select id="rcDeliveryStatus"><option value="all">Все статусы</option><option value="created">Создан</option><option value="transit">В пути</option><option value="ready">Готов к выдаче</option><option value="delivered">Вручен</option></select></label>',
   '<label class="rc-check"><input type="checkbox" id="rcOnlyPortal"> Только из кабинетов поставщиков</label></div>',
   '<div class="rc-actions"><button class="rc-btn rc-btn-active" type="button" id="rcInvoices">По накладным</button><button class="rc-btn" type="button" id="rcProducts">Сводка товаров</button>',
   '<button class="rc-btn" type="button" id="rcExport">↓ Скачать CSV</button><button class="rc-btn" type="button" id="rcExportMerged" hidden>↓ CSV объединённой сводки</button>',
