@@ -1,4 +1,5 @@
 // Supplier-scoped read-only projection: never return the private database.
+import {supplierEditable} from './supplier-edit.mjs';
 const CDEK_STATUS={created:'Создан',transit:'В пути',ready:'Готов к выдаче',delivered:'Вручен'};
 const cents=n=>Math.round((Number.isFinite(Number(n))?Number(n):0)*100);
 const money=n=>Math.round(n)/100;
@@ -35,9 +36,16 @@ export function supplierOverview(backup,supplierId,page=1){
    const charge=accrued(i);
    const status=i.status==='received'?'delivered':(CDEK_STATUS[i.status]?i.status:'created');
    return {
+    id:i.submittedAt?String(i.id||'').slice(0,160):null,
+    editable:supplierEditable(i,supplierId,ops.allocations),
+    editRevision:Number(i.supplierEditRevision)||0,
+    editedAt:String(i.supplierEditedAt||'').slice(0,40),
+    editedBy:i.supplierEditedBy===supplierId?'Поставщик':'',
+    sender:String(i.sender||'').slice(0,100),route:String(i.route||'').slice(0,120),
+    supplierNote:String(i.supplierNote||'').slice(0,280),
     number:String(i.number||'').slice(0,100),tracking:String(i.tracking||'').slice(0,100),date:String(i.date||'').slice(0,20),
     status,statusLabel:CDEK_STATUS[status],trackingVerified:i.trackingVerified===true,accrued:charge,reviewStatus:i.submittedAt?(i.reviewStatus==='approved'?'approved':'pending'):'approved',statusCheckedAt:String(i.statusCheckedAt||''),statusSource:String(i.statusSource||''),
-    items:(Array.isArray(i.items)?i.items:[]).slice(0,100).map(x=>({name:String(x.name||'').slice(0,180),qty:Number(x.qty)||0,price:Number(x.price)||0,sku:String(x.sku||'').slice(0,100)})),
+    items:(Array.isArray(i.items)?i.items:[]).slice(0,100).map(x=>({name:String(x.name||'').slice(0,180),qty:Number(x.qty)||0,price:Number(x.price)||0,priceMissing:x.priceMissing===true,sku:String(x.sku||'').slice(0,100)})),
     goodsCost:Number.isFinite(i.goodsCost)?i.goodsCost:(Number(i.total)||0),deliveryCost:Number(i.deliveryCost)||0,includeDelivery:!!i.includeDelivery,deliveryMissing:i.deliveryMissing===true,
     total:Number(i.total)||0,allocated:money(paid),due:charge?money(Math.max(0,cents(i.total)-paid)):0
    };
