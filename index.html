@@ -106,7 +106,7 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
 <!-- Standalone expenses journal: separate from cash, suppliers, invoices and financial proschet. -->
 <section id="expensesPage" class="page" hidden>
  <div class="heading ops-head"><div><div class="eyebrow">ЛИЧНЫЙ ЖУРНАЛ / РАСХОДЫ</div><h1>Расходы</h1><p>Быстрая запись расхода, история и график по дням или месяцам — отдельно от остальных расчётов LANDA.</p></div><div class="actions"><button type="button" class="btn" id="exExportCSV">↓ CSV</button><button type="button" class="btn" id="exExportJSON">↓ Копия JSON</button><button type="button" class="btn" id="exImportJSON">↑ Загрузить JSON</button><input type="file" id="exImportFile" accept=".json,application/json" hidden></div></div>
- <div class="ops-notice exp-info">Новые расходы записываются в <strong>рублях (₽)</strong>. Старые записи в других валютах сохраняются и показываются отдельно. Этот журнал не меняет кассу, поставщиков, накладные или финансовый просчёт и пока хранится только в данном браузере.</div>
+ <div class="ops-notice exp-info">Новые расходы записываются в <strong>рублях (₽)</strong>. Старые записи в других валютах сохраняются и показываются отдельно. Этот журнал не меняет кассу, поставщиков, накладные или финансовый просчёт. При подключённой синхронизации GitHub расходы автоматически доступны на ваших устройствах.</div>
  <div class="exp-layout">
   <section class="ops-card exp-entry"><h2 id="exFormTitle">Новый расход</h2>
    <form id="exForm" autocomplete="off">
@@ -1225,7 +1225,7 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  <label style="display:flex;gap:9px;align-items:flex-start;font-size:12px"><input type="checkbox" id="ghAuto" checked> Автоматическая синхронизация: сохранять изменения и получать обновления с других устройств</label>
  <div class="gh-actions"><button class="btn btn-primary" type="button" id="ghConnect">Подключить и проверить</button><button class="btn" type="button" id="ghUpload">Сохранить на GitHub</button><button class="btn" type="button" id="ghRefresh">Проверить облако</button></div>
  <div class="gh-actions"><button class="btn btn-primary" type="button" id="ghLoadNow">⬇ Загрузить финансовые данные из GitHub</button></div>
- <div class="gh-note">Подключение GitHub не всегда означает, что облачная база уже открыта. Если просчёт пустой, нажми «Загрузить финансовые данные из GitHub». Программа покажет количество строк и периодов до замены локальных данных; облачная копия останется неизменной.</div>
+ <div class="gh-note">Обычно актуальные финансовые данные загружаются автоматически при открытии LANDA. Если на новом устройстве уже есть другие локальные расчёты, программа остановится для защиты от замены. Тогда можно проверить облачную копию и явно подтвердить загрузку.</div>
  <div class="gh-message" id="ghMessage" role="status" aria-live="polite">GitHub не подключён.</div>
  <div class="gh-note"><b>Единая синхронизация:</b> финансовые данные и накладные — через основную резервную копию; расходы, сверка товаров, объединения, «МойСклад» и приёмка паллетов — через отдельный файл того же приватного репозитория. <b>Включите «Автоматическая синхронизация».</b> На каждом личном устройстве один раз подключите GitHub и при необходимости включите «Запомнить токен» (не на общем компьютере). При конфликте одновременных правок одной записи система остановится, а не удалит данные.</div>
  <div class="gh-actions"><button type="button" class="btn" id="ghExtrasNow">↻ Проверить расходы и приёмку</button></div>
