@@ -60,7 +60,7 @@ if(typeof document!=='undefined'&&document.getElementById('expensesPage')){
   try{
    localStorage.setItem(EXPENSES_STORAGE_KEY,serialized);
    if(localStorage.getItem(EXPENSES_STORAGE_KEY)!==serialized)throw new Error('Браузер не подтвердил сохранение.');
-   book=next;error='';return true;
+   book=next;error='';window.dispatchEvent(new Event('landa:aux-data-changed'));return true;
   }catch(e){feedback('Запись не сохранена: '+e.message+'. Проверьте место в браузере и сохраните JSON-копию.',true);return false}
  };
  function formData(){
