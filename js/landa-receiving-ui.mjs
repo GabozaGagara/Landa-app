@@ -56,7 +56,7 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
  dialog.innerHTML=[
   '<header><h2>📦 Сверка товаров поставщиков</h2><button class="rc-btn" type="button" id="rcClose">Закрыть ×</button></header>',
   '<div class="rc-body"><p class="rc-hint">Позиции берутся из накладных, загруженных в LANDA на этом устройстве. Вводите количество, которое физически приняли и внесли в «МойСклад». Это ручная сверка, а не подключение к API «МоегоСклада».</p>',
-  '<p class="rc-warning">Сверка хранится отдельно в этом браузере и не синхронизируется с GitHub. Скачивайте CSV для архива. Касса, долг, накладные и данные «МоегоСклада» не изменяются.</p>',
+  '<p class="rc-warning">Сверка сохраняется на этом устройстве и автоматически синхронизируется через GitHub, если он подключён. Можно скачать CSV для архива. Касса, долг, накладные и данные «МоегоСклада» не изменяются.</p>',
   '<div class="rc-controls"><label>Поставщик<select id="rcSupplier"><option value="all">Все поставщики</option></select></label>',
   '<label>Товар / артикул / СДЭК<input type="search" id="rcSearch" placeholder="Найти товар или накладную"></label>',
   '<label>Результат сверки<select id="rcStatus"><option value="all">Все</option><option value="pending">Не сверено</option><option value="difference">Расхождения</option><option value="matched">Совпадает</option></select></label>',
@@ -70,7 +70,7 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   '<div id="rcMergeSelected" class="rc-hint">Выбрано: 0</div><label>Общее название товара<input id="rcMergeName" maxlength="180" placeholder="Например: Karcher Puzzi 10/1"></label>',
   '<div class="rc-merge-actions"><button class="rc-btn rc-btn-primary" type="button" id="rcMergeSave" disabled>Объединить выбранные</button><button class="rc-btn" type="button" id="rcMergeClear">Снять выделение</button>',
   '<button class="rc-btn" type="button" id="rcAliasDownload">↓ Сохранить объединения JSON</button><button class="rc-btn" type="button" id="rcAliasUpload">↑ Загрузить объединения JSON</button></div>',
-  '<p class="rc-hint">Правила объединения хранятся в этом браузере, не в финансовой базе. Для переноса на другой компьютер или телефон используйте JSON-файл.</p>',
+  '<p class="rc-hint">Правила объединения не меняют финансовую базу. При подключённом GitHub они автоматически синхронизируются; JSON-файл остаётся запасным способом переноса.</p>',
   '<input type="file" id="rcAliasFile" accept=".json,application/json" hidden></div>',
   '<div id="rcSummary" class="rc-stats"></div><p id="rcMessage" class="rc-hint" role="status" aria-live="polite"></p><div id="rcResults"></div>',
   '</div>'
@@ -228,7 +228,7 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
  }
  function open(){
   refreshSuppliers();dialog.showModal();if(typeof closeMobile==='function')closeMobile();
-  $('rcMessage').textContent=loadError||'Для свежих данных сначала загрузите последнюю облачную копию в LANDA. Изменения сверки не отправляются в GitHub.';
+  $('rcMessage').textContent=loadError||'При включённой синхронизации LANDA получает обновления из GitHub и сохраняет сверку автоматически.';
   render();
  }
  btn.addEventListener('click',open);
