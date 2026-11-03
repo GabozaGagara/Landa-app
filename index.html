@@ -1215,7 +1215,7 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  <div class="modal-hd" id="ghTitle">☁ Синхронизация с GitHub <button type="button" class="btn" id="ghClose" style="float:right" aria-label="Закрыть">✕</button></div>
  <div class="gh-body">
  <div class="gh-warning"><b>iPhone:</b> для синхронизации открой сайт LANDA по HTTPS в Safari. Встроенный просмотрщик HTML (в ChatGPT, «Файлах» и мессенджерах) может блокировать запросы GitHub и показывать «Load failed».</div>
- <div class="gh-note">После подключения LANDA <strong>хранит данные локально и в приватном GitHub</strong>. На запуске, после возвращения к вкладке и примерно каждые 90 секунд активной работы проверяет облачные изменения. Сохраняет свои изменения с небольшой задержкой. Если две версии изменены независимо, синхронизация остановится до ручного разрешения конфликта. Нужен интернет.</div>
+ <div class="gh-note">После подключения LANDA <strong>хранит данные локально и в приватном GitHub</strong>. На запуске, после возвращения к вкладке и примерно каждые 30–40 секунд активной работы проверяет облачные изменения. Сохраняет свои изменения с небольшой задержкой. Если две версии изменены независимо, синхронизация остановится до ручного разрешения конфликта. Нужен интернет.</div>
  <div class="gh-grid">
   <label class="gh-label">Репозиторий GitHub (владелец/имя)<input class="gh-input" id="ghRepo" placeholder="GabozaGagara/Landa-financenot" autocapitalize="off" spellcheck="false" autocomplete="off"></label>
   <label class="gh-label">Путь резервной копии<input class="gh-input" id="ghPath" value="landa-data/backup.json" spellcheck="false" autocapitalize="off"></label>
