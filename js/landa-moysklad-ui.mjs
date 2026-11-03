@@ -39,7 +39,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
  dialog.innerHTML=[
   '<header><h2>↔ Сверка приёмок «МойСклад»</h2><button class="msbtn" id="msClose" type="button">Закрыть ×</button></header>',
   '<div class="msbody"><p class="msinfo">Выберите одного поставщика или всех сразу, период приёмок и документы. По умолчанию показываются вручённые накладные; при необходимости включите остальные статусы.</p>',
-  '<div class="mswarn">Только чтение из «МоегоСклада». Сопоставления товаров хранятся локально в этом браузере; финансовые данные LANDA и приёмки не изменяются. Для доступа нужен отдельный серверный код владельца.</div>',
+  '<div class="mswarn">Только чтение из «МоегоСклада». Сопоставления товаров хранятся локально и при подключённом GitHub автоматически синхронизируются. Финансовые данные LANDA и приёмки не изменяются. Для доступа нужен отдельный серверный код владельца.</div>',
   '<div class="mscontrols">',
   '<label>Поставщик LANDA<select id="msSupplier"></select></label>',
   '<label>Статус накладных LANDA<select id="msInvoiceStatus"><option value="delivered">Вручены</option><option value="all">Все статусы</option><option value="created">Созданы</option><option value="transit">В пути</option><option value="ready">Готовы к выдаче</option></select></label>',
