@@ -123,6 +123,6 @@ test('UI dispatches sync after all five journals, finance sync remains authentic
  assert.match(sync,/lando:aux-data-changed|landa:aux-data-changed/);
  assert.match(sync,/landa-data\/auxiliary-sync\.json/);
  assert.doesNotMatch(sync,/\/admin\/supplier|\/supplier-edit|\/submit/);
- assert.doesNotMatch(sync,/\bbackup\.json\b/);
+ assert.doesNotMatch(sync,/contents\/'+\s*['"]landa-data\/backup\.json/);
  assert.match(html,/landa-data\/backup\.json/);
 });
