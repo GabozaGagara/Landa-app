@@ -90,7 +90,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
     throw Error('Журнал был изменён в другой вкладке. Не перезаписывайте его: перезагрузите LANDA, чтобы увидеть последние записи.');
    localStorage.setItem(PALLET_STORAGE_KEY,raw);
    if(localStorage.getItem(PALLET_STORAGE_KEY)!==raw)throw Error('Хранилище не подтвердило запись');
-   savedRaw=raw;book=next;return true;
+   savedRaw=raw;book=next;window.dispatchEvent(new Event('landa:aux-data-changed'));return true;
   }catch(e){say('Не удалось сохранить приёмку: '+e.message+'. Проверь память браузера.',true);return false}
  };
  const download=(value,file,type)=>{
