@@ -280,7 +280,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'){
   const newId=e.target.value,old=links[key]||'';
   if(newId&&!confirm(currentSupplier()==='all'?'Связать товар с выбранным товаром «МоегоСклада» для общей сверки? Индивидуальные соответствия поставщиков не изменятся.':'Подтвердить связь товара поставщика с выбранным товаром из «МоегоСклада»?')){e.target.value=old;return}
   if(newId)links[key]=newId;else delete links[key];
-  try{localStorage.setItem(KEY,JSON.stringify(links));message('Соответствие сохранено локально. Финансовые данные не изменены.')}
+  try{localStorage.setItem(KEY,JSON.stringify(links));message('Соответствие сохранено локально; при подключённом GitHub отправится автоматически.');window.dispatchEvent(new Event('landa:aux-data-changed'))}
   catch(e){if(old)links[key]=old;else delete links[key];message('Не удалось сохранить связь: '+e.message,true)}
   renderResult();
  });
