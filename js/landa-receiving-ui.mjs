@@ -95,7 +95,7 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
   sel.value=options.some(x=>x[0]===old)?old:'all';
  }
  function store(){
-  try{localStorage.setItem(id,JSON.stringify({version:1,entries:records}));$('rcMessage').textContent='✓ Сверка сохранена только на этом устройстве. Для переноса скачайте CSV.';return true}
+  try{localStorage.setItem(id,JSON.stringify({version:1,entries:records}));$('rcMessage').textContent='✓ Сверка сохранена локально; при подключённом GitHub отправится автоматически.';window.dispatchEvent(new Event('landa:aux-data-changed'));return true}
   catch(e){$('rcMessage').textContent='Не удалось сохранить сверку: '+e.message+'. Не закрывайте страницу, экспортируйте CSV.';return false}
  }
  function storeAliases(next){
@@ -107,7 +107,7 @@ if(typeof document!=='undefined' && typeof ops!=='undefined') {
    if(localStorage.getItem(aliasStorageKey)!==raw)throw Error('Браузер не подтвердил запись');
   }catch(e){throw Error('Не удалось сохранить объединения: '+e.message)}
   aliases=cleaned;
-  $('rcMessage').textContent='✓ Правила объединения сохранены только в этом браузере. Финансовые данные и накладные не изменены.';
+  $('rcMessage').textContent='✓ Правила сохранены локально; при подключённом GitHub отправятся автоматически.';window.dispatchEvent(new Event('landa:aux-data-changed'));
  }
  function refreshMergeSelection(){
   const valid=new Set(visibleProducts.map(p=>p.key));
