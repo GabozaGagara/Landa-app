@@ -55,6 +55,16 @@ if(typeof document!=='undefined'){
   const binary=atob(str.replace(/\s/g,'')),bytes=Uint8Array.from(binary,ch=>ch.charCodeAt(0));
   return new TextDecoder().decode(bytes);
  }
+ async function verifyPrivate(cfg){
+  const endpoint='https://api.github.com/repos/'+cfg.repo.split('/').map(encodeURIComponent).join('/');
+  const response=await fetch(endpoint,{headers:{
+   Accept:'application/vnd.github+json',Authorization:'Bearer '+cfg.token,
+   'X-GitHub-Api-Version':'2022-11-28'
+  },cache:'no-store'});
+  if(!response.ok)throw Error('Нет доступа к приватному GitHub (HTTP '+response.status+').');
+  const metadata=await response.json();
+  if(metadata.private!==true)throw Error('Репозиторий не приватный. Синхронизация личных данных запрещена.');
+ }
  async function getCloud(cfg){
   const response=await request(cfg);
   if(response.status===404)return null;
@@ -91,7 +101,7 @@ if(typeof document!=='undefined'){
  function sameRaw(a,b){return JSON.stringify(a)===JSON.stringify(b)}
  function unsafeToReload(){
   const e=document.activeElement;
-  if(document.querySelector('dialog[open]')||e?.matches?.('input,textarea,select,[contenteditable="true"]'))return true;
+  if(document.querySelector('dialog[open]:not(#githubDialog)')||e?.matches?.('input,textarea,select,[contenteditable="true"]'))return true;
   if((el('exAmount')?.value||'').trim()||(el('exDescription')?.value||'').trim())return true;
   return false;
  }
@@ -110,6 +120,7 @@ if(typeof document!=='undefined'){
   busy=true;last=Date.now();
   try{
    const originalRaw=liveRaw(),local=validateDomain(parseLocalAux(localStorage)),base=getBase(cfg);
+   await verifyPrivate(cfg);
    const remote=await getCloud(cfg),cloud=remote?.aux||emptyAux();
    const outcome=mergeAux(base,local,cloud);
    if(outcome.conflicts.length){
@@ -139,7 +150,9 @@ if(typeof document!=='undefined'){
    // A new baseline is saved ONLY after the cloud has accepted the write.
    // Re-check that no local edit arrived while the GitHub PUT was in flight.
    if(!sameRaw(liveRaw(),originalRaw)){
-    // Do not pull old remote state over a newer local edit.
+    // PUT succeeded, so record the new cloud base before merging later local changes.
+    // This ensures the next sync sees those changes as local-only modifications.
+    setBase(cfg,merged);
     pending=true;
     return;
    }
