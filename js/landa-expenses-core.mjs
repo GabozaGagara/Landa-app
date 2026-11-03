@@ -1,5 +1,5 @@
 // LANDA standalone expense journal.
-// Deliberately independent from proschet, operations, suppliers, invoices, cash and GitHub sync.
+// Independent from financial proschet, operations, suppliers, invoices and cash; optional private companion sync copies journal data.
 export const EXPENSES_STORAGE_KEY='landa_expenses_standalone_v1';
 export const EXPENSES_VERSION=1;
 export const EXPENSE_CURRENCIES=['RUB','USD','BYN','EUR'];
