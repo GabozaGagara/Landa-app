@@ -46,12 +46,14 @@ jobs:
           node --check js/landa-pallet-ui.mjs
           node --check js/landa-expenses-core.mjs
           node --check js/landa-expenses-ui.mjs
+          node --check js/landa-aux-sync-core.mjs
+          node --check js/landa-aux-sync.mjs
           node --check js/landa-cb-baseline.mjs
           node --check cloudflare/moysklad-read.mjs
           node --check js/landa-moysklad-match.mjs
           node --check js/landa-moysklad-ui.mjs
       - name: Supplier, accounting and supplier-edit and receiving tests
-        run: node --test tests/landa.test.mjs tests/supplier-edit.test.mjs tests/receiving-aliases.test.mjs tests/expenses.test.mjs tests/proschet-period.test.mjs tests/pallet-intake.test.mjs tests/moysklad-all-suppliers.test.mjs
+        run: node --test tests/landa.test.mjs tests/supplier-edit.test.mjs tests/receiving-aliases.test.mjs tests/expenses.test.mjs tests/proschet-period.test.mjs tests/pallet-intake.test.mjs tests/moysklad-all-suppliers.test.mjs tests/aux-sync.test.mjs
       - name: D1 schema syntax and foreign keys (test only)
         run: |
           python3 - <<'PY'
