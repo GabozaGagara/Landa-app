@@ -35,6 +35,9 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
   '.pl-entry-fields .pl-action{align-self:end}.pl-entry-fields .rc-btn{width:100%}',
   '.pl-shortcuts{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}.pl-shortcuts button{font-size:11px;padding:6px 8px}',
   '.pl-active-invoices{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 12px}.pl-active-invoices button.active{background:#315ed2;color:white;border-color:#315ed2}',
+  '.pl-manifest{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}.pl-manifest button{text-align:left;white-space:normal;max-width:100%;font-size:12px;padding:9px 11px}',
+  '.pl-manifest button.pl-not-loaded{border-color:#e9b5ad;background:#fff5f3}.pl-manifest button.pl-difference{border-color:#e9b5ad;background:#fff5f3}',
+  '.pl-manifest button.pl-matched{border-color:#9bd6be;background:#effaf4}.pl-check-table{min-width:440px}',
   '.pl-table{width:100%;border-collapse:collapse;min-width:500px;font-size:12px}.pl-table td,.pl-table th{padding:9px 7px;text-align:left;border-bottom:1px solid #e5ebf3;vertical-align:top}',
   '.pl-table th{font-weight:700;color:#47617e;background:#f5f8fd}.pl-table strong{font-size:13px}',
   '.pl-scroll{overflow-x:auto;max-width:100%}.pl-warning{color:#926015}.pl-good{color:#167852}.pl-alert{color:#ad3a44}',
@@ -63,11 +66,12 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
   '<label>Мест<input id="plPlaces" inputmode="numeric" type="number" min="1" step="1" value="1" required></label>',
   '<label>Товара, шт. (необяз.)<input id="plUnits" type="number" inputmode="decimal" min="0.001" step="any" placeholder="Неизвестно"></label>',
   '<div class="pl-action"><button class="rc-btn rc-btn-primary" id="plSaveEntry" type="submit">＋ Добавить в машину</button></div>',
-  '</div></form><div id="plSuggestions" class="pl-shortcuts"></div>',
+  '</div></form><div class="pl-muted" style="margin-top:12px">Состав выбранной накладной от поставщика — нажми на товар, чтобы записать его погрузку. Отметки и расхождения по названиям обновляются автоматически.</div>',
+  '<div id="plManifest" class="pl-manifest"></div><div id="plSuggestions" class="pl-shortcuts"></div>',
   '<p class="pl-muted">Места = физические коробки/упаковки. «Штук товара» вводи только если знаешь количество внутри; программа не приравнивает его к числу мест. Для следующего места из другой накладной просто переключи номер.</p></div>',
   '<div class="pl-box"><h3>3. Журнал погрузки — в порядке добавления</h3><div class="pl-scroll" id="plLog"></div></div>',
   '<div class="pl-box"><h3>4. Итог по каждой накладной</h3>',
-  '<p class="pl-muted">Вводи «Ожидается мест», если это число известно; иначе программа честно покажет только фактически забранные места. Сравнение заявленных штук товара и фактических штук выполняется лишь при заполнении количества штук для каждой записи.</p>',
+  '<p class="pl-muted">Позиции автоматически сравниваются с составом накладных поставщиков. Не отмеченные и лишние позиции видны сразу. Разницу в штуках можно достоверно посчитать только для товаров, у которых при погрузке указано фактическое количество. Места считаются отдельно.</p>',
   '<div id="plReport"></div></div>',
   '<div class="pl-box"><h3>Важно о сохранении</h3><p class="pl-muted">Приёмка сохраняется локально и синхронизируется между устройствами через подключённый приватный GitHub. Она не меняет статусы накладных, кассу, долги или платежи. JSON-архив полезен как резервная копия.</p></div>'
  ].join('');
@@ -175,7 +179,20 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
     '<span>Расхождение по местам: <b>'+mismatches+' накладных</b> (из '+expected.length+' с планом)</span>'+
     (s.closed?'<span class="pl-good">✓ Завершена</span>':'<span class="pl-warning">● В работе</span>');
   }else $('plOverview').innerHTML='<span>Создай приёмку, чтобы начать запись мест</span>';
+  renderManifest();
   renderSuggestions();
+ }
+ function renderManifest(){
+  const s=current(),v=s&&palletSummary(s).find(i=>i.key===activeInvoice);
+  if(!v){$('plManifest').innerHTML='';return}
+  const planned=v.positionChecks.filter(p=>p.state!=='unexpected');
+  $('plManifest').innerHTML=planned.length?planned.map(p=>{
+   const detail=p.state==='not_loaded'?'ещё не отмечен':
+    p.received===null?'отмечен · количество не проверено':
+    'записано '+fmt(p.received)+' шт. из '+fmt(p.expected);
+   return '<button type="button" class="rc-btn pl-'+esc(p.state)+'" data-pl-manifest="'+esc(p.name)+'" '+(s.closed?'disabled':'')+'>'+
+    esc(p.name)+' · план '+fmt(p.expected)+' шт.<span class="pl-muted"> · '+detail+'</span></button>';
+  }).join(''):'<span class="pl-muted">В выбранной накладной нет товарных позиций.</span>';
  }
  function renderSuggestions(){
   const s=current();
@@ -202,23 +219,37 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
   const s=current();if(!s){$('plReport').innerHTML='';return}
   const summaries=palletSummary(s),n=names(),lookup=uniqueSuffix(s.invoices);
   $('plReport').innerHTML=summaries.length?'<div class="pl-scroll"><table class="pl-table"><thead><tr>'+
-   '<th>Накладная</th><th>Фактически мест</th><th>Ожидается мест</th><th>Расхождение</th><th>Разных позиций</th><th>Сверка товаров, шт.</th></tr></thead><tbody>'+
+   '<th>Накладная</th><th>Фактически мест</th><th>Ожидается мест</th><th>Расхождения</th><th>Сверка позиций</th><th>Сверка товаров, шт.</th></tr></thead><tbody>'+
    summaries.map(v=>{
     const diff=v.differencePlaces,prefix=diff===null?'—':diff===0?'✓ 0':(diff>0?'+':'')+fmt(diff);
-    const units=v.actualUnits===null?'не подсчитано':fmt(v.actualUnits)+' / '+fmt(v.expectedUnits);
+    const units=v.actualUnits===null?'Количество не подтверждено':fmt(v.actualUnits)+' / '+fmt(v.expectedUnits);
+    const missing=v.missingPositions,extra=v.unexpectedPositions;
+    const positionLine=missing||extra?
+     (missing?missing+' не отмечено':'')+(missing&&extra?' · ':'')+(extra?extra+' нет в накладной':''):
+     v.plannedPositions?'✓ Все названия найдены':'Нет товарного состава в накладной';
+    const placeLine=diff===null?'Места: нет плана':diff===0?'Места: совпадают':'Места: '+prefix;
     return '<tr><td><strong>'+esc(lookup(v))+'</strong><div class="pl-muted">'+esc(n[v.supplierId]||v.supplierId)+'</div></td>'+
      '<td><strong>'+fmt(v.places)+'</strong> · '+v.entries+' записей</td><td>'+
      '<input type="number" min="1" step="1" class="pl-expected" style="max-width:105px" data-pl-expected="'+esc(v.key)+'" value="'+(v.expectedPlaces??'')+'" placeholder="Нет данных" '+(s.closed?'disabled':'')+'></td>'+
-     '<td class="'+(diff===null?'pl-muted':diff===0?'pl-good':'pl-alert')+'">'+prefix+'</td>'+
-     '<td>'+v.positions+'</td><td>'+units+'<div class="pl-muted">План: '+fmt(v.expectedUnits)+' шт.; места считаются отдельно</div></td></tr>';
+     '<td><div class="'+(missing||extra?'pl-alert':v.plannedPositions?'pl-good':'pl-muted')+'">'+positionLine+'</div><div class="pl-muted">'+placeLine+'</div></td>'+
+     '<td><strong>'+v.matchedPositions+' / '+v.plannedPositions+'</strong> позиций из накладной отмечено'+
+     (extra?'<div class="pl-warning">Лишних названий: '+extra+'</div>':'')+'</td>'+
+     '<td>'+units+'<div class="pl-muted">План: '+fmt(v.expectedUnits)+' шт.'+
+     (v.uncheckedQuantities?' · Не проверено количеств: '+v.uncheckedQuantities:'')+
+     (v.differentQuantities?' · Расхождений в штуках: '+v.differentQuantities:'')+'</div></td></tr>';
    }).join('')+'</tbody></table></div><div class="pl-final-list">'+summaries.map(v=>
-    '<details class="pl-final"><summary>'+esc(lookup(v))+' · '+esc(n[v.supplierId]||v.supplierId)+' — '+fmt(v.places)+' мест / '+v.positions+' позиций</summary>'+
-    '<ul>'+(v.products.length?v.products.map(g=>
-     '<li><strong>'+esc(g.name)+'</strong> · '+fmt(g.places)+' мест'+(g.units===null?'':' · '+fmt(g.units)+' шт.')+
-     (v.hasManifest&&v.unexpected.some(x=>x.name===g.name)?' <span class="pl-warning">· нет точного совпадения в накладной</span>':'')+'</li>').join(''):
-     '<li>Пока нет фактически забранных мест</li>')+'</ul>'+
-    (v.notLoaded.length?'<div class="pl-muted pl-warning" style="margin-top:8px">Позиции из накладной, ещё не отмеченные при погрузке: '+v.notLoaded.map(x=>esc(x.name)).join(', ')+
-      '. Названия сверяются буквально, с игнорированием регистра — похожие написания могут считаться разными.</div>':'')+
+    '<details class="pl-final"><summary>'+esc(lookup(v))+' · '+esc(n[v.supplierId]||v.supplierId)+' — '+v.matchedPositions+'/'+v.plannedPositions+' позиций отмечено'+
+    (v.missingPositions?' · '+v.missingPositions+' осталось':'')+(v.unexpectedPositions?' · '+v.unexpectedPositions+' лишних':'')+'</summary>'+
+    '<div class="pl-scroll"><table class="pl-table pl-check-table"><thead><tr><th>Товар</th><th>План, шт.</th><th>Факт, шт.</th><th>Разница</th><th>Статус</th></tr></thead><tbody>'+
+    (v.positionChecks.length?v.positionChecks.map(p=>{
+     const statuses={not_loaded:s.closed?'Не забрано':'Ещё не отмечено',unverified:'Отмечено · штуки не проверены',
+      matched:'✓ Совпадает',difference:'Расхождение по штукам',unexpected:'Нет в накладной'};
+     const klass=p.state==='matched'?'pl-good':p.state==='unverified'?'pl-warning':'pl-alert';
+     return '<tr><td>'+esc(p.name)+'</td><td>'+fmt(p.expected)+'</td><td>'+
+      (p.received===null?'—':fmt(p.received))+'</td><td>'+
+      (p.delta===null?'—':(p.delta>0?'+':'')+fmt(p.delta))+'</td><td class="'+klass+'">'+statuses[p.state]+'</td></tr>';
+    }).join(''):'<tr><td colspan="5">В накладной нет товарных позиций, а в погрузке нет записей.</td></tr>')+
+    '</tbody></table></div><div class="pl-muted">Названия сравниваются без учёта регистра. Если они различаются, выбери название из накладной или проверь позицию вручную. Места не считаются штуками.</div>'+
     '</details>').join('')+'</div>':
     '<p class="pl-muted">Пока не выбраны накладные для приёмки.</p>';
  }
@@ -278,6 +309,11 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
  $('plSuggestions').addEventListener('click',e=>{
   const t=e.target.closest('[data-pl-suggest]');if(!t)return;
   $('plProduct').value=t.dataset.plSuggest;$('plProduct').focus();renderSuggestions();
+ });
+ $('plManifest').addEventListener('click',e=>{
+  const t=e.target.closest('[data-pl-manifest]');if(!t)return;
+  $('plProduct').value=t.dataset.plManifest;
+  renderSuggestions();$('plPlaces').focus();
  });
  $('plEntryForm').addEventListener('submit',e=>{
   e.preventDefault();if(blocked())return;

@@ -163,11 +163,29 @@ export function palletSummary(session){
   }
   const notLoaded=[...plannedNames.entries()].filter(([key])=>!groups.has(key)).map(([,v])=>v);
   const unexpected=actual.filter(g=>!plannedNames.has(g.name.toLocaleLowerCase('ru-RU').trim()));
+  // Presence is derived from the supplier's manifest and the pickup journal.
+  // A recorded parcel does NOT prove its number of product units: only an
+  // explicitly recorded e.units can confirm a quantity or its difference.
+  const positionChecks=[...plannedNames.entries()].map(([key,item])=>{
+   const found=groups.get(key),received=found&&found.unitsKnown?found.units:null;
+   const delta=received===null?null:Math.round((received-item.qty)*1000)/1000;
+   return {name:item.name,expected:item.qty,received,delta,
+    places:found?.places||0,entries:found?.entries||0,
+    state:!found?'not_loaded':received===null?'unverified':delta===0?'matched':'difference'};
+  });
+  for(const g of unexpected)positionChecks.push({name:g.name,expected:0,
+   received:g.units,delta:g.units===null?null:g.units,
+   places:g.places,entries:g.entries,state:'unexpected'});
+  const missingPositions=positionChecks.filter(x=>x.state==='not_loaded').length;
+  const unexpectedPositions=positionChecks.filter(x=>x.state==='unexpected').length;
+  const uncheckedQuantities=positionChecks.filter(x=>x.state==='unverified').length;
+  const differentQuantities=positionChecks.filter(x=>x.state==='difference').length;
   return {...i,entries:entries.length,places,positions:groups.size,expectedUnits,
    actualUnits:entries.length&&entries.every(e=>e.units!==null)?entries.reduce((x,e)=>x+e.units,0):null,
    differencePlaces:i.expectedPlaces===null?null:places-i.expectedPlaces,
    hasManifest:plannedNames.size>0,notLoaded,unexpected,matchedPositions:plannedNames.size-notLoaded.length,
-   products:actual};
+   plannedPositions:plannedNames.size,missingPositions,unexpectedPositions,
+   uncheckedQuantities,differentQuantities,positionChecks,products:actual};
  });
 }
 export function palletSuggestions(book,invoices=[],invoiceKey='',query=''){
@@ -208,5 +226,11 @@ export function palletCSV(session){
   const unexpected=i.hasManifest&&i.unexpected.some(x=>x.name===g.name);
   rows.push(['',i.number,palletShortNumber(i),i.supplierId,g.name,g.places,g.units??'',g.entries,unexpected?'Нет точного совпадения':'']);
  }
+ rows.push([]);
+ rows.push(['АВТОСВЕРКА ПОЗИЦИЙ','Накладная','Поставщик','Товар из накладной / погрузки','Заявлено, шт.','Отмечено, шт.','Разница, шт.','Мест','Результат']);
+ const states={not_loaded:'Ещё не отмечено',unverified:'Позиция есть, штуки не проверены',
+  matched:'Совпадает',difference:'Расхождение по штукам',unexpected:'Нет в накладной'};
+ for(const i of report)for(const p of i.positionChecks)
+  rows.push(['',i.number,i.supplierId,p.name,p.expected,p.received??'',p.delta??'',p.places,states[p.state]]);
  return '\ufeff'+rows.map(row=>row.map(quote).join(';')).join('\r\n');
 }

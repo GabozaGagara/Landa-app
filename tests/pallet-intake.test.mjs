@@ -174,3 +174,59 @@ test('manifest reports still-unseen item names but does not claim missing physic
  assert.equal(v.differencePlaces,null);
  assert.equal(v.matchedPositions,1);
 });
+
+test('automatic position check compares supplier manifest to pickup without equating parcels to units',()=>{
+ const before=JSON.stringify(first);
+ let b=select(create(),first);
+ b=add(b,'p1',first,'KARCHER PUZZI 10/1',3);
+ const v=palletSummary(b.sessions[0])[0];
+ assert.equal(v.plannedPositions,2);
+ assert.equal(v.matchedPositions,1);
+ assert.equal(v.missingPositions,1);
+ assert.equal(v.uncheckedQuantities,1);
+ assert.equal(v.unexpectedPositions,0);
+ assert.deepEqual(v.positionChecks.map(x=>x.state),['unverified','not_loaded']);
+ assert.equal(v.positionChecks[0].expected,2);
+ assert.equal(v.positionChecks[0].received,null);
+ assert.equal(v.positionChecks[0].places,3);
+ assert.equal(v.positionChecks[0].delta,null);
+ assert.equal(v.actualUnits,null);
+ assert.equal(JSON.stringify(first),before,'The financial invoice must remain unchanged');
+});
+
+test('automatic check detects exact piece shortage, surplus and names absent in supplier manifest',()=>{
+ let b=select(create(),first);
+ b=add(b,'p1',first,'Karcher Puzzi 10/1',1,1);
+ b=add(b,'p2',first,'Dyson Absolute Red',1,2);
+ b=add(b,'p3',first,'Extra item',1);
+ const v=palletSummary(b.sessions[0])[0];
+ assert.equal(v.missingPositions,0);
+ assert.equal(v.unexpectedPositions,1);
+ assert.equal(v.uncheckedQuantities,0);
+ assert.equal(v.differentQuantities,2);
+ assert.deepEqual(v.positionChecks.map(x=>x.state),['difference','difference','unexpected']);
+ assert.deepEqual(v.positionChecks.map(x=>x.delta),[-1,1,null]);
+ assert.match(palletCSV(b.sessions[0]),/АВТОСВЕРКА ПОЗИЦИЙ/);
+ assert.match(palletCSV(b.sessions[0]),/Нет в накладной/);
+ assert.match(palletCSV(b.sessions[0]),/Расхождение по штукам/);
+});
+
+test('same product names are compared within their own supplier invoice, not across invoices',()=>{
+ let b=select(select(create(),first),second);
+ b=add(b,'p1',second,'Puzzi 10/1',1,3);
+ const [a,c]=palletSummary(b.sessions[0]);
+ assert.equal(a.matchedPositions,0);
+ assert.equal(a.missingPositions,2);
+ assert.equal(c.matchedPositions,1);
+ assert.equal(c.missingPositions,0);
+ assert.equal(c.positionChecks[0].state,'matched');
+});
+
+test('pallet interface displays an automatic manifest and visible per-position results',()=>{
+ const ui=readFileSync(new URL('../js/landa-pallet-ui.mjs',import.meta.url),'utf8');
+ assert.match(ui,/id="plManifest"/);
+ assert.match(ui,/data-pl-manifest/);
+ assert.match(ui,/Сверка позиций/);
+ assert.match(ui,/v\.positionChecks\.map/);
+ assert.match(ui,/Ещё не отмечено/);
+});
