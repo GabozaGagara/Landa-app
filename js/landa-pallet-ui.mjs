@@ -291,20 +291,22 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
    '<strong>'+fmt(report.rate)+' ₽/$</strong>'+(report.rateDate?' · покупка от '+esc(report.rateDate):'');
   $('plStock').innerHTML='<div class="pl-banners"><span>Всего забрано: <b>'+fmt(report.totalQuantity)+' шт.</b></span>'+
    '<span>Наименований: <b>'+report.rows.length+'</b></span><span>Последний курс покупки $: '+rate+'</span></div>'+
-   '<div class="pl-muted">Цена указана за одну штуку по действующей накладной поставщика, без доставки. Для товара с разными ценами закупки используется средневзвешенная цена. Прочерк означает, что цену нельзя определить надёжно.</div>'+
-   '<div class="pl-scroll"><table class="pl-table"><thead><tr><th>Название товара</th><th>Количество, шт.</th><th>Цена за шт., $</th><th>Цена за шт., ₽</th></tr></thead><tbody>'+
+   '<div class="pl-muted">Отдельно показаны цена за 1 штуку и стоимость всей забранной партии, без доставки. Для товара с разными ценами закупки используется средневзвешенная цена. Прочерк означает, что цену нельзя определить надёжно.</div>'+
+   '<div class="pl-scroll"><table class="pl-table"><thead><tr><th>Название товара</th><th>Количество, шт.</th><th>Цена за 1 шт., $</th><th>Цена за 1 шт., ₽</th><th>Всего, $</th><th>Всего, ₽</th></tr></thead><tbody>'+
    report.rows.map(row=>'<tr><td><strong>'+esc(row.name)+'</strong>'+
     (row.sku?'<div class="pl-muted">Артикул: '+esc(row.sku)+'</div>':'')+
     (row.issues.length?'<div class="pl-warning">⚠ '+esc(row.issues.join('; '))+'</div>':'')+
     (row.average?'<div class="pl-muted">Средневзвешенная цена по накладным</div>':'')+
     '</td><td><strong>'+fmt(row.quantity)+'</strong></td><td>'+
     (row.unitUsd===null?'—':usd(row.unitUsd))+'</td><td>'+
-    (row.unitRub===null?'—':rub(row.unitRub))+'</td></tr>').join('')+
-   '</tbody><tfoot><tr><th>Итого</th><th>'+fmt(report.totalQuantity)+' шт.</th><th>'+
+    (row.unitRub===null?'—':rub(row.unitRub))+'</td><td>'+
+    (row.totalUsd===null?'—':usd(row.totalUsd))+'</td><td>'+
+    (row.totalRub===null?'—':rub(row.totalRub))+'</td></tr>').join('')+
+   '</tbody><tfoot><tr><th>Итого</th><th>'+fmt(report.totalQuantity)+' шт.</th><th>—</th><th>—</th><th>'+
    (report.totalUsd===null?'—':usd(report.totalUsd))+'</th><th>'+
    (report.totalRub===null?'—':rub(report.totalRub))+'</th></tr></tfoot></table></div>'+
    (report.missingPrices?'<p class="pl-warning">⚠ '+report.missingPrices+' строк(и) без подтверждённой цены. Общая стоимость не рассчитана, чтобы не занизить итог.</p>':'')+
-   '<p class="pl-muted">CSV содержит только четыре колонки таблицы и подходит для переноса в «МойСклад». Записи приёмки, накладные и финансы при экспорте не изменяются.</p>';
+   '<p class="pl-muted">CSV для «МойСклад» содержит четыре колонки: название, количество и цену за 1 штуку в $ и ₽. Записи приёмки, накладные и финансы при экспорте не изменяются.</p>';
  }
  function render(){
   if(!panel.isConnected)return;

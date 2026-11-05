@@ -54,8 +54,9 @@ export function palletStockReport(session,invoices=[],cash=[]){
   const fullyPriced=row.knownQuantity===row.quantity&&row.issues.size===0;
   const unitUsd=fullyPriced?round(row.costCents/row.quantity/100,4):null;
   const unitRub=unitUsd!==null&&purchase.rate!==null?round(unitUsd*purchase.rate,2):null;
+  const totalUsd=fullyPriced?round(row.costCents/100):null;
   return {name:row.name,sku:row.sku,quantity:row.quantity,unitUsd,unitRub,
-   totalUsd:fullyPriced?round(row.costCents/100):null,
+   totalUsd,totalRub:totalUsd!==null&&purchase.rate!==null?round(totalUsd*purchase.rate):null,
    average:row.prices.size>1,issues:[...row.issues]};
  }).sort((a,b)=>a.name.localeCompare(b.name,'ru')||a.sku.localeCompare(b.sku,'ru'));
  const missingPrices=rows.filter(row=>row.unitUsd===null).length;

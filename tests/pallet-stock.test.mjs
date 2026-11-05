@@ -42,6 +42,8 @@ test('warehouse list sums actually loaded places and computes quantity-weighted 
  assert.deepEqual(report.rows.map(row=>row.quantity),[1,5]);
  assert.equal(report.rows[1].unitUsd,118); // (2 × $100 + 3 × $130) / 5
  assert.equal(report.rows[1].unitRub,10620);
+ assert.equal(report.rows[1].totalUsd,590);
+ assert.equal(report.rows[1].totalRub,53100);
  assert.equal(report.rows[1].average,true);
  assert.equal(report.totalUsd,660);
  assert.equal(report.totalRub,59400);
@@ -56,6 +58,8 @@ test('missing invoice price and latest purchase rate remain visibly unknown',()=
  assert.equal(report.totalQuantity,3);
  assert.equal(report.rows.find(row=>row.name==='Karcher').unitUsd,100);
  assert.equal(report.rows.find(row=>row.name==='Karcher').unitRub,null);
+ assert.equal(report.rows.find(row=>row.name==='Karcher').totalUsd,100);
+ assert.equal(report.rows.find(row=>row.name==='Karcher').totalRub,null);
  assert.equal(report.rows.find(row=>row.name==='Undeclared product').unitUsd,null);
  assert.equal(report.totalUsd,null);
  assert.equal(report.totalRub,null);
@@ -100,6 +104,9 @@ test('stock table is at end of pickup recap with CSV and reads current invoice/c
  assert.match(ui,/palletStockReport\(s,getInvoices\(\),ops\.cash\|\|\[\]\)/);
  assert.match(ui,/plStockCSV/);
  assert.match(ui,/Количество, шт\./);
- assert.match(ui,/Цена за шт\., \$/);
- assert.match(ui,/Цена за шт\., ₽/);
+ assert.match(ui,/Цена за 1 шт\., \$/);
+ assert.match(ui,/Цена за 1 шт\., ₽/);
+ assert.match(ui,/Всего, \$/);
+ assert.match(ui,/Всего, ₽/);
+ assert.match(ui,/<th>—<\/th><th>—<\/th>/,'Total monetary values must not be displayed as unit prices');
 });
