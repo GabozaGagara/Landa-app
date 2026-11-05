@@ -5,6 +5,7 @@ import {
  palletInvoiceKey,palletInvoiceSnapshot,palletShortNumber,palletCSV
 } from './landa-pallet-core.mjs';
 import {palletSettlementEligibility} from './landa-pallet-settlement.mjs';
+import {palletStockReport,palletStockCSV} from './landa-pallet-stock.mjs';
 
 if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementById('landaReceivingDialog')){
  const $=x=>document.getElementById(x);
@@ -74,6 +75,8 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
   '<div class="pl-box"><h3>4. Итог по каждой накладной</h3>',
   '<p class="pl-muted">План и названия товаров автоматически берутся из накладных поставщиков. Количество загруженных мест равно количеству штук товара: расхождения считаются без дополнительных полей, включая старые записи. После полного совпадения и завершения приёмки владелец может отдельно подтвердить начисление и статус «Вручен».</p>',
   '<div id="plReport"></div></div>',
+  '<div class="pl-box"><div class="pl-head"><div><h3>5. Общий итог паллеты для «МойСклад»</h3><div class="pl-muted">Фактически забранные товары по всем выбранным накладным. Одинаковые названия объединены, разные артикулы показаны отдельно.</div></div><button type="button" class="rc-btn rc-btn-primary" id="plStockCSV">↓ Таблица CSV для «МойСклад»</button></div>',
+  '<div id="plStock"></div></div>',
   '<div class="pl-box"><h3>Важно о сохранении</h3><p class="pl-muted">Приёмка сохраняется локально и синхронизируется между устройствами через подключённый приватный GitHub. Она не меняет статусы накладных, кассу, долги или платежи. JSON-архив полезен как резервная копия.</p></div>'
  ].join('');
  parent.append(panel);
@@ -276,9 +279,36 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
     '</details>').join('')+'</div>':
     '<p class="pl-muted">Пока не выбраны накладные для приёмки.</p>';
  }
+ function renderStock(){
+  const s=current();
+  $('plStockCSV').disabled=!s||!s.entries.length;
+  if(!s){$('plStock').innerHTML='<p class="pl-muted">Сначала выбери приёмку.</p>';return}
+  const report=palletStockReport(s,getInvoices(),ops.cash||[]);
+  if(!report.rows.length){$('plStock').innerHTML='<p class="pl-muted">Товары ещё не загружены. Они появятся здесь после записи мест.</p>';return}
+  const usd=v=>Number(v).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:4})+' $';
+  const rub=v=>Number(v).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₽';
+  const rate=report.rate===null?'<span class="pl-warning">Курс не найден. Запиши покупку долларов в разделе «Касса», чтобы увидеть цены в рублях.</span>':
+   '<strong>'+fmt(report.rate)+' ₽/$</strong>'+(report.rateDate?' · покупка от '+esc(report.rateDate):'');
+  $('plStock').innerHTML='<div class="pl-banners"><span>Всего забрано: <b>'+fmt(report.totalQuantity)+' шт.</b></span>'+
+   '<span>Наименований: <b>'+report.rows.length+'</b></span><span>Последний курс покупки $: '+rate+'</span></div>'+
+   '<div class="pl-muted">Цена указана за одну штуку по действующей накладной поставщика, без доставки. Для товара с разными ценами закупки используется средневзвешенная цена. Прочерк означает, что цену нельзя определить надёжно.</div>'+
+   '<div class="pl-scroll"><table class="pl-table"><thead><tr><th>Название товара</th><th>Количество, шт.</th><th>Цена за шт., $</th><th>Цена за шт., ₽</th></tr></thead><tbody>'+
+   report.rows.map(row=>'<tr><td><strong>'+esc(row.name)+'</strong>'+
+    (row.sku?'<div class="pl-muted">Артикул: '+esc(row.sku)+'</div>':'')+
+    (row.issues.length?'<div class="pl-warning">⚠ '+esc(row.issues.join('; '))+'</div>':'')+
+    (row.average?'<div class="pl-muted">Средневзвешенная цена по накладным</div>':'')+
+    '</td><td><strong>'+fmt(row.quantity)+'</strong></td><td>'+
+    (row.unitUsd===null?'—':usd(row.unitUsd))+'</td><td>'+
+    (row.unitRub===null?'—':rub(row.unitRub))+'</td></tr>').join('')+
+   '</tbody><tfoot><tr><th>Итого</th><th>'+fmt(report.totalQuantity)+' шт.</th><th>'+
+   (report.totalUsd===null?'—':usd(report.totalUsd))+'</th><th>'+
+   (report.totalRub===null?'—':rub(report.totalRub))+'</th></tr></tfoot></table></div>'+
+   (report.missingPrices?'<p class="pl-warning">⚠ '+report.missingPrices+' строк(и) без подтверждённой цены. Общая стоимость не рассчитана, чтобы не занизить итог.</p>':'')+
+   '<p class="pl-muted">CSV содержит только четыре колонки таблицы и подходит для переноса в «МойСклад». Записи приёмки, накладные и финансы при экспорте не изменяются.</p>';
+ }
  function render(){
   if(!panel.isConnected)return;
-  renderSessions();renderInvoices();renderLog();renderReport();
+  renderSessions();renderInvoices();renderLog();renderReport();renderStock();
   if(infoError)say(infoError,true);
  }
  function open(){
@@ -397,6 +427,11 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
  $('plExportCSV').addEventListener('click',()=>{
   const s=current();if(!s)return;
   download(palletCSV(s),'LANDA-СДЭК-приёмка-'+day()+'.csv','text/csv;charset=utf-8');
+ });
+ $('plStockCSV').addEventListener('click',()=>{
+  const s=current();if(!s||!s.entries.length)return;
+  download(palletStockCSV(palletStockReport(s,getInvoices(),ops.cash||[])),
+   'LANDA-МойСклад-паллета-'+day()+'.csv','text/csv;charset=utf-8');
  });
  $('plExportJSON').addEventListener('click',()=>{
   if(blocked())return;
