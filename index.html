@@ -1004,6 +1004,51 @@ function chargeCdek(id){const i=ops.invoices.find(x=>x.id===id);if(!i||invoiceAc
   if(invoiceAccrued(i))return;i.accrued=true;i.accruedAt=new Date().toISOString();opCommit('Долг по накладной '+i.number+' начислен поставщику: '+cashFmt(i.total,'USD'));
  });
 }
+// Pallet reconciliation may PROPOSE a settlement, but only this owner-side
+// action can change financial invoice records. Re-read both journals before
+// and after the explicit confirmation to avoid settling a stale version.
+let palletSettlementPending=false;
+window.LANDA_PALLET_OWNER_APPROVE=async function(sessionId,invoiceKeys){
+ if(palletSettlementPending)return false;
+ palletSettlementPending=true;
+ try{
+  const [{PALLET_STORAGE_KEY,palletValidate},settlement]=await Promise.all([
+   import('./js/landa-pallet-core.mjs'),import('./js/landa-pallet-settlement.mjs')
+  ]);
+  const palletRaw=localStorage.getItem(PALLET_STORAGE_KEY),opsRaw=localStorage.getItem(OPS_KEY);
+  if(!palletRaw||!opsRaw||opsRaw!==JSON.stringify(ops))
+   throw Error('Локальные данные отличаются от открытой версии. Перезагрузите LANDA и проверьте синхронизацию перед начислением.');
+  const book=palletValidate(JSON.parse(palletRaw));
+  const plan=settlement.preparePalletSettlement(book,ops,sessionId,invoiceKeys);
+  const amount=fromCents(plan.totalCents),details=plan.candidates.map(c=>
+   '№ '+c.number+' · '+supName(c.supplierId)+' · '+cashFmt(c.total,'USD')).join('\n');
+  const question='ПОДТВЕРДИТЬ ПРИЁМКУ И НАЧИСЛИТЬ ДОЛГ?\n\n'+details+
+   '\n\nВсего: '+cashFmt(amount,'USD')+'.\nСтатус накладных станет «Вручен», стоимость товаров и доставки будет начислена в баланс поставщиков ОДИН РАЗ. Оплаты и зачёты не изменятся. Продолжить?';
+  if(!await askConfirmAsync(question))return false;
+  if(localStorage.getItem(PALLET_STORAGE_KEY)!==palletRaw||
+     localStorage.getItem(OPS_KEY)!==opsRaw||JSON.stringify(ops)!==opsRaw)
+   throw Error('Пока окно подтверждения было открыто, данные изменились. Начисление отменено; обновите сверку.');
+  const latest=settlement.preparePalletSettlement(
+   palletValidate(JSON.parse(palletRaw)),ops,sessionId,invoiceKeys);
+  if(JSON.stringify(latest)!==JSON.stringify(plan))
+   throw Error('Накладные изменились во время подтверждения. Начисление отменено.');
+  const previous=ops;
+  ops=settlement.applyPalletSettlement(ops,latest,new Date().toISOString());
+  if(!saveOps()){
+   ops=previous;
+   try{if(localStorage.getItem(OPS_KEY)!==opsRaw)localStorage.setItem(OPS_KEY,opsRaw)}catch(_){}
+   throw Error('Браузер не подтвердил сохранение. Начисление не подтверждено; проверьте резервную копию.');
+  }
+  try{renderOps()}catch(err){
+   window.__landaReportError?.('Начисление сохранено, но не удалось обновить интерфейс: '+(err?.message||String(err)));
+   toast('Начисление сохранено, но интерфейс не обновился. Перезагрузите LANDA и проверьте данные.');
+   return true;
+  }
+  toast('✓ '+plan.candidates.length+' накладных вручены и начислены: '+cashFmt(amount,'USD')+'. Проверьте статус синхронизации GitHub.');
+  return true;
+ }catch(err){toast('Начисление после приёмки остановлено: '+(err?.message||String(err)));return false}
+ finally{palletSettlementPending=false}
+};
 function unchargeCdek(id){const i=ops.invoices.find(x=>x.id===id);if(!i||!invoiceAccrued(i)||i.isOpening)return;
  if(invoicePaid(i.id)>0){toast('Сначала отмените зачёты по накладной, иначе долг нельзя снять');return}
  askConfirm('Отменить начисление по накладной '+i.number+'? Баланс поставщика увеличится на '+cashFmt(i.total,'USD')+'. Статус доставки не изменится.',()=>{i.accrued=false;opCommit('Начисление по накладной отменено')});

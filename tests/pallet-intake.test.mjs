@@ -6,6 +6,8 @@ import {
  palletAdd,palletEditEntry,palletRemoveEntry,palletClose,palletSummary,palletSuggestions,
  palletInvoiceKey,palletInvoiceSnapshot,palletShortNumber,palletCSV
 } from '../js/landa-pallet-core.mjs';
+import {palletSettlementEligibility,preparePalletSettlement,applyPalletSettlement}
+ from '../js/landa-pallet-settlement.mjs';
 
 const at='2026-11-02T12:00:00.000Z';
 const invoice=(id,supplierId,number,items,status='ready')=>({id,supplierId,number,tracking:number,date:'2026-11-02',status,
@@ -229,4 +231,108 @@ test('pallet interface displays an automatic manifest and visible per-position r
  assert.match(ui,/Сверка позиций/);
  assert.match(ui,/v\.positionChecks\.map/);
  assert.match(ui,/Ещё не отмечено/);
+});
+
+const financial=(...sources)=>({version:1,suppliers:[{id:'anna',name:'Анна'},{id:'alina',name:'Алина'}],
+ invoices:sources.map(i=>({...structuredClone(i),goodsCost:100,deliveryCost:10,total:110,
+  deliveryMissing:false,includeDelivery:true,accrued:false,submittedAt:at,reviewStatus:'approved'})),
+ payments:[],allocations:[],cash:[]});
+const complete=(b,i)=>{
+ const key=palletInvoiceKey(i);
+ for(const [j,item] of i.items.entries())b=add(b,'complete-'+i.id+'-'+j,i,item.name,1,item.qty);
+ return b;
+};
+
+test('owner settlement is unavailable until every unit is recorded and intake is closed',()=>{
+ let b=select(create(),first);
+ let status=palletSettlementEligibility(palletSummary(b.sessions[0])[0],false);
+ assert.equal(status.ready,false);
+ b=complete(b,first);
+ status=palletSettlementEligibility(palletSummary(b.sessions[0])[0],false);
+ assert.equal(status.ready,false);
+ b=palletClose(b,'sess1',true);
+ assert.equal(palletSettlementEligibility(palletSummary(b.sessions[0])[0],true).ready,true);
+});
+
+test('confirmed pallet settlement charges once and changes only approved invoice status and audit metadata',()=>{
+ let b=select(create(),first);b=complete(b,first);b=palletClose(b,'sess1',true);
+ const ops=financial(first),original=JSON.stringify(ops);
+ const plan=preparePalletSettlement(b,ops,'sess1',[palletInvoiceKey(first)]);
+ assert.equal(plan.totalCents,11000);
+ const changed=applyPalletSettlement(ops,plan,at);
+ assert.equal(JSON.stringify(ops),original);
+ assert.equal(changed.invoices[0].status,'delivered');
+ assert.equal(changed.invoices[0].statusSource,'pallet-owner-confirmed');
+ assert.equal(changed.invoices[0].trackingVerified,false);
+ assert.equal(changed.invoices[0].accrued,true);
+ assert.equal(changed.invoices[0].palletSessionId,'sess1');
+ assert.equal(changed.invoices[0].total,110);
+ assert.deepEqual(changed.payments,ops.payments);
+ assert.deepEqual(changed.allocations,ops.allocations);
+ assert.throws(()=>preparePalletSettlement(b,changed,'sess1',[palletInvoiceKey(first)]),/уже начислена/);
+ assert.throws(()=>applyPalletSettlement(changed,plan,at),/уже начислена/);
+});
+
+test('batch settlement is all-or-nothing for two suppliers and sums amounts precisely',()=>{
+ let b=select(select(create(),first),second);
+ b=complete(complete(b,first),second);
+ b=palletClose(b,'sess1',true);
+ const ops=financial(first,second);ops.invoices[1].total=77.35;
+ const keys=[palletInvoiceKey(first),palletInvoiceKey(second)];
+ const plan=preparePalletSettlement(b,ops,'sess1',keys);
+ assert.equal(plan.candidates.length,2);
+ assert.equal(plan.totalCents,18735);
+ const applied=applyPalletSettlement(ops,plan,at);
+ assert.equal(applied.invoices.filter(i=>i.accrued).length,2);
+ assert.equal(ops.invoices.filter(i=>i.accrued).length,0);
+});
+
+test('settlement refuses missing, unchecked, mismatched and unexpected pickup products',()=>{
+ let b=select(create(),first);
+ for(const entry of [
+  add(b,'unknown',first,'Karcher Puzzi 10/1',1),
+  add(b,'short',first,'Karcher Puzzi 10/1',1,1),
+  add(complete(b,first),'extra',first,'Other',1,1)
+ ]){
+  const closed=palletClose(entry,'sess1',true);
+  assert.throws(()=>preparePalletSettlement(closed,financial(first),'sess1',[palletInvoiceKey(first)]),
+   /накладной|количество|совпадения|отмечены/);
+ }
+});
+
+test('settlement refuses edited manifests, unreviewed submissions, unknown delivery and payment allocations',()=>{
+ let b=select(create(),first);b=complete(b,first);b=palletClose(b,'sess1',true);
+ const key=palletInvoiceKey(first),base=financial(first);
+ const changed=structuredClone(base);changed.invoices[0].items[0].qty=9;
+ assert.throws(()=>preparePalletSettlement(b,changed,'sess1',[key]),/изменился/);
+ const pending=structuredClone(base);pending.invoices[0].reviewStatus='pending';
+ assert.throws(()=>preparePalletSettlement(b,pending,'sess1',[key]),/Центре контроля/);
+ const missingDelivery=structuredClone(base);missingDelivery.invoices[0].deliveryMissing=true;
+ assert.throws(()=>preparePalletSettlement(b,missingDelivery,'sess1',[key]),/доставки/);
+ const allocated=structuredClone(base);allocated.allocations.push({invoiceId:first.id,paymentId:'old',amount:10});
+ assert.throws(()=>preparePalletSettlement(b,allocated,'sess1',[key]),/зачёты/);
+});
+
+test('duplicate supplier product names with different SKUs require manual review before billing',()=>{
+ const ambiguous=invoice('ambiguous','anna','INVOICE-AMBIGUOUS',[
+  ['Spare part',1],['Spare part',2]
+ ]);
+ ambiguous.items[0].sku='A';ambiguous.items[1].sku='B';
+ let b=select(create(),ambiguous);
+ b=add(b,'p1',ambiguous,'Spare part',1,3);
+ b=palletClose(b,'sess1',true);
+ assert.equal(palletSettlementEligibility(palletSummary(b.sessions[0])[0],true).ready,true);
+ assert.throws(()=>preparePalletSettlement(b,financial(ambiguous),'sess1',[palletInvoiceKey(ambiguous)]),/артикулы/);
+});
+
+test('owner confirmation is explicit and double-checks local versions before saving',()=>{
+ const ui=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ const pallet=readFileSync(new URL('../js/landa-pallet-ui.mjs',import.meta.url),'utf8');
+ assert.match(ui,/LANDA_PALLET_OWNER_APPROVE/);
+ assert.match(ui,/askConfirmAsync\(question\)/);
+ assert.match(ui,/localStorage\.getItem\(PALLET_STORAGE_KEY\)!==palletRaw/);
+ assert.match(ui,/settlement\.applyPalletSettlement/);
+ assert.match(pallet,/Подтвердить и начислить/);
+ assert.match(pallet,/palletSettlementEligibility/);
+ assert.match(pallet,/уже начислен долг поставщикам/);
 });

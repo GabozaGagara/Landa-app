@@ -4,6 +4,7 @@ import {
  palletAdd,palletEditEntry,palletRemoveEntry,palletClose,palletSummary,palletSuggestions,
  palletInvoiceKey,palletInvoiceSnapshot,palletShortNumber,palletCSV
 } from './landa-pallet-core.mjs';
+import {palletSettlementEligibility} from './landa-pallet-settlement.mjs';
 
 if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementById('landaReceivingDialog')){
  const $=x=>document.getElementById(x);
@@ -38,6 +39,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
   '.pl-manifest{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}.pl-manifest button{text-align:left;white-space:normal;max-width:100%;font-size:12px;padding:9px 11px}',
   '.pl-manifest button.pl-not-loaded{border-color:#e9b5ad;background:#fff5f3}.pl-manifest button.pl-difference{border-color:#e9b5ad;background:#fff5f3}',
   '.pl-manifest button.pl-matched{border-color:#9bd6be;background:#effaf4}.pl-check-table{min-width:440px}',
+  '.pl-settlement{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:9px 0 14px}.pl-settlement button{font-size:12px}',
   '.pl-table{width:100%;border-collapse:collapse;min-width:500px;font-size:12px}.pl-table td,.pl-table th{padding:9px 7px;text-align:left;border-bottom:1px solid #e5ebf3;vertical-align:top}',
   '.pl-table th{font-weight:700;color:#47617e;background:#f5f8fd}.pl-table strong{font-size:13px}',
   '.pl-scroll{overflow-x:auto;max-width:100%}.pl-warning{color:#926015}.pl-good{color:#167852}.pl-alert{color:#ad3a44}',
@@ -71,7 +73,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
   '<p class="pl-muted">Места = физические коробки/упаковки. «Штук товара» вводи только если знаешь количество внутри; программа не приравнивает его к числу мест. Для следующего места из другой накладной просто переключи номер.</p></div>',
   '<div class="pl-box"><h3>3. Журнал погрузки — в порядке добавления</h3><div class="pl-scroll" id="plLog"></div></div>',
   '<div class="pl-box"><h3>4. Итог по каждой накладной</h3>',
-  '<p class="pl-muted">Позиции автоматически сравниваются с составом накладных поставщиков. Не отмеченные и лишние позиции видны сразу. Разницу в штуках можно достоверно посчитать только для товаров, у которых при погрузке указано фактическое количество. Места считаются отдельно.</p>',
+  '<p class="pl-muted">Позиции автоматически сравниваются с составом накладных поставщиков. Не отмеченные и лишние позиции видны сразу. Разницу в штуках можно достоверно посчитать только для товаров, у которых при погрузке указано фактическое количество. Места считаются отдельно. После полного совпадения и завершения приёмки владелец может отдельно подтвердить начисление и статус «Вручен».</p>',
   '<div id="plReport"></div></div>',
   '<div class="pl-box"><h3>Важно о сохранении</h3><p class="pl-muted">Приёмка сохраняется локально и синхронизируется между устройствами через подключённый приватный GitHub. Она не меняет статусы накладных, кассу, долги или платежи. JSON-архив полезен как резервная копия.</p></div>'
  ].join('');
@@ -218,8 +220,20 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
  function renderReport(){
   const s=current();if(!s){$('plReport').innerHTML='';return}
   const summaries=palletSummary(s),n=names(),lookup=uniqueSuffix(s.invoices);
-  $('plReport').innerHTML=summaries.length?'<div class="pl-scroll"><table class="pl-table"><thead><tr>'+
-   '<th>Накладная</th><th>Фактически мест</th><th>Ожидается мест</th><th>Расхождения</th><th>Сверка позиций</th><th>Сверка товаров, шт.</th></tr></thead><tbody>'+
+  const billed=invoice=>!!(invoice&&(invoice.isOpening||invoice.accrued===true||
+   (invoice.accrued===undefined&&['received','transit'].includes(invoice.status))));
+  const payable=summaries.filter(v=>{
+   const live=invoiceByKey(v.key);
+   return palletSettlementEligibility(v,s.closed).ready&&live&&!billed(live)&&
+    (!live.submittedAt||live.reviewStatus==='approved')&&live.deliveryMissing!==true&&
+    (live.includeDelivery||!(Number(live.deliveryCost)>0))&&Number(live.total)>0;
+  }).slice(0,30);
+  $('plReport').innerHTML=summaries.length?'<div class="pl-settlement">'+
+   '<button type="button" class="rc-btn rc-btn-primary" data-pl-charge-all '+
+   (!payable.length?'disabled':'')+'>✓ Подтвердить и начислить сверенные ('+payable.length+')</button>'+
+   '<span class="pl-muted">За одно подтверждение — до 30 накладных. Только после завершения приёмки, точного совпадения всех штук и отдельного подтверждения владельца. Зачёты оплат не меняются.</span></div>'+
+   '<div class="pl-scroll"><table class="pl-table"><thead><tr>'+
+   '<th>Накладная</th><th>Фактически мест</th><th>Ожидается мест</th><th>Расхождения</th><th>Сверка позиций</th><th>Сверка товаров, шт.</th><th>Начисление</th></tr></thead><tbody>'+
    summaries.map(v=>{
     const diff=v.differencePlaces,prefix=diff===null?'—':diff===0?'✓ 0':(diff>0?'+':'')+fmt(diff);
     const units=v.actualUnits===null?'Количество не подтверждено':fmt(v.actualUnits)+' / '+fmt(v.expectedUnits);
@@ -228,6 +242,15 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
      (missing?missing+' не отмечено':'')+(missing&&extra?' · ':'')+(extra?extra+' нет в накладной':''):
      v.plannedPositions?'✓ Все названия найдены':'Нет товарного состава в накладной';
     const placeLine=diff===null?'Места: нет плана':diff===0?'Места: совпадают':'Места: '+prefix;
+    const live=invoiceByKey(v.key),already=billed(live),gate=palletSettlementEligibility(v,s.closed);
+    const blocker=!live?'Накладная отсутствует в базе LANDA':
+     live.submittedAt&&live.reviewStatus!=='approved'?'Сначала подтвердите накладную в Центре контроля':
+     live.deliveryMissing===true?'Уточните стоимость доставки':
+     !live.includeDelivery&&Number(live.deliveryCost)>0?'Проверьте включение доставки в долг':
+     !(Number(live.total)>0)?'Укажите стоимость накладной':'';
+    const action=already?'<span class="pl-good">✓ Уже начислена</span>':gate.ready&&!blocker?
+     '<button type="button" class="rc-btn rc-btn-primary" data-pl-charge="'+esc(v.key)+'">Подтвердить и начислить</button>':
+     '<span class="pl-muted">'+esc(blocker||gate.reasons[0]||'Нужна проверка')+'</span>';
     return '<tr><td><strong>'+esc(lookup(v))+'</strong><div class="pl-muted">'+esc(n[v.supplierId]||v.supplierId)+'</div></td>'+
      '<td><strong>'+fmt(v.places)+'</strong> · '+v.entries+' записей</td><td>'+
      '<input type="number" min="1" step="1" class="pl-expected" style="max-width:105px" data-pl-expected="'+esc(v.key)+'" value="'+(v.expectedPlaces??'')+'" placeholder="Нет данных" '+(s.closed?'disabled':'')+'></td>'+
@@ -236,7 +259,8 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
      (extra?'<div class="pl-warning">Лишних названий: '+extra+'</div>':'')+'</td>'+
      '<td>'+units+'<div class="pl-muted">План: '+fmt(v.expectedUnits)+' шт.'+
      (v.uncheckedQuantities?' · Не проверено количеств: '+v.uncheckedQuantities:'')+
-     (v.differentQuantities?' · Расхождений в штуках: '+v.differentQuantities:'')+'</div></td></tr>';
+     (v.differentQuantities?' · Расхождений в штуках: '+v.differentQuantities:'')+'</div></td>'+
+     '<td>'+action+'</td></tr>';
    }).join('')+'</tbody></table></div><div class="pl-final-list">'+summaries.map(v=>
     '<details class="pl-final"><summary>'+esc(lookup(v))+' · '+esc(n[v.supplierId]||v.supplierId)+' — '+v.matchedPositions+'/'+v.plannedPositions+' позиций отмечено'+
     (v.missingPositions?' · '+v.missingPositions+' осталось':'')+(v.unexpectedPositions?' · '+v.unexpectedPositions+' лишних':'')+'</summary>'+
@@ -284,6 +308,9 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
  });
  $('plCloseSession').addEventListener('click',()=>{
   const s=current();if(!s||blocked())return;
+  if(s.closed&&ops.invoices.some(i=>i.palletSessionId===s.id&&i.accrued===true)){
+   say('По этой приёмке уже начислен долг поставщикам. Нельзя возобновить журнал, пока начисление действует. Для исправления сначала проверьте и отмените начисление в разделе накладных.',true);return;
+  }
   if(!s.closed&&!confirm('Завершить приёмку «'+s.name+'»? После завершения запись блокируется. При необходимости её можно возобновить.'))return;
   try{store(palletClose(book,s.id,!s.closed),s.closed?'Приёмка снова открыта для исправлений.':'Приёмка завершена. Сохраните итог CSV или архив JSON.')}catch(e){say(e.message,true)}
  });
@@ -351,6 +378,25 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
  $('plReport').addEventListener('change',e=>{
   const input=e.target.closest('[data-pl-expected]'),s=current();if(!input||!s||blocked())return;
   try{store(palletExpected(book,s.id,input.dataset.plExpected,input.value),'Ожидаемое число мест записано.')}catch(err){say(err.message,true);renderReport()}
+ });
+ $('plReport').addEventListener('click',async e=>{
+  const single=e.target.closest('[data-pl-charge]'),all=e.target.closest('[data-pl-charge-all]'),s=current();
+  if((!single&&!all)||!s||blocked())return;
+  if(typeof window.LANDA_PALLET_OWNER_APPROVE!=='function'){
+   say('Подтверждение начисления недоступно. Обновите страницу LANDA.',true);return;
+  }
+  const keys=single?[single.dataset.plCharge]:palletSummary(s)
+   .filter(v=>palletSettlementEligibility(v,s.closed).ready).map(v=>v.key)
+   .filter(key=>{
+    const i=invoiceByKey(key);
+    return i&&!(i.accrued===true||(i.accrued===undefined&&['received','transit'].includes(i.status)))&&
+     (!i.submittedAt||i.reviewStatus==='approved')&&i.deliveryMissing!==true&&
+     (i.includeDelivery||!(Number(i.deliveryCost)>0))&&Number(i.total)>0;
+   }).slice(0,30);
+  if(!keys.length)return;
+  if(await window.LANDA_PALLET_OWNER_APPROVE(s.id,keys)){
+   render();say('✓ Подтверждённые накладные получили статус «Вручен» и начислены поставщикам.');
+  }
  });
  $('plExportCSV').addEventListener('click',()=>{
   const s=current();if(!s)return;
