@@ -38,7 +38,8 @@ test('mixed pallet 1111 → 2222 → 1111 preserves exact scan order and groups 
  assert.deepEqual(report[0].products.map(x=>x.name),['Karcher Puzzi 10/1','Dyson Absolute Red']);
  assert.equal(report[1].entries,1);assert.equal(report[1].places,2);
  assert.equal(report[1].expectedUnits,3);
- assert.equal(report[1].actualUnits,null,'Do not equate boxes with product pieces');
+ assert.equal(report[1].actualUnits,2,'Each place is one product unit');
+ assert.equal(report[1].differencePlaces,-1);
  assert.equal(JSON.stringify(b),before);
 });
 test('same last four digits on different invoices never collide',()=>{
@@ -52,17 +53,17 @@ test('same last four digits on different invoices never collide',()=>{
  assert.equal(palletSummary(b.sessions[0])[0].places,1);
  assert.equal(palletSummary(b.sessions[0])[1].places,2);
 });
-test('plan places is optional and difference only appears when entered',()=>{
+test('plan comes from the supplier manifest and differences are automatic, even for legacy expected places',()=>{
  let b=select(create(),first);b=add(b,'p1',first,'Puzzi',2,2);
  let report=palletSummary(b.sessions[0])[0];
- assert.equal(report.differencePlaces,null);
+ assert.equal(report.differencePlaces,-1);
  assert.equal(report.expectedUnits,3);
  assert.equal(report.actualUnits,2);
- b=palletExpected(b,'sess1',palletInvoiceKey(first),3);
+ b=palletExpected(b,'sess1',palletInvoiceKey(first),9);
  report=palletSummary(b.sessions[0])[0];
  assert.equal(report.differencePlaces,-1);
  b=palletExpected(b,'sess1',palletInvoiceKey(first),'');
- assert.equal(palletSummary(b.sessions[0])[0].differencePlaces,null);
+ assert.equal(palletSummary(b.sessions[0])[0].differencePlaces,-1);
 });
 test('pickup record corrections do not reorder log or change original source invoices',()=>{
  const originals=JSON.stringify([first,second]);
@@ -124,7 +125,8 @@ test('CSV shows chronological records then summary with full numbers and prevent
  assert.match(csv,/1111/);
  assert.match(csv,/'=HYPERLINK/);
  assert.match(csv,/СВОДКА/);
- assert.match(csv,/Мест фактически/);
+ assert.match(csv,/Мест \/ штук фактически/);
+ assert.match(csv,/Мест = штук товара/);
  assert.match(csv,/ПО ТОВАРАМ/);
  assert.match(csv,/HYPERLINK/);
  assert.equal(csv.startsWith('\ufeff'),true);
@@ -141,7 +143,8 @@ test('UI is integrated as third receiving tab without writes to financial ledger
  assert.match(ui,/plExportCSV/);
  assert.match(ui,/plExportJSON/);
  assert.match(ui,/plImportJSON/);
- assert.match(ui,/plExpected/);
+ assert.match(ui,/Мест \(= товаров, шт\.\)/);
+ assert.doesNotMatch(ui,/id="plUnits"|data-pl-expected/);
  assert.match(ui,/data-pl-suggest/);
  assert.match(ui,/data-pl-edit/);
  assert.match(ui,/plActiveInvoices/);
@@ -166,18 +169,19 @@ test('manifest highlights actual undeclared names without confusing different sp
  assert.equal(v.matchedPositions,2);
  assert.equal(v.places,4);
  assert.equal(v.expectedUnits,3);
- assert.equal(v.actualUnits,null);
+ assert.equal(v.actualUnits,4);
+ assert.equal(v.differencePlaces,1);
 });
-test('manifest reports still-unseen item names but does not claim missing physical places',()=>{
+test('manifest reports still-unseen items and actual shortage by places',()=>{
  let b=select(create(),first);
  b=add(b,'p1',first,'Karcher Puzzi 10/1',1);
  const v=palletSummary(b.sessions[0])[0];
  assert.deepEqual(v.notLoaded.map(x=>x.name),['Dyson Absolute Red']);
- assert.equal(v.differencePlaces,null);
+ assert.equal(v.differencePlaces,-2);
  assert.equal(v.matchedPositions,1);
 });
 
-test('automatic position check compares supplier manifest to pickup without equating parcels to units',()=>{
+test('automatic position check equates each recorded place to one item unit',()=>{
  const before=JSON.stringify(first);
  let b=select(create(),first);
  b=add(b,'p1',first,'KARCHER PUZZI 10/1',3);
@@ -185,18 +189,18 @@ test('automatic position check compares supplier manifest to pickup without equa
  assert.equal(v.plannedPositions,2);
  assert.equal(v.matchedPositions,1);
  assert.equal(v.missingPositions,1);
- assert.equal(v.uncheckedQuantities,1);
+ assert.equal(v.uncheckedQuantities,0);
  assert.equal(v.unexpectedPositions,0);
- assert.deepEqual(v.positionChecks.map(x=>x.state),['unverified','not_loaded']);
+ assert.deepEqual(v.positionChecks.map(x=>x.state),['difference','not_loaded']);
  assert.equal(v.positionChecks[0].expected,2);
- assert.equal(v.positionChecks[0].received,null);
+ assert.equal(v.positionChecks[0].received,3);
  assert.equal(v.positionChecks[0].places,3);
- assert.equal(v.positionChecks[0].delta,null);
- assert.equal(v.actualUnits,null);
+ assert.equal(v.positionChecks[0].delta,1);
+ assert.equal(v.actualUnits,3);
  assert.equal(JSON.stringify(first),before,'The financial invoice must remain unchanged');
 });
 
-test('automatic check detects exact piece shortage, surplus and names absent in supplier manifest',()=>{
+test('automatic check detects exact shortages, unexpected products and ignores old manually specified units',()=>{
  let b=select(create(),first);
  b=add(b,'p1',first,'Karcher Puzzi 10/1',1,1);
  b=add(b,'p2',first,'Dyson Absolute Red',1,2);
@@ -205,17 +209,48 @@ test('automatic check detects exact piece shortage, surplus and names absent in 
  assert.equal(v.missingPositions,0);
  assert.equal(v.unexpectedPositions,1);
  assert.equal(v.uncheckedQuantities,0);
- assert.equal(v.differentQuantities,2);
- assert.deepEqual(v.positionChecks.map(x=>x.state),['difference','difference','unexpected']);
- assert.deepEqual(v.positionChecks.map(x=>x.delta),[-1,1,null]);
+ assert.equal(v.differentQuantities,1);
+ assert.deepEqual(v.positionChecks.map(x=>x.state),['difference','matched','unexpected']);
+ assert.deepEqual(v.positionChecks.map(x=>x.delta),[-1,0,1]);
  assert.match(palletCSV(b.sessions[0]),/АВТОСВЕРКА ПОЗИЦИЙ/);
  assert.match(palletCSV(b.sessions[0]),/Нет в накладной/);
  assert.match(palletCSV(b.sessions[0]),/Расхождение по штукам/);
 });
 
+test('old journal rows become fully verified by place count without editing stored units',()=>{
+ let b=select(create(),first);
+ b=add(b,'p1',first,'Karcher Puzzi 10/1',2,null);
+ b=add(b,'p2',first,'Dyson Absolute Red',1,9);
+ const raw=JSON.stringify(b);
+ const report=palletSummary(b.sessions[0])[0];
+ assert.equal(report.actualUnits,3);
+ assert.equal(report.expectedUnits,3);
+ assert.equal(report.differencePlaces,0);
+ assert.equal(report.differentQuantities,0);
+ assert.deepEqual(report.positionChecks.map(x=>x.state),['matched','matched']);
+ assert.equal(JSON.stringify(b),raw,'Historical records and old units remain untouched');
+ b=palletClose(b,'sess1',true);
+ assert.equal(palletSettlementEligibility(palletSummary(b.sessions[0])[0],true).ready,true);
+});
+
+test('4 extra places in one declared product block settlement even if another product matches',()=>{
+ let b=select(create(),first);
+ b=add(b,'p1',first,'Karcher Puzzi 10/1',6);
+ b=add(b,'p2',first,'Dyson Absolute Red',1);
+ const v=palletSummary(b.sessions[0])[0];
+ assert.equal(v.actualUnits,7);
+ assert.equal(v.expectedUnits,3);
+ assert.equal(v.differencePlaces,4);
+ assert.equal(v.differentQuantities,1);
+ assert.deepEqual(v.positionChecks.map(x=>x.delta),[4,0]);
+ b=palletClose(b,'sess1',true);
+ assert.equal(palletSettlementEligibility(palletSummary(b.sessions[0])[0],true).ready,false);
+ assert.throws(()=>preparePalletSettlement(b,financial(first),'sess1',[palletInvoiceKey(first)]),/количество/i);
+});
+
 test('same product names are compared within their own supplier invoice, not across invoices',()=>{
  let b=select(select(create(),first),second);
- b=add(b,'p1',second,'Puzzi 10/1',1,3);
+ b=add(b,'p1',second,'Puzzi 10/1',3);
  const [a,c]=palletSummary(b.sessions[0]);
  assert.equal(a.matchedPositions,0);
  assert.equal(a.missingPositions,2);
@@ -239,7 +274,7 @@ const financial=(...sources)=>({version:1,suppliers:[{id:'anna',name:'Анна'}
  payments:[],allocations:[],cash:[]});
 const complete=(b,i)=>{
  const key=palletInvoiceKey(i);
- for(const [j,item] of i.items.entries())b=add(b,'complete-'+i.id+'-'+j,i,item.name,1,item.qty);
+ for(const [j,item] of i.items.entries())b=add(b,'complete-'+i.id+'-'+j,i,item.name,item.qty);
  return b;
 };
 
@@ -287,7 +322,7 @@ test('batch settlement is all-or-nothing for two suppliers and sums amounts prec
  assert.equal(ops.invoices.filter(i=>i.accrued).length,0);
 });
 
-test('settlement refuses missing, unchecked, mismatched and unexpected pickup products',()=>{
+test('settlement refuses missing, mismatched and unexpected pickup products',()=>{
  let b=select(create(),first);
  for(const entry of [
   add(b,'unknown',first,'Karcher Puzzi 10/1',1),
@@ -319,7 +354,7 @@ test('duplicate supplier product names with different SKUs require manual review
  ]);
  ambiguous.items[0].sku='A';ambiguous.items[1].sku='B';
  let b=select(create(),ambiguous);
- b=add(b,'p1',ambiguous,'Spare part',1,3);
+ b=add(b,'p1',ambiguous,'Spare part',3);
  b=palletClose(b,'sess1',true);
  assert.equal(palletSettlementEligibility(palletSummary(b.sessions[0])[0],true).ready,true);
  assert.throws(()=>preparePalletSettlement(b,financial(ambiguous),'sess1',[palletInvoiceKey(ambiguous)]),/артикулы/);

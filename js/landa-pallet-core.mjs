@@ -147,13 +147,15 @@ export function palletSummary(session){
  return s.invoices.map(i=>{
   const entries=s.entries.filter(e=>e.invoiceKey===i.key),groups=new Map();
   for(const e of entries){
-   const key=e.product.toLocaleLowerCase('ru-RU').trim(),g=groups.get(key)||{name:e.product,places:0,entries:0,units:0,unitsKnown:true};
+   const key=e.product.toLocaleLowerCase('ru-RU').trim(),g=groups.get(key)||{name:e.product,places:0,entries:0,units:0};
    g.places+=e.places;g.entries++;
-   if(e.units===null)g.unitsKnown=false;else g.units+=e.units;
+   // Owner's receiving rule: one recorded place is one product unit.
+   // Derive quantities at read time; preserve historical e.units untouched.
+   g.units+=e.places;
    groups.set(key,g);
   }
   const places=entries.reduce((x,e)=>x+e.places,0),expectedUnits=i.items.reduce((x,e)=>x+e.qty,0);
-  const actual=[...groups.values()].map(g=>({...g,units:g.unitsKnown?g.units:null}));
+  const actual=[...groups.values()];
   const plannedNames=new Map();
   for(const item of i.items){
    const key=item.name.trim().toLocaleLowerCase('ru-RU');
@@ -163,26 +165,25 @@ export function palletSummary(session){
   }
   const notLoaded=[...plannedNames.entries()].filter(([key])=>!groups.has(key)).map(([,v])=>v);
   const unexpected=actual.filter(g=>!plannedNames.has(g.name.toLocaleLowerCase('ru-RU').trim()));
-  // Presence is derived from the supplier's manifest and the pickup journal.
-  // A recorded parcel does NOT prove its number of product units: only an
-  // explicitly recorded e.units can confirm a quantity or its difference.
+  // The owner confirmed that the physical place count equals the actual item
+  // count for this workflow. Compare it directly to supplier-declared units.
   const positionChecks=[...plannedNames.entries()].map(([key,item])=>{
-   const found=groups.get(key),received=found&&found.unitsKnown?found.units:null;
+   const found=groups.get(key),received=found?found.places:null;
    const delta=received===null?null:Math.round((received-item.qty)*1000)/1000;
    return {name:item.name,expected:item.qty,received,delta,
     places:found?.places||0,entries:found?.entries||0,
-    state:!found?'not_loaded':received===null?'unverified':delta===0?'matched':'difference'};
+    state:!found?'not_loaded':delta===0?'matched':'difference'};
   });
   for(const g of unexpected)positionChecks.push({name:g.name,expected:0,
-   received:g.units,delta:g.units===null?null:g.units,
+   received:g.places,delta:g.places,
    places:g.places,entries:g.entries,state:'unexpected'});
   const missingPositions=positionChecks.filter(x=>x.state==='not_loaded').length;
   const unexpectedPositions=positionChecks.filter(x=>x.state==='unexpected').length;
   const uncheckedQuantities=positionChecks.filter(x=>x.state==='unverified').length;
   const differentQuantities=positionChecks.filter(x=>x.state==='difference').length;
   return {...i,entries:entries.length,places,positions:groups.size,expectedUnits,
-   actualUnits:entries.length&&entries.every(e=>e.units!==null)?entries.reduce((x,e)=>x+e.units,0):null,
-   differencePlaces:i.expectedPlaces===null?null:places-i.expectedPlaces,
+   actualUnits:places,
+   differencePlaces:plannedNames.size?places-expectedUnits:null,
    hasManifest:plannedNames.size>0,notLoaded,unexpected,matchedPositions:plannedNames.size-notLoaded.length,
    plannedPositions:plannedNames.size,missingPositions,unexpectedPositions,
    uncheckedQuantities,differentQuantities,positionChecks,products:actual};
@@ -210,18 +211,18 @@ export function palletCSV(session){
   if(/^\s*[=+\-@]/.test(val))val="'"+val;
   return '"'+val.replace(/"/g,'""')+'"';
  };
- const rows=[['Приёмка','Накладная (полная)','Последние 4 цифры','Поставщик','Время записи','Фактически записано','Мест','Штук товара','ID']];
+ const rows=[['Приёмка','Накладная (полная)','Последние 4 цифры','Поставщик','Время записи','Фактически записано','Мест = штук товара','Исторически указано штук','ID']];
  for(const e of s.entries){
   const i=names.get(e.invoiceKey);
   rows.push([s.name,i.number,palletShortNumber(i),i.supplierId,e.at,e.product,e.places,e.units??'',e.id]);
  }
  rows.push([]);
- rows.push(['СВОДКА','Накладная','Последние 4 цифры','Поставщик','Записей','Мест фактически','Ожидается мест','Разница мест','Разных позиций']);
+ rows.push(['СВОДКА','Накладная','Последние 4 цифры','Поставщик','Записей','Мест / штук фактически','План штук по накладной','Разница штук','Разных позиций']);
  const report=palletSummary(s);
  for(const i of report)
-  rows.push(['',i.number,palletShortNumber(i),i.supplierId,i.entries,i.places,i.expectedPlaces??'',i.differencePlaces??'',i.positions]);
+  rows.push(['',i.number,palletShortNumber(i),i.supplierId,i.entries,i.places,i.expectedUnits,i.differencePlaces??'',i.positions]);
  rows.push([]);
- rows.push(['ПО ТОВАРАМ','Накладная','Последние 4 цифры','Поставщик','Товар','Мест','Штук (если указано)','Записей','В исходной накладной']);
+ rows.push(['ПО ТОВАРАМ','Накладная','Последние 4 цифры','Поставщик','Товар','Мест','Штук (= мест)','Записей','В исходной накладной']);
  for(const i of report)for(const g of i.products){
   const unexpected=i.hasManifest&&i.unexpected.some(x=>x.name===g.name);
   rows.push(['',i.number,palletShortNumber(i),i.supplierId,g.name,g.places,g.units??'',g.entries,unexpected?'Нет точного совпадения':'']);

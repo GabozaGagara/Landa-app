@@ -1,6 +1,6 @@
 // Mixed pallet intake workflow. Independent of accounting, invoices and existing reconciliation values.
 import {
- PALLET_STORAGE_KEY,palletEmpty,palletValidate,palletCreate,palletSelect,palletExpected,
+ PALLET_STORAGE_KEY,palletEmpty,palletValidate,palletCreate,palletSelect,
  palletAdd,palletEditEntry,palletRemoveEntry,palletClose,palletSummary,palletSuggestions,
  palletInvoiceKey,palletInvoiceSnapshot,palletShortNumber,palletCSV
 } from './landa-pallet-core.mjs';
@@ -31,7 +31,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
   '.pl-invoice{display:flex;gap:10px;align-items:start;padding:10px;border-radius:9px;border:1px solid #d5e0ef;cursor:pointer}',
   '.pl-invoice.checked{background:#edf5ff;border-color:#80a2ec}.pl-invoice b{font-size:14px}.pl-invoice .pl-muted{margin-top:3px;display:block}',
   '.pl-badge{display:inline-block;font-size:11px;border-radius:6px;padding:2px 6px;background:#edf2f9;color:#476382}',
-  '.pl-entry-fields{display:grid;grid-template-columns:minmax(140px,1fr) minmax(160px,2fr) 90px 110px;gap:9px;align-items:end}',
+  '.pl-entry-fields{display:grid;grid-template-columns:minmax(140px,1fr) minmax(160px,2fr) 90px 150px;gap:9px;align-items:end}',
   '.pl-entry-fields label{font-size:12px;color:#496481;font-weight:600;display:grid;gap:4px}',
   '.pl-entry-fields .pl-action{align-self:end}.pl-entry-fields .rc-btn{width:100%}',
   '.pl-shortcuts{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}.pl-shortcuts button{font-size:11px;padding:6px 8px}',
@@ -65,15 +65,14 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
   '<form id="plEntryForm"><div class="pl-entry-fields">',
   '<label class="pl-wide">Накладная<select id="plCurrentInvoice" required></select></label>',
   '<label class="pl-wide">Что фактически забрал<input id="plProduct" type="text" list="plProductHints" maxlength="180" required placeholder="Например, Karcher Puzzi 10/1" autocomplete="off"></label><datalist id="plProductHints"></datalist>',
-  '<label>Мест<input id="plPlaces" inputmode="numeric" type="number" min="1" step="1" value="1" required></label>',
-  '<label>Товара, шт. (необяз.)<input id="plUnits" type="number" inputmode="decimal" min="0.001" step="any" placeholder="Неизвестно"></label>',
+  '<label>Мест (= товаров, шт.)<input id="plPlaces" inputmode="numeric" type="number" min="1" step="1" value="1" required></label>',
   '<div class="pl-action"><button class="rc-btn rc-btn-primary" id="plSaveEntry" type="submit">＋ Добавить в машину</button></div>',
   '</div></form><div class="pl-muted" style="margin-top:12px">Состав выбранной накладной от поставщика — нажми на товар, чтобы записать его погрузку. Отметки и расхождения по названиям обновляются автоматически.</div>',
   '<div id="plManifest" class="pl-manifest"></div><div id="plSuggestions" class="pl-shortcuts"></div>',
-  '<p class="pl-muted">Места = физические коробки/упаковки. «Штук товара» вводи только если знаешь количество внутри; программа не приравнивает его к числу мест. Для следующего места из другой накладной просто переключи номер.</p></div>',
+  '<p class="pl-muted">1 место = 1 единица товара. Штуки считаются автоматически по полю «Мест», отдельно вводить их не нужно. Для следующего товара из другой накладной просто переключи номер.</p></div>',
   '<div class="pl-box"><h3>3. Журнал погрузки — в порядке добавления</h3><div class="pl-scroll" id="plLog"></div></div>',
   '<div class="pl-box"><h3>4. Итог по каждой накладной</h3>',
-  '<p class="pl-muted">Позиции автоматически сравниваются с составом накладных поставщиков. Не отмеченные и лишние позиции видны сразу. Разницу в штуках можно достоверно посчитать только для товаров, у которых при погрузке указано фактическое количество. Места считаются отдельно. После полного совпадения и завершения приёмки владелец может отдельно подтвердить начисление и статус «Вручен».</p>',
+  '<p class="pl-muted">План и названия товаров автоматически берутся из накладных поставщиков. Количество загруженных мест равно количеству штук товара: расхождения считаются без дополнительных полей, включая старые записи. После полного совпадения и завершения приёмки владелец может отдельно подтвердить начисление и статус «Вручен».</p>',
   '<div id="plReport"></div></div>',
   '<div class="pl-box"><h3>Важно о сохранении</h3><p class="pl-muted">Приёмка сохраняется локально и синхронизируется между устройствами через подключённый приватный GitHub. Она не меняет статусы накладных, кассу, долги или платежи. JSON-архив полезен как резервная копия.</p></div>'
  ].join('');
@@ -174,11 +173,11 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
    esc(label(i))+'</button>').join('');
   if(s){
    const summary=palletSummary(s),total=summary.reduce((v,x)=>v+x.places,0);
-   const expected=summary.filter(x=>x.expectedPlaces!==null);
-   const mismatches=expected.filter(x=>x.differencePlaces!==0).length;
+   const expected=summary.filter(x=>x.hasManifest);
+   const mismatches=expected.filter(x=>x.differencePlaces!==0||x.missingPositions||x.unexpectedPositions||x.differentQuantities).length;
    $('plOverview').innerHTML='<span>Накладных: <b>'+s.invoices.length+'</b></span>'+
     '<span>Записей: <b>'+s.entries.length+'</b></span><span>В машину: <b>'+fmt(total)+' мест</b></span>'+
-    '<span>Расхождение по местам: <b>'+mismatches+' накладных</b> (из '+expected.length+' с планом)</span>'+
+    '<span>Расхождения по товарам: <b>'+mismatches+' накладных</b> (из '+expected.length+' с составом)</span>'+
     (s.closed?'<span class="pl-good">✓ Завершена</span>':'<span class="pl-warning">● В работе</span>');
   }else $('plOverview').innerHTML='<span>Создай приёмку, чтобы начать запись мест</span>';
   renderManifest();
@@ -190,8 +189,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
   const planned=v.positionChecks.filter(p=>p.state!=='unexpected');
   $('plManifest').innerHTML=planned.length?planned.map(p=>{
    const detail=p.state==='not_loaded'?'ещё не отмечен':
-    p.received===null?'отмечен · количество не проверено':
-    'записано '+fmt(p.received)+' шт. из '+fmt(p.expected);
+    'записано '+fmt(p.received)+' мест / шт. из '+fmt(p.expected);
    return '<button type="button" class="rc-btn pl-'+esc(p.state)+'" data-pl-manifest="'+esc(p.name)+'" '+(s.closed?'disabled':'')+'>'+
     esc(p.name)+' · план '+fmt(p.expected)+' шт.<span class="pl-muted"> · '+detail+'</span></button>';
   }).join(''):'<span class="pl-muted">В выбранной накладной нет товарных позиций.</span>';
@@ -208,11 +206,11 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
  function renderLog(){
   const s=current();if(!s){$('plLog').innerHTML='<p class="pl-muted">Записей пока нет.</p>';return}
   const n=names(),lookup=uniqueSuffix(s.invoices),invoiceMap=new Map(s.invoices.map(i=>[i.key,i]));
-  $('plLog').innerHTML=s.entries.length?'<table class="pl-table"><thead><tr><th>№</th><th>Накладная</th><th>Что загрузил</th><th>Мест</th><th>Штук</th><th>Время</th><th></th></tr></thead><tbody>'+
+  $('plLog').innerHTML=s.entries.length?'<table class="pl-table"><thead><tr><th>№</th><th>Накладная</th><th>Что загрузил</th><th>Мест / товаров, шт.</th><th>Время</th><th></th></tr></thead><tbody>'+
    s.entries.map((e,index)=>{
     const i=invoiceMap.get(e.invoiceKey);
     return '<tr><td>'+(index+1)+'</td><td><strong>'+esc(i?lookup(i):'—')+'</strong><div class="pl-muted">'+esc(n[i?.supplierId]||i?.supplierId||'')+'</div></td>'+
-     '<td>'+esc(e.product)+'</td><td><strong>'+fmt(e.places)+'</strong></td><td>'+(e.units===null?'—':fmt(e.units))+'</td>'+
+     '<td>'+esc(e.product)+'</td><td><strong>'+fmt(e.places)+'</strong></td>'+
      '<td>'+esc(timestamp(e.at))+'</td><td><div class="pl-actions"><button type="button" class="rc-btn" data-pl-edit="'+esc(e.id)+'" '+(s.closed?'disabled':'')+'>Исправить</button>'+
      '<button type="button" class="rc-btn" data-pl-delete="'+esc(e.id)+'" '+(s.closed?'disabled':'')+'>×</button></div></td></tr>';
    }).join('')+'</tbody></table>':'<p class="pl-muted">Записей пока нет. Добавь первое фактически загруженное место в форме выше.</p>';
@@ -231,17 +229,19 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
   $('plReport').innerHTML=summaries.length?'<div class="pl-settlement">'+
    '<button type="button" class="rc-btn rc-btn-primary" data-pl-charge-all '+
    (!payable.length?'disabled':'')+'>✓ Подтвердить и начислить сверенные ('+payable.length+')</button>'+
-   '<span class="pl-muted">За одно подтверждение — до 30 накладных. Только после завершения приёмки, точного совпадения всех штук и отдельного подтверждения владельца. Зачёты оплат не меняются.</span></div>'+
+   '<span class="pl-muted">За одно подтверждение — до 30 накладных. 1 место = 1 штука товара. Начисление только после завершения приёмки, полного совпадения и подтверждения владельца. Зачёты оплат не меняются.</span></div>'+
    '<div class="pl-scroll"><table class="pl-table"><thead><tr>'+
-   '<th>Накладная</th><th>Фактически мест</th><th>Ожидается мест</th><th>Расхождения</th><th>Сверка позиций</th><th>Сверка товаров, шт.</th><th>Начисление</th></tr></thead><tbody>'+
+   '<th>Накладная</th><th>Факт мест / шт.</th><th>План, шт. по накладной</th><th>Расхождения</th><th>Сверка позиций</th><th>Сверка товаров, шт.</th><th>Начисление</th></tr></thead><tbody>'+
    summaries.map(v=>{
     const diff=v.differencePlaces,prefix=diff===null?'—':diff===0?'✓ 0':(diff>0?'+':'')+fmt(diff);
-    const units=v.actualUnits===null?'Количество не подтверждено':fmt(v.actualUnits)+' / '+fmt(v.expectedUnits);
+    const units=fmt(v.actualUnits)+' / '+fmt(v.expectedUnits);
     const missing=v.missingPositions,extra=v.unexpectedPositions;
-    const positionLine=missing||extra?
-     (missing?missing+' не отмечено':'')+(missing&&extra?' · ':'')+(extra?extra+' нет в накладной':''):
-     v.plannedPositions?'✓ Все названия найдены':'Нет товарного состава в накладной';
-    const placeLine=diff===null?'Места: нет плана':diff===0?'Места: совпадают':'Места: '+prefix;
+    const differing=v.differentQuantities,hasProblem=missing||extra||differing||diff!==null&&diff!==0;
+    const positionLine=missing||extra||differing?
+     [missing?missing+' не отмечено':'',extra?extra+' нет в накладной':'',
+      differing?differing+' несовпадений по количеству':''].filter(Boolean).join(' · '):
+     v.plannedPositions?'✓ Все позиции и количества совпадают':'Нет товарного состава в накладной';
+    const placeLine=diff===null?'Нет плана по товарам':diff===0?'Всего штук: совпадают':'Разница в штуках: '+prefix;
     const live=invoiceByKey(v.key),already=billed(live),gate=palletSettlementEligibility(v,s.closed);
     const blocker=!live?'Накладная отсутствует в базе LANDA':
      live.submittedAt&&live.reviewStatus!=='approved'?'Сначала подтвердите накладную в Центре контроля':
@@ -252,28 +252,27 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
      '<button type="button" class="rc-btn rc-btn-primary" data-pl-charge="'+esc(v.key)+'">Подтвердить и начислить</button>':
      '<span class="pl-muted">'+esc(blocker||gate.reasons[0]||'Нужна проверка')+'</span>';
     return '<tr><td><strong>'+esc(lookup(v))+'</strong><div class="pl-muted">'+esc(n[v.supplierId]||v.supplierId)+'</div></td>'+
-     '<td><strong>'+fmt(v.places)+'</strong> · '+v.entries+' записей</td><td>'+
-     '<input type="number" min="1" step="1" class="pl-expected" style="max-width:105px" data-pl-expected="'+esc(v.key)+'" value="'+(v.expectedPlaces??'')+'" placeholder="Нет данных" '+(s.closed?'disabled':'')+'></td>'+
-     '<td><div class="'+(missing||extra?'pl-alert':v.plannedPositions?'pl-good':'pl-muted')+'">'+positionLine+'</div><div class="pl-muted">'+placeLine+'</div></td>'+
+     '<td><strong>'+fmt(v.places)+'</strong> · '+v.entries+' записей</td><td><strong>'+fmt(v.expectedUnits)+'</strong></td>'+
+     '<td><div class="'+(hasProblem?'pl-alert':v.plannedPositions?'pl-good':'pl-muted')+'">'+positionLine+'</div><div class="pl-muted">'+placeLine+'</div></td>'+
      '<td><strong>'+v.matchedPositions+' / '+v.plannedPositions+'</strong> позиций из накладной отмечено'+
      (extra?'<div class="pl-warning">Лишних названий: '+extra+'</div>':'')+'</td>'+
-     '<td>'+units+'<div class="pl-muted">План: '+fmt(v.expectedUnits)+' шт.'+
-     (v.uncheckedQuantities?' · Не проверено количеств: '+v.uncheckedQuantities:'')+
-     (v.differentQuantities?' · Расхождений в штуках: '+v.differentQuantities:'')+'</div></td>'+
+     '<td>'+units+'<div class="pl-muted">Факт / план, шт.'+
+     (v.differentQuantities?' · Расхождений по позициям: '+v.differentQuantities:'')+'</div></td>'+
      '<td>'+action+'</td></tr>';
    }).join('')+'</tbody></table></div><div class="pl-final-list">'+summaries.map(v=>
     '<details class="pl-final"><summary>'+esc(lookup(v))+' · '+esc(n[v.supplierId]||v.supplierId)+' — '+v.matchedPositions+'/'+v.plannedPositions+' позиций отмечено'+
-    (v.missingPositions?' · '+v.missingPositions+' осталось':'')+(v.unexpectedPositions?' · '+v.unexpectedPositions+' лишних':'')+'</summary>'+
+    (v.missingPositions?' · '+v.missingPositions+' осталось':'')+(v.unexpectedPositions?' · '+v.unexpectedPositions+' лишних':'')+
+    (v.differentQuantities?' · '+v.differentQuantities+' расхождений по количеству':'')+'</summary>'+
     '<div class="pl-scroll"><table class="pl-table pl-check-table"><thead><tr><th>Товар</th><th>План, шт.</th><th>Факт, шт.</th><th>Разница</th><th>Статус</th></tr></thead><tbody>'+
     (v.positionChecks.length?v.positionChecks.map(p=>{
-     const statuses={not_loaded:s.closed?'Не забрано':'Ещё не отмечено',unverified:'Отмечено · штуки не проверены',
+     const statuses={not_loaded:s.closed?'Не забрано':'Ещё не отмечено',
       matched:'✓ Совпадает',difference:'Расхождение по штукам',unexpected:'Нет в накладной'};
-     const klass=p.state==='matched'?'pl-good':p.state==='unverified'?'pl-warning':'pl-alert';
+     const klass=p.state==='matched'?'pl-good':'pl-alert';
      return '<tr><td>'+esc(p.name)+'</td><td>'+fmt(p.expected)+'</td><td>'+
       (p.received===null?'—':fmt(p.received))+'</td><td>'+
       (p.delta===null?'—':(p.delta>0?'+':'')+fmt(p.delta))+'</td><td class="'+klass+'">'+statuses[p.state]+'</td></tr>';
     }).join(''):'<tr><td colspan="5">В накладной нет товарных позиций, а в погрузке нет записей.</td></tr>')+
-    '</tbody></table></div><div class="pl-muted">Названия сравниваются без учёта регистра. Если они различаются, выбери название из накладной или проверь позицию вручную. Места не считаются штуками.</div>'+
+    '</tbody></table></div><div class="pl-muted">Названия сравниваются без учёта регистра. Если они различаются, выбери точное название из накладной. Каждое место считается одной штукой товара.</div>'+
     '</details>').join('')+'</div>':
     '<p class="pl-muted">Пока не выбраны накладные для приёмки.</p>';
  }
@@ -292,7 +291,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
   try{
    const b=palletCreate(book,id,at,'Приёмка '+timestamp(at));
    if(!persist(b))return;
-   currentId=id;activeInvoice='';editingEntry='';$('plProduct').value='';$('plPlaces').value='1';$('plUnits').value='';
+   currentId=id;activeInvoice='';editingEntry='';$('plProduct').value='';$('plPlaces').value='1';
    $('plSearch').value='';$('plStatus').value='ready';searchLimit=36;
    render();say('Приёмка создана. Отметь накладные и начинай загружать места.');
   }catch(e){say(e.message,true)}
@@ -303,7 +302,7 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
  }
  $('plNew').addEventListener('click',make);
  $('plSessions').addEventListener('change',e=>{
-  currentId=e.target.value;activeInvoice='';editingEntry='';$('plProduct').value='';$('plPlaces').value='1';$('plUnits').value='';
+  currentId=e.target.value;activeInvoice='';editingEntry='';$('plProduct').value='';$('plPlaces').value='1';
   render();
  });
  $('plCloseSession').addEventListener('click',()=>{
@@ -345,15 +344,16 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
  $('plEntryForm').addEventListener('submit',e=>{
   e.preventDefault();if(blocked())return;
   const s=current();if(!s||s.closed)return;
+  const legacyEntry=editingEntry?s.entries.find(item=>item.id===editingEntry):null;
   const entry={invoiceKey:$('plCurrentInvoice').value,product:$('plProduct').value,
-   places:$('plPlaces').value,units:$('plUnits').value,at:new Date().toISOString()};
+   places:$('plPlaces').value,units:legacyEntry?.units??'',at:new Date().toISOString()};
   try{
    const result=editingEntry?
     palletEditEntry(book,s.id,editingEntry,entry):
     palletAdd(book,s.id,{...entry,id:'place-'+crypto.randomUUID()});
    if(!persist(result))return;
    editingEntry='';$('plSaveEntry').textContent='＋ Добавить в машину';
-   $('plProduct').value='';$('plPlaces').value='1';$('plUnits').value='';
+   $('plProduct').value='';$('plPlaces').value='1';
    activeInvoice=entry.invoiceKey;
    render();say('✓ Фактическое место записано: '+entry.product+'. Можно продолжать с этой или другой накладной.');
    $('plProduct').focus();
@@ -369,15 +369,11 @@ if(typeof document!=='undefined'&&typeof ops!=='undefined'&&document.getElementB
    try{store(palletRemoveEntry(book,s.id,id),'Запись удалена из приёмки.')}catch(err){say(err.message,true)}
   }else{
    editingEntry=id;activeInvoice=entry.invoiceKey;
-   $('plProduct').value=entry.product;$('plPlaces').value=entry.places;$('plUnits').value=entry.units??'';
+   $('plProduct').value=entry.product;$('plPlaces').value=entry.places;
    renderSessions();$('plSaveEntry').textContent='✓ Сохранить исправление';
    $('plEntryForm').scrollIntoView({behavior:'smooth',block:'start'});$('plProduct').focus();
    say('Исправляешь запись №'+(s.entries.indexOf(entry)+1)+'. При сохранении её место в журнале не изменится.');
   }
- });
- $('plReport').addEventListener('change',e=>{
-  const input=e.target.closest('[data-pl-expected]'),s=current();if(!input||!s||blocked())return;
-  try{store(palletExpected(book,s.id,input.dataset.plExpected,input.value),'Ожидаемое число мест записано.')}catch(err){say(err.message,true);renderReport()}
  });
  $('plReport').addEventListener('click',async e=>{
   const single=e.target.closest('[data-pl-charge]'),all=e.target.closest('[data-pl-charge-all]'),s=current();

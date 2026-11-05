@@ -16,7 +16,7 @@ export function palletSettlementEligibility(summary,closed){
  if(summary?.missingPositions)reasons.push('Не все товары из накладной отмечены');
  if(summary?.unexpectedPositions)reasons.push('В погрузке есть товары без совпадения в накладной');
  if(summary?.uncheckedQuantities||summary?.actualUnits===null)
-  reasons.push('Укажите фактическое количество штук для каждой записи');
+  reasons.push('Не удалось определить фактическое количество мест / штук');
  if(summary?.differentQuantities||
   (summary?.actualUnits!==null&&Math.abs(summary.actualUnits-summary.expectedUnits)>0.000001))
   reasons.push('Количество штук отличается от накладной');
