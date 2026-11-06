@@ -81,6 +81,28 @@ test('independent receiving counts, alias groups, MoySklad mappings and pallet s
  assert.equal(JSON.parse(store2.getItem(AUX_KEYS.pallets)).sessions[0].id,'p1');
  assert.equal(JSON.parse(store2.getItem(AUX_KEYS.moysklad))['["all","puzzi",""]'],'ms-product-1');
 });
+test('two devices can add places to the same open pallet without losing either scan',()=>{
+ const invoiceKey='["anna","inv-1"]',invoice={key:invoiceKey,supplierId:'anna',number:'INV1',
+  tracking:'INV1',date:'2026-11-06',status:'ready',expectedPlaces:null,
+  items:[{name:'Puzzi',sku:'',qty:2}]};
+ const initial=place('p1');initial.invoices.push(invoice);
+ const base=data('pallets','p1',initial),local=structuredClone(base),remote=structuredClone(base);
+ local.collections.pallets.p1.entries.push({id:'e1',invoiceKey,product:'Puzzi',places:1,units:null,at:'2026-11-06T12:00:00Z'});
+ remote.collections.pallets.p1.entries.push({id:'e2',invoiceKey,product:'Puzzi',places:1,units:null,at:'2026-11-06T12:01:00Z'});
+ const merged=mergeAux(base,local,remote);
+ assert.deepEqual(merged.conflicts,[]);
+ assert.deepEqual(new Set(merged.merged.collections.pallets.p1.entries.map(e=>e.id)),new Set(['e1','e2']));
+ assert.deepEqual(merged.merged.collections.pallets.p1.entries.map(e=>e.id),['e1','e2']);
+});
+test('closing a pallet while another device adds places still needs manual review',()=>{
+ const initial=place('p1'),base=data('pallets','p1',initial);
+ const local=structuredClone(base),remote=structuredClone(base);
+ local.collections.pallets.p1.closed=true;
+ remote.collections.pallets.p1.entries.push({id:'e1',product:'Puzzi',places:1});
+ const result=mergeAux(base,local,remote);
+ assert.equal(result.merged,null);
+ assert.equal(result.conflicts[0].section,'pallets');
+});
 test('cross-device alias rules cannot silently assign the same product to two groups',()=>{
  const m=emptyAux();
  m.collections.aliases.g1={id:'g1',name:'One',members:['a','b']};

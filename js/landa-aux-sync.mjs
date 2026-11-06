@@ -164,7 +164,9 @@ if(typeof document!=='undefined'){
   }catch(e){
    errors++;
    info('⚠ Синхронизация дополнительных данных: '+e.message,true);
-   // A collision should be re-read on the next periodic check.
+   // Two devices may have committed seconds apart. Re-read the latest cloud
+   // version shortly; a SHA conflict never authorizes a blind overwrite.
+   if(String(e.message||'').includes('Облачный файл изменился'))pending=true;
   }finally{
    busy=false;
    if(pending){pending=false;schedule(5000);}

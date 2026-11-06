@@ -1,5 +1,6 @@
 // Pure, per-record three-way merge for LANDA browser-only journals.
 // No credentials, network, or finance data. The private sidecar is NOT backup.json.
+import {mergeRecords} from './landa-record-merge.mjs';
 export const AUX_KEYS={
  expenses:'landa_expenses_standalone_v1',
  receiving:'landa_receiving_counts_v1',
@@ -69,6 +70,23 @@ export function mergeAux(base,local,remote){
    const baseVal=own(srcB,key)?srcB[key]:null,localVal=own(srcL,key)?srcL[key]:null,remoteVal=own(srcR,key)?srcR[key]:null;
    const localChanged=!same(baseVal,localVal),remoteChanged=!same(baseVal,remoteVal);
    if(localChanged&&remoteChanged&&!same(localVal,remoteVal)){
+    if(section==='pallets'&&baseVal&&localVal&&remoteVal){
+     const changedJournal=x=>!same(x.entries,baseVal.entries)||!same(x.invoices,baseVal.invoices);
+     // A pallet being finalized while another device is still loading needs
+     // explicit review before it can be billed to the supplier.
+     if((localVal.closed!==baseVal.closed&&changedJournal(remoteVal))||
+      (remoteVal.closed!==baseVal.closed&&changedJournal(localVal))){
+      conflicts.push({section,key});continue;
+     }
+     const deep=mergeRecords(baseVal,localVal,remoteVal,{arrayIds:{invoices:'key',entries:'id'}});
+     if(!deep.conflicts.length){
+      // Entries were created on different devices: restore chronological order
+      // without changing any recorded place, quantity or original timestamp.
+      deep.merged.entries.sort((a,b)=>String(a.at||'').localeCompare(String(b.at||''))||
+       String(a.id).localeCompare(String(b.id)));
+      dest[key]=deep.merged;continue;
+     }
+    }
     conflicts.push({section,key});continue;
    }
    const winner=localChanged?localVal:remoteVal;

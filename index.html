@@ -1293,12 +1293,16 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  let meta={repo:'',path:'',sha:null,hash:null}, token='', remote=null, ready=false, busy=false, queued=false, timer=0, inFlight=false;
  // Cloud polling is read-first and never overwrites diverged financial versions.
  let lastAutoCheck=Date.now();
+ function unsafeToRefresh(){
+  if(document.querySelector('dialog[open]'))return true;
+  const editing=document.activeElement;
+  if(editing&&editing.matches&&editing.matches('input,textarea,select,[contenteditable="true"]'))return true;
+  return !!(($('exAmount')?.value||'').trim()||($('exDescription')?.value||'').trim());
+ }
  function autoCheckCloud(){
   if(!conf.auto||!configReady()||busy||inFlight||document.hidden)return;
   // Never reload the page while a person is filling in a form or dialog.
-  if(document.querySelector('dialog[open]'))return;
-  const editing=document.activeElement;
-  if(editing&&editing.matches&&editing.matches('input,textarea,select,[contenteditable="true"]'))return;
+  if(unsafeToRefresh())return;
   if(Date.now()-lastAutoCheck<25000)return;
   lastAutoCheck=Date.now();
   void checkRemote(true);
@@ -1338,6 +1342,16 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  function dec(b){let str=atob(b.replace(/\s/g,''));let arr=new Uint8Array(str.length);for(let i=0;i<str.length;i++)arr[i]=str.charCodeAt(i);return new TextDecoder().decode(arr)}
  function fileUrl(){return base()+'/contents/'+conf.path.split('/').map(encodeURIComponent).join('/')}
  async function getCloud(){const r=await fetchAPI(fileUrl());if(r.status===404)return null;let x=r.data;if(!x.sha||!x.content)throw Error('GitHub не прислал содержимое JSON (файл больше 1 МБ?).');let d;try{d=JSON.parse(dec(x.content))}catch(e){throw Error('Не удалось разобрать облачный JSON: '+e.message)}if(!snapshotValid(d))throw Error('JSON на GitHub не соответствует резервной копии LANDA.');return {sha:x.sha,data:d,hash:fingerprint(d)}}
+ async function getPreviousCloud(){
+  if(!/^[a-f0-9]{40}$/i.test(String(meta.sha||'')))throw Error('Нет сохранённой контрольной версии для объединения.');
+  const result=await fetchAPI(base()+'/git/blobs/'+meta.sha);
+  if(result.status!==200||result.data.sha!==meta.sha||result.data.encoding!=='base64'||!result.data.content)
+   throw Error('Не удалось прочитать предыдущую версию финансовой базы из истории GitHub.');
+  const previous=JSON.parse(dec(result.data.content));
+  if(!snapshotValid(previous)||fingerprint(previous)!==meta.hash)
+   throw Error('Контрольная версия не совпадает с локальной историей синхронизации.');
+  return previous;
+ }
  async function checkRepoPrivate(){
   const r=await fetchAPI(base());
   if(r.status===404){
@@ -1362,6 +1376,56 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
    return true;
  }
  function synced(r){ready=true;remote=r;setMeta(r?r.sha:null,fingerprint(getSnapshot()));clearConflict();msg('✓ GitHub подключён · данные синхронизированы', 'ok')}
+ function installSnapshot(data,found,automatic,originalHash,message){
+  if(automatic&&unsafeToRefresh()){
+   msg('В GitHub есть обновления. Ждём, пока закончишь ввод данных, чтобы безопасно обновить страницу.');
+   return false;
+  }
+  if(originalHash&&fingerprint(getSnapshot())!==originalHash){
+   msg('За время проверки появились новые локальные изменения. Повторим синхронизацию.');
+   return false;
+  }
+  if(!snapshotValid(data))throw Error('Объединённая финансовая база не прошла проверку.');
+  const rawS=JSON.stringify(data.proschet),rawO=JSON.stringify(data.operations);
+  const prevS=readStore(localStorage,KEY),prevO=readStore(localStorage,OPS_KEY);
+  try{
+   if(!writeStore(localStorage,KEY,rawS)||!writeStore(localStorage,OPS_KEY,rawO)||
+      readStore(localStorage,KEY)!==rawS||readStore(localStorage,OPS_KEY)!==rawO)
+    throw Error('Браузер не подтвердил сохранение.');
+  }catch(e){
+   if(prevS===null)delStore(localStorage,KEY);else writeStore(localStorage,KEY,prevS);
+   if(prevO===null)delStore(localStorage,OPS_KEY);else writeStore(localStorage,OPS_KEY,prevO);
+   throw Error('Не удалось сохранить данные без потерь: '+e.message);
+  }
+  setMeta(found.sha,found.hash);remote=found;ready=true;clearConflict();
+  msg(message||'✓ Данные из GitHub загружены. Перезапускаем приложение…','ok');
+  window.location.reload();
+  return true;
+ }
+ async function tryAutoMerge(found,localHash){
+  try{
+   const original=await getPreviousCloud();
+   const {mergeFinanceBackups}=await import('./js/landa-finance-sync-core.mjs');
+   if(fingerprint(getSnapshot())!==localHash){msg('Локальные данные изменились, проверим облако повторно.');return}
+   const outcome=mergeFinanceBackups(original,getSnapshot(),found.data);
+   if(outcome.conflicts.length){
+    conflict('Разные устройства изменили одни и те же данные: '+outcome.conflicts.slice(0,3).join('; ')+'. Ничего не заменено. Сохрани локальную копию перед разрешением конфликта.');
+    msg('⚠ Есть финансовый конфликт. Объединение остановлено для защиты данных.','error');return;
+   }
+   const combinedHash=fingerprint(outcome.merged);
+   if(combinedHash===found.hash){installSnapshot(found.data,found,true,localHash);return}
+   if(combinedHash===localHash){
+    setMeta(found.sha,found.hash);remote=found;ready=true;clearConflict();
+    msg('✓ Все изменения уже есть локально; сохраняем объединённую копию в GitHub.','ok');
+    queueUpload();return;
+   }
+   installSnapshot(outcome.merged,found,true,localHash,
+    '✓ Независимые изменения обоих устройств объединены. Перезапускаем LANDA для безопасного сохранения в GitHub.');
+  }catch(e){
+   conflict('Безопасное объединение пока невозможно: '+e.message+'. Локальные и облачные записи не заменены.');
+   msg('⚠ Автоматическое объединение остановлено: '+e.message,'error');
+  }
+ }
  async function checkRemote(bootstrap){if(!configReady())throw Error('Сначала укажи репозиторий и токен.');if(busy)return;busy=true;msg('Проверяем приватный GitHub и облачную копию…');try{
    await checkRepoPrivate();let found=await getCloud(),local=fingerprint(getSnapshot());remote=found;
    if(!found){if(meta.sha){conflict('Облачная копия была удалена или перемещена. Можно загрузить сюда локальные данные, но сначала проверь адрес и путь.');msg('В GitHub нет ранее синхронизированной копии.', 'error')}else{ready=false;clearConflict();msg('✓ Приватный репозиторий доступен. Нажми «Сохранить на GitHub» для первой загрузки.')}}
@@ -1375,6 +1439,8 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
       ready=true;clearConflict();msg('Есть локальные изменения. Отправляем их в GitHub…');if(conf.auto)queued=true;
    }else if(meta.repo===conf.repo&&meta.path===conf.path&&meta.hash===local){
       ready=false;clearConflict();msg('В GitHub есть более новые изменения. Загружаем их…');restoreRemote(found,true);
+   }else if(conf.auto&&meta.repo===conf.repo&&meta.path===conf.path&&meta.sha&&meta.hash&&found.sha!==meta.sha){
+     await tryAutoMerge(found,local);
    }else{
       conflict('Облачная и локальная версии не совпадают. Автоматическая замена остановлена. Для проверки сначала скачай локальную копию, затем выбери, какую оставить.');msg('⚠ Обнаружены разные версии данных. Выбери одну.', 'error');
    }
@@ -1394,7 +1460,13 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
        msg('⚠ Новая облачная версия защищена от принудительной перезаписи.','error');
        return;
      }
-     if(!force){if(latest&&meta.sha!==latest.sha){remote=latest;conflict('Файл изменён с другого устройства. Чтобы не затереть чужие изменения, автоматическая запись остановлена.');msg('⚠ Конфликт: GitHub изменился. Проверь версии.','error');return}if(!latest&&meta.sha){ready=false;conflict('Облачный файл исчез. Проверь репозиторий перед повторной записью.');msg('⚠ Облачная копия удалена.','error');return}}
+     if(!force){if(latest&&meta.sha!==latest.sha){
+       remote=latest;ready=false;
+       msg('☁ На другом устройстве появились изменения. Проверяем безопасное автоматическое объединение…');
+       lastAutoCheck=0;
+       setTimeout(()=>{if(conf.auto&&!inFlight)void checkRemote(true)},1000);
+       return;
+     }if(!latest&&meta.sha){ready=false;conflict('Облачный файл исчез. Проверь репозиторий перед повторной записью.');msg('⚠ Облачная копия удалена.','error');return}}
      if(latest&&latest.hash===localHash){synced(latest);return}
      const body=JSON.stringify(now);if(new TextEncoder().encode(body).length>900000)throw Error('Размер данных близок к лимиту GitHub Contents API (1 МБ). Скачай JSON-копию для сохранности.');
      msg('☁ Сохраняем изменения на GitHub…');
@@ -1407,22 +1479,19 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
      let changed=fingerprint(getSnapshot())!==localHash;
      msg(changed?'✓ Копия сохранена; появились новые изменения — сохраняем их следом.':'✓ GitHub: все изменения сохранены', 'ok');
      if(changed)queued=true;
-   }catch(e){ready=false;msg('Ошибка сохранения в GitHub: '+e.message+' Локальная копия не затронута.','error')}
+   }catch(e){
+     ready=false;msg('Ошибка сохранения в GitHub: '+e.message+' Локальная копия не затронута.','error');
+     if(conf.auto&&/GitHub уже изменился|HTTP 409|HTTP 422/.test(String(e.message))){
+       lastAutoCheck=0;
+       setTimeout(()=>{if(!inFlight)void checkRemote(true)},1200);
+     }
+   }
    finally{inFlight=false;if(queued&&ready){queued=false;queueUpload()}}
  }
  function queueUpload(){if(!ready||!conf.auto||!token)return;clearTimeout(timer);timer=setTimeout(()=>upload(false),3200)}
  function restoreRemote(found,automatic){if(!found)return;try{
-    if(!snapshotValid(found.data))throw Error('Неподдерживаемая копия');
-    const localHash=fingerprint(getSnapshot());
-    const rawS=JSON.stringify(found.data.proschet),rawO=JSON.stringify(found.data.operations);
-    const prevS=readStore(localStorage,'landa_proschet_offline_v1'),prevO=readStore(localStorage,'landa_finance_operations_v1');
-    if(!writeStore(localStorage,'landa_proschet_offline_v1',rawS)||!writeStore(localStorage,'landa_finance_operations_v1',rawO)){
-       if(prevS===null)delStore(localStorage,'landa_proschet_offline_v1');else writeStore(localStorage,'landa_proschet_offline_v1',prevS);
-       if(prevO===null)delStore(localStorage,'landa_finance_operations_v1');else writeStore(localStorage,'landa_finance_operations_v1',prevO);
-       throw Error('Браузер запретил запись в локальное хранилище.');
-    }
-    setMeta(found.sha,found.hash);msg('✓ Данные загружены с GitHub. Перезапускаем приложение…','ok');
-    window.location.reload();
+    installSnapshot(found.data,found,automatic,fingerprint(getSnapshot()),
+     '✓ Данные загружены с GitHub. Перезапускаем приложение…');
    }catch(e){ready=false;msg('Не удалось применить облачную копию: '+e.message,'error')}
  }
  function showDialog(){el('githubDialog').showModal();el('ghRepo').value=conf.repo;el('ghPath').value=conf.path;el('ghRemember').checked=conf.remember;el('ghAuto').checked=conf.auto;el('ghToken').value=token}
@@ -1480,7 +1549,7 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
    if(!saveOps()){ops=oldOps;throw Error('Браузер не сохранил объединённые данные. GitHub не изменён.')}
    renderOps();
    const updatedHash=fingerprint(getSnapshot());
-   setMeta(found.sha,updatedHash);remote=found;ready=true;clearConflict();
+   setMeta(found.sha,found.hash);remote=found;ready=true;clearConflict();
    msg('✓ Объединено '+additions.length+' новых облачных накладных. Локальных новых: '+localOnly.length+'. Сохраняем итоговую версию в GitHub.','ok');
    if(conf.auto)queueUpload();else msg('✓ Накладные объединены локально. Включи автосохранение или нажми «Сохранить на GitHub», чтобы записать объединённую версию.','ok');
  }
