@@ -1558,9 +1558,19 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
      const response=await fetchAPI(fileUrl(),{method:'PUT',headers:Object.assign({'Content-Type':'application/json'},apiHeaders()),body:JSON.stringify(payload)});
      if(response.status!==200&&response.status!==201)throw Error(apiError(response.status,response.data.message));
      const newSha=response.data.content&&response.data.content.sha;if(!newSha)throw Error('GitHub не подтвердил SHA сохранённого файла.');
-     setMeta(newSha,localHash);remote={sha:newSha,data:now,hash:localHash};ready=true;clearConflict();
-     let changed=fingerprint(getSnapshot())!==localHash;
-     msg(changed?'✓ Копия сохранена; появились новые изменения — сохраняем их следом.':'✓ GitHub: все изменения сохранены', 'ok');
+     // A successful PUT is not enough: read the private backup back and verify
+     // the exact financial snapshot, including every cash operation.
+     const verified=await getCloud();
+     if(!verified||verified.sha!==newSha||verified.hash!==localHash){
+      remote=verified||null;
+      ready=false;
+      conflict('GitHub принял сохранение, но контрольная проверка облачной копии не совпала. Ничего не перезаписывай; проверь синхронизацию.');
+      msg('⚠ Облако пока не подтвердило все кассовые и финансовые записи.','error');
+      return;
+     }
+     setMeta(newSha,localHash);remote=verified;ready=true;clearConflict();
+     const changed=fingerprint(getSnapshot())!==localHash;
+     msg(changed?'✓ Проверено в GitHub; появились новые изменения — сохраняем их следом.':'✓ GitHub: сохранено и проверено · '+new Date().toLocaleTimeString('ru-RU'), 'ok');
      if(changed)queued=true;
    }catch(e){
      ready=false;msg('Ошибка сохранения в GitHub: '+e.message+' Локальная копия не затронута.','error');
