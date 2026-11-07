@@ -21,7 +21,8 @@ test('urgent ledger uploads are queued promptly, without replacing other values'
 
 test('offline save is visibly distinguished from cloud success',()=>{
  assert.match(html,/Сохранено только на устройстве/);
- assert.match(html,/GitHub: все изменения сохранены/);
+ assert.match(html,/GitHub: сохранено и проверено/);
+ assert.match(html,/verified\.sha!==newSha\|\|verified\.hash!==localHash/);
  assert.match(html,/if\(conf\.auto&&configReady\(\)\)setTimeout/);
 });
 
