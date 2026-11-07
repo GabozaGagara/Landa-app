@@ -1424,6 +1424,18 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
   return 'В новой версии отсутствуют '+missing.length+
    ' кассовых операций без записи об удалении. Автосинхронизация остановлена во избежание потери денег. Скачай «Архив истории кассы» и проверь версии.';
  }
+ // Opening balances change the cash total even if every individual entry remains.
+ // Require a fresh, per-account audit event instead of silently resetting them.
+ function unexpectedOpeningChange(before,after){
+  const oldOps=before?.operations||{},newOps=after?.operations||{};
+  const openingChanged=JSON.stringify(oldOps.openings||{})!==JSON.stringify(newOps.openings||{});
+  const rateChanged=(oldOps.openingUsdRate??null)!==(newOps.openingUsdRate??null);
+  if(!openingChanged&&!rateChanged)return false;
+  const known=new Set((oldOps.auditTrail||[]).map(x=>String(x.id)));
+  const fresh=(newOps.auditTrail||[]).filter(x=>!known.has(String(x.id))&&x.recordId==='accounts');
+  return (openingChanged&&!fresh.some(x=>x.type==='opening'))||
+   (rateChanged&&!fresh.some(x=>x.type==='rate'));
+ }
  function synced(r){ready=true;remote=r;setMeta(r?r.sha:null,fingerprint(getSnapshot()));clearConflict();msg('✓ GitHub подключён · данные синхронизированы', 'ok')}
  function installSnapshot(data,found,automatic,originalHash,message){
   if(automatic&&unsafeToRefresh()){
@@ -1438,6 +1450,10 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
   const lostCash=unexplainedCashLoss(getSnapshot(),data);
   if(automatic&&lostCash.length){
    conflict(cashLossWarning(lostCash));msg('⚠ Синхронизация остановлена: облако потеряло кассовые записи.','error');return false;
+  }
+  if(automatic&&unexpectedOpeningChange(getSnapshot(),data)){
+   conflict('В облачной версии изменены начальные остатки кассы без новой записи в журнале действий. Автозамена остановлена.');
+   msg('⚠ Начальные остатки изменились без подтверждённой истории.','error');return false;
   }
   if(!automatic&&lostCash.length){
    if(!confirm('В облачной версии отсутствуют '+lostCash.length+' кассовых операций этого устройства. Перед заменой скачай «Полную копию» и «Архив истории кассы». Продолжить ручную замену?'))return false;
@@ -1528,6 +1544,10 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
       const lostCash=unexplainedCashLoss(latest.data,now);
       if(lostCash.length){
        conflict(cashLossWarning(lostCash));msg('⚠ Сохранение остановлено: текущая версия потеряла кассовые записи.','error');return;
+      }
+      if(unexpectedOpeningChange(latest.data,now)){
+       conflict('Начальные остатки кассы отличаются от облачных без записи об их изменении. Отправка остановлена.');
+       msg('⚠ Кассовые остатки требуют проверки перед сохранением.','error');return;
       }
      }
      if(latest&&latest.hash===localHash){synced(latest);return}
