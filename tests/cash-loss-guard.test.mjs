@@ -58,3 +58,11 @@ test('urgent cash saves bypass backup throttling in IndexedDB',()=>{
  assert.match(localBackups,/event\?\.detail\?\.urgent/);
  assert.match(localBackups,/void createBackup\(false,true\)/);
 });
+
+test('cash rescue button listener is declared in the same script as its function',()=>{
+ const scripts=[...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/g)].map(x=>x[1]);
+ const fn=scripts.findIndex(x=>x.includes('function downloadCashRescue(){'));
+ const handler=scripts.findIndex(x=>x.includes("addEventListener('click',downloadCashRescue)"));
+ assert.ok(fn>=0,'cash rescue function missing');
+ assert.equal(handler,fn,'cross-script binding can stop the financial dashboard startup');
+});
