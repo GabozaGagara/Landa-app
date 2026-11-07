@@ -4,9 +4,9 @@
 if(typeof ops==='undefined'||typeof state==='undefined')return;
 const $=id=>document.getElementById(id);
 if(!$('lcMakeBackup'))return;
-const name='landa_safe_snapshots_v1',store='versions',maxStored=12;
+const name='landa_safe_snapshots_v1',store='versions',maxStored=80;
 const esc=x=>String(x??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-let timer=0,inFlight=false,lastSignature='';
+let timer=0,inFlight=false,lastSignature='',pendingUrgent=false;
 function status(msg){const x=$('lcBackupStatus');if(x)x.textContent=msg;}
 function openDatabase(){
  return new Promise((resolve,reject)=>{
@@ -41,8 +41,8 @@ function remove(db,id){
 function capture(){
  return {app:'LANDA-suite',backupVersion:3,createdAt:new Date().toISOString(),proschet:JSON.parse(JSON.stringify(state)),operations:JSON.parse(JSON.stringify(ops))};
 }
-async function createBackup(manual){
- if(inFlight)return;
+async function createBackup(manual,urgent=false){
+ if(inFlight){if(urgent)pendingUrgent=true;return;}
  inFlight=true;let db=null;
  try{
   const snapshot=capture();
@@ -55,7 +55,7 @@ async function createBackup(manual){
   if(!manual&&lastSignature===signature)return;
   db=await openDatabase();
   const last=await readAll(db);
-  if(!manual&&last.length){
+  if(!manual&&!urgent&&last.length){
    const latest=last.sort((a,b)=>b.id.localeCompare(a.id))[0];
    if(Date.now()-Date.parse(latest.at)<120000)return;
   }
@@ -66,7 +66,7 @@ async function createBackup(manual){
   lastSignature=signature;
   status('✓ Локальная резервная версия создана '+at.toLocaleString('ru-RU')+'. Хранится только на этом устройстве.');
  }catch(e){status('Не удалось создать резервную версию: '+e.message+'. Скачайте полную JSON-копию вручную.')}
- finally{if(db)db.close();inFlight=false}
+ finally{if(db)db.close();inFlight=false;if(pendingUrgent){pendingUrgent=false;void createBackup(false,true)}}
 }
 function download(contents,name){
  const blob=new Blob([contents],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
@@ -95,7 +95,11 @@ async function downloadVersion(id){
 $('lcMakeBackup').addEventListener('click',async()=>{await createBackup(true);await listBackups()});
 $('lcListBackups').addEventListener('click',listBackups);
 $('lcBackups').addEventListener('click',e=>{const b=e.target.closest('[data-lc-download-version]');if(b)downloadVersion(b.dataset.lcDownloadVersion)});
-window.addEventListener('landa:data-changed',()=>{clearTimeout(timer);timer=setTimeout(()=>createBackup(false),3000)});
+window.addEventListener('landa:data-changed',event=>{
+ clearTimeout(timer);
+ if(event?.detail?.urgent){void createBackup(false,true);return;}
+ timer=setTimeout(()=>createBackup(false),3000);
+});
 async function ensureInitialBackup(){
  let db;
  try{
