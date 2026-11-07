@@ -522,7 +522,7 @@ const shipmentTotalCents=i=>{
 const invoiceAmount=inv=>invoiceAccrued(inv)?moneyCents(inv.total):0;
 const amountInput=(s,positive=true)=>{let n=evaluated(s);if(n===null||!Number.isFinite(n)||(positive&&n<=0))throw Error('Введите сумму больше нуля');return moneyCents(n)};
 const roundCents=n=>fromCents(moneyCents(n));
-function saveOps(){try{let data=JSON.stringify(ops);localStorage.setItem(OPS_KEY,data);if(localStorage.getItem(OPS_KEY)!==data)throw Error('Браузер не подтвердил запись данных');savedMsg();try{window.dispatchEvent(new Event('landa:data-changed'))}catch(_){}return true}catch(e){savedMsg('Не удалось сохранить! Скачайте копию.',true);showStorageWarning();return false}}
+function saveOps(){try{let data=JSON.stringify(ops);localStorage.setItem(OPS_KEY,data);if(localStorage.getItem(OPS_KEY)!==data)throw Error('Браузер не подтвердил запись данных');savedMsg();try{window.dispatchEvent(new CustomEvent('landa:data-changed',{detail:{urgent:true}}))}catch(_){}return true}catch(e){savedMsg('Не удалось сохранить! Скачайте копию.',true);showStorageWarning();return false}}
 function opCommit(msg){
  let ok=saveOps(),renderError=null;
  try{renderOps()}catch(err){renderError=err;window.__landaReportError('Ошибка обновления журналов: '+(err&&err.message||String(err)))}
@@ -1488,7 +1488,7 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
    }
    finally{inFlight=false;if(queued&&ready){queued=false;queueUpload()}}
  }
- function queueUpload(){if(!ready||!conf.auto||!token)return;clearTimeout(timer);timer=setTimeout(()=>upload(false),3200)}
+ function queueUpload(delay=3200){if(!ready||!conf.auto||!token)return;clearTimeout(timer);timer=setTimeout(()=>upload(false),delay)}
  function restoreRemote(found,automatic){if(!found)return;try{
     installSnapshot(found.data,found,automatic,fingerprint(getSnapshot()),
      '✓ Данные загружены с GitHub. Перезапускаем приложение…');
@@ -1559,7 +1559,14 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  action('ghForceUpload',async()=>{storeForm();const existing=await getCloud();if(existing&&isEmptyInstallation()&&existing.data.proschet.rows.length>0)throw Error('Нельзя перезаписать непустую облачную базу пустым просчётом. Сначала загрузи данные из GitHub.');if(!confirm('Перезаписать облачный файл данными ЭТОГО устройства? Облачная версия сохранится только в истории GitHub.'))return;await upload(true)});
  action('ghDownloadLocal',()=>{if(typeof downloadBackup==='function')downloadBackup();else throw Error('Выгрузка недоступна')});
  action('ghDisconnect',()=>{if(!confirm('Отключить синхронизацию GitHub на этом устройстве? Локальные финансовые данные останутся.'))return;clearTimeout(timer);ready=false;remote=null;token='';delStore(localStorage,CONFKEY);delStore(localStorage,METAKEY);delStore(localStorage,LOCAL_TOKEN);delStore(sessionStorage,LOCAL_TOKEN);conf={repo:'',path:'landa-data/backup.json',remember:false,auto:true};meta={repo:'',path:'',sha:null,hash:null};el('ghToken').value='';el('ghRepo').value='';el('ghPath').value=conf.path;clearConflict();msg('☁ GitHub отключён. Локальные данные сохранены.');window.dispatchEvent(new Event('landa:github-disconnected'))});
- window.addEventListener('landa:data-changed',()=>{if(ready){msg('● Локально сохранено · ожидает GitHub');queueUpload()}else if(conf.repo){msg('● Локальные изменения. GitHub сейчас не синхронизирован.') }});
+ window.addEventListener('landa:data-changed',event=>{
+  if(ready&&conf.auto){msg('● Запись сохранена на устройстве · отправляем в GitHub…');queueUpload(event?.detail?.urgent?150:3200)}
+  else if(ready){msg('⚠ Сохранено только на устройстве: автоматическая отправка в GitHub выключена.','error')}
+  else if(conf.repo){
+   msg('⚠ Сохранено только на устройстве: GitHub ещё не подтвердил синхронизацию.','error');
+   if(conf.auto&&configReady())setTimeout(()=>{if(!busy&&!inFlight)void checkRemote(true)},650);
+  }else msg('⚠ Сохранено только на устройстве: подключите приватный GitHub.','error');
+ });
  try{const v=JSON.parse(readStore(localStorage,CONFKEY)||'null');if(v&&v.repo){conf=Object.assign(conf,v);meta=JSON.parse(readStore(localStorage,METAKEY)||'null')||meta;token=readStore(conf.remember?localStorage:sessionStorage,LOCAL_TOKEN)||'';if(meta.repo!==conf.repo||meta.path!==conf.path)meta={repo:conf.repo,path:conf.path,sha:null,hash:null}}}catch(e){}
  if(conf.repo){msg(token?'☁ GitHub: проверяем облачную копию…':'☁ GitHub настроен, нужен токен');if(token){lastAutoCheck=Date.now();checkRemote(true)}}else msg('☁ GitHub не настроен');
 })();
