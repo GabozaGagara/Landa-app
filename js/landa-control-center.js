@@ -77,7 +77,7 @@ let previousOps=JSON.parse(JSON.stringify(ops));
 let previousState=JSON.parse(JSON.stringify(state));
 const auditRecord=(type,id,label,source='owner')=>({id:'evt-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,9),at:iso(),type,recordId:String(id||''),summary:String(label||'').slice(0,250),source});
 function diffOps(before,after){
- const events=[],types={invoices:'Накладная',payments:'Оплата',allocations:'Зачёт',cash:'Касса',sales:'Продажа'};
+ const events=[],types={invoices:'Накладная',payments:'Оплата',allocations:'Зачёт',cash:'Касса',sales:'Продажа',reservedAdvances:'Резерв средств'};
  for(const [key,tag] of Object.entries(types)){
   const pre=new Map((before[key]||[]).map(v=>[v.id,v]));
   const post=new Map((after[key]||[]).map(v=>[v.id,v]));
@@ -146,6 +146,8 @@ save=function(){
 };
 function getIssues(){
  const errors=[],invIds=new Set(ops.invoices.map(x=>x.id)),payIds=new Set(ops.payments.map(x=>x.id));
+ const heldByPayment=new Map();for(const r of ops.reservedAdvances||[]){const p=ops.payments.find(x=>x.id===r.paymentId);if(!p||p.supplierId!==r.supplierId)errors.push('Отложенный аванс без правильного перевода');else heldByPayment.set(p.id,(heldByPayment.get(p.id)||0)+cents(r.amount)-cents(r.releasedAmount||0));}
+ for(const p of ops.payments)if((heldByPayment.get(p.id)||0)+ops.allocations.filter(a=>a.paymentId===p.id).reduce((v,a)=>v+cents(a.amount),0)>cents(p.amount))errors.push('Платёж зарезервирован и распределён сверх суммы: '+p.id);
  const tracks=new Set();
  for(const i of ops.invoices){
   const t=String(i.tracking||'').replace(/\s/g,'').toLowerCase();
@@ -219,22 +221,32 @@ function statement(){
  const payments=pays.filter(p=>payDate(p)>=from&&payDate(p)<=to);
  const billed=invoices.reduce((s,i)=>s+cents(i.total),0);
  const paid=payments.reduce((s,p)=>s+cents(p.amount),0);
- const opening=oldPays-oldInv,ending=opening+paid-billed;
- const rows=[...invoices.map(i=>({date:invDate(i),type:'Начисленная накладная',number:i.number||'',delta:-cents(i.total)})),...payments.map(p=>({date:payDate(p),type:p.isOpening?'Начальный аванс':'Перевод поставщику',number:p.note||'',delta:cents(p.amount)}))].sort((a,b)=>a.date.localeCompare(b.date));
- return {id,from,to,opening,ending,billed,paid,rows};
+ const reserves=(ops.reservedAdvances||[]).filter(r=>r.supplierId===id);
+ const reserveDate=r=>String(r.createdAt||'').slice(0,10),releaseDate=r=>String(r.releasedAt||'').slice(0,10);
+ const oldReserved=reserves.filter(r=>reserveDate(r)<from&&(!r.releasedAt||releaseDate(r)>=from)).reduce((v,r)=>v+cents(r.amount),0);
+ const created=reserves.filter(r=>reserveDate(r)>=from&&reserveDate(r)<=to);
+ const released=reserves.filter(r=>r.releasedAt&&releaseDate(r)>=from&&releaseDate(r)<=to);
+ const held=created.reduce((v,r)=>v+cents(r.amount),0),freed=released.reduce((v,r)=>v+cents(r.releasedAmount||0),0);
+ const opening=oldPays-oldInv-oldReserved,ending=opening+paid-billed-held+freed;
+ const rows=[...invoices.map(i=>({date:invDate(i),type:'Начисленная накладная',number:i.number||'',delta:-cents(i.total)})),
+  ...payments.map(p=>({date:payDate(p),type:p.isOpening?'Начальный аванс':'Перевод поставщику',number:p.note||'',delta:cents(p.amount)})),
+  ...created.map(r=>({date:reserveDate(r),type:'Отложено под закупку',number:r.purpose||'',delta:-cents(r.amount)})),
+  ...released.map(r=>({date:releaseDate(r),type:'Возвращено в свободный аванс',number:r.purpose||'',delta:cents(r.releasedAmount||0)}))
+ ].sort((a,b)=>a.date.localeCompare(b.date));
+ return {id,from,to,opening,ending,billed,paid,held,freed,rows};
 }
 function renderStatement(){
  const x=statement();cs.statement=x;
  $('lcStatementPreview').innerHTML='<div class="lc-metrics">'+[
  ['Баланс на начало',usd(x.opening)],['Начислено за период',usd(x.billed)],
- ['Оплачено за период',usd(x.paid)],['Баланс на конец',usd(x.ending)]
+ ['Оплачено за период',usd(x.paid)],['Отложено за период',usd(x.held)],['Освобождено',usd(x.freed)],['Баланс на конец',usd(x.ending)]
  ].map(y=>'<div class="lc-metric"><small>'+y[0]+'</small><b>'+esc(y[1])+'</b></div>').join('')+'</div>'+
  '<div class="lc-list">'+x.rows.map(r=>'<div class="lc-row"><span>'+esc(r.date)+' · '+esc(r.type)+' · '+esc(r.number)+'</span><b>'+esc(usd(r.delta))+'</b></div>').join('')+'</div>';
 }
 function exportStatement(){
  if(!cs.statement)renderStatement();
  const x=cs.statement;
- const rows=[['Акт сверки LANDA',supplierName(x.id)],['Период',x.from+' — '+x.to],['Начальный баланс, $',amount(x.opening)],['Дата','Операция','Документ','Изменение баланса, $'],...x.rows.map(y=>[y.date,y.type,y.number,amount(y.delta)]),['Начислено за период, $',amount(x.billed)],['Переведено за период, $',amount(x.paid)],['Конечный баланс, $',amount(x.ending)]];
+ const rows=[['Акт сверки LANDA',supplierName(x.id)],['Период',x.from+' — '+x.to],['Начальный баланс, $',amount(x.opening)],['Дата','Операция','Документ','Изменение баланса, $'],...x.rows.map(y=>[y.date,y.type,y.number,amount(y.delta)]),['Начислено за период, $',amount(x.billed)],['Переведено за период, $',amount(x.paid)],['Отложено за период, $',amount(x.held)],['Освобождено за период, $',amount(x.freed)],['Конечный баланс, $',amount(x.ending)]];
  download('\ufeff'+rows.map(row=>row.map(safeCSV).join(';')).join('\r\n'),'LANDA-сверка-'+x.id+'-'+x.to+'.csv','text/csv;charset=utf-8');
 }
 function profit(s){
