@@ -119,3 +119,22 @@ test('reserved UI derives its money from existing transfers and never creates ne
 test('safe cross-device merge tracks reservation IDs',()=>{
  assert.match(core,/'operations\.reservedAdvances':'id'/);
 });
+
+test('new reservation merges safely with a legacy backup that has no reserve field',()=>{
+ const b=cloud();delete b.operations.reservedAdvances;
+ const l=structuredClone(b),r=structuredClone(b);
+ l.operations.reservedAdvances=[reserve('new',250)];
+ const result=mergeFinanceBackups(b,l,r);
+ assert.deepEqual(result.conflicts,[]);
+ assert.equal(result.merged.operations.reservedAdvances.length,1);
+ assert.equal(result.merged.operations.reservedAdvances[0].amount,250);
+});
+
+test('reserve interactions stay inside the operational script to avoid startup errors',()=>{
+ const blocks=html.split('<script>').slice(1).map(x=>x.split('</script>')[0]);
+ const has=(term)=>blocks.findIndex(x=>x.includes(term));
+ assert.ok(has('function openReserve(paymentId)')>=0);
+ assert.equal(has('function openReserve(paymentId)'),has("else if(kind==='newReserve')openReserve()"));
+ assert.equal(has('function releaseReserve(id)'),has('data-release-reserve'));
+});
+
