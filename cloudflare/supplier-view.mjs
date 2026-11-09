@@ -19,6 +19,8 @@ export function supplierOverview(backup,supplierId,page=1){
  const paymentIds=new Set(payments.map(p=>p.id));
  const alloc=ops.allocations.filter(a=>ids.has(a.invoiceId)&&paymentIds.has(a.paymentId));
  const allPaidCents=payments.reduce((s,p)=>s+cents(p.amount),0);
+ const reservedCents=(ops.reservedAdvances||[]).filter(r=>r.supplierId===supplierId).reduce((sum,r)=>
+  sum+Math.max(0,cents(r.amount)-cents(r.releasedAmount||0)),0);
  const allBilledCents=invoices.reduce((s,i)=>s+(accrued(i)?cents(i.total):0),0);
  const allocatedCents=alloc.reduce((s,a)=>s+cents(a.amount),0);
  const notAccrued=invoices.filter(i=>!i.isOpening&&!accrued(i));
@@ -29,7 +31,7 @@ export function supplierOverview(backup,supplierId,page=1){
  const names={anna:'Анна',alina:'Алина',anatoly:'Анатолий'};
  return {
   supplier:{id:supplierId,name:names[supplierId]},
-  summary:{balance:money(allPaidCents-allBilledCents),paid:money(allPaidCents),accrued:money(allBilledCents),allocated:money(allocatedCents),open:money(allBilledCents-allocatedCents),advance:money(allPaidCents-allocatedCents),pendingAmount:money(notAccrued.reduce((s,i)=>s+cents(i.total),0)),pendingCount:notAccrued.length,count:listed.length,transitAmount:money(transitCents),transitCount:inTransit.length,transitMissingDelivery:inTransit.filter(i=>i.deliveryMissing===true).length},
+  summary:{balance:money(allPaidCents-allBilledCents-reservedCents),paid:money(allPaidCents),accrued:money(allBilledCents),allocated:money(allocatedCents),open:money(allBilledCents-allocatedCents),reserved:money(reservedCents),advance:money(allPaidCents-allocatedCents-reservedCents),pendingAmount:money(notAccrued.reduce((s,i)=>s+cents(i.total),0)),pendingCount:notAccrued.length,count:listed.length,transitAmount:money(transitCents),transitCount:inTransit.length,transitMissingDelivery:inTransit.filter(i=>i.deliveryMissing===true).length},
   pagination:{page,pageSize:perPage,total:listed.length,pages:Math.ceil(listed.length/perPage)},
   invoices:listed.slice(from,from+perPage).map(i=>{
    const paid=alloc.filter(a=>a.invoiceId===i.id).reduce((s,a)=>s+cents(a.amount),0);
