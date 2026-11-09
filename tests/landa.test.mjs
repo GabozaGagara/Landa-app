@@ -28,10 +28,26 @@ const post=(pathname,body,origin=ORIGIN)=>new Request('https://landa-app.example
 test('supplier summary uses the same accrued-only cash formula as LANDA',()=>{
  const d=supplierOverview(base(),'anna',1);
  assert.equal(d.supplier.id,'anna');
- assert.deepEqual(d.summary,{balance:-10,paid:90,accrued:100,allocated:70,open:30,advance:20,pendingAmount:20,pendingCount:1,count:2,transitAmount:0,transitCount:0,transitMissingDelivery:0});
+ assert.deepEqual(d.summary,{balance:-10,paid:90,accrued:100,allocated:70,open:30,reserved:0,advance:20,pendingAmount:20,pendingCount:1,count:2,transitAmount:0,transitCount:0,transitMissingDelivery:0});
  assert.equal(d.invoices.length,2);
  assert.equal(d.invoices[0].number,'10000000002');
  assert.equal(d.invoices[0].due,0); // Not accrued: no supplier debt yet
+});
+
+test('earmarked supplier advances do not enter the ordinary supplier balance',()=>{
+ const data=base();
+ data.operations.reservedAdvances=[{id:'reserve-1',paymentId:'p1',supplierId:'anna',amount:15,releasedAmount:0,purpose:'Чайники',createdAt:'2026-11-09T10:00:00Z'}];
+ const held=supplierOverview(data,'anna',1).summary;
+ assert.equal(held.reserved,15);
+ assert.equal(held.balance,-25);
+ assert.equal(held.advance,5);
+ // Releasing the reserve restores spendable funds without another payment.
+ data.operations.reservedAdvances[0].releasedAmount=15;
+ data.operations.reservedAdvances[0].releasedAt='2026-11-09T11:00:00Z';
+ const released=supplierOverview(data,'anna',1).summary;
+ assert.equal(released.reserved,0);
+ assert.equal(released.balance,-10);
+ assert.equal(released.advance,20);
 });
 
 test('supplier overview never leaks other supplier or raw financial data',()=>{
