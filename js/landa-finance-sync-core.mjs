@@ -12,6 +12,7 @@ const arrays={
  'operations.invoices':'id',
  'operations.payments':'id',
  'operations.allocations':'id',
+ 'operations.reservedAdvances':'id',
  'operations.cash':'id',
  'operations.sales':'id',
  'operations.auditTrail':'id'
@@ -36,8 +37,20 @@ function verifyAccounting(ops){
  for(const [id,cents] of invoicePaid){
   if(cents>Math.round(Number(invoices.get(id).total)*100))return 'Зачёты превышают стоимость накладной '+id;
  }
- for(const [id,cents] of paymentUsed){
-  if(cents>Math.round(Number(payments.get(id).amount)*100))return 'Зачёты превышают платёж '+id;
+ const reservedUsed=new Map();
+ for(const r of ops.reservedAdvances||[]){
+  const payment=payments.get(String(r.paymentId));
+  if(!payment||payment.supplierId!==r.supplierId)return 'Отложенный аванс не связан с правильным переводом';
+  if(!Number.isFinite(r.amount)||r.amount<=0||!String(r.purpose||'').trim()||
+   !Number.isFinite(Number(r.releasedAmount||0))||Number(r.releasedAmount||0)<0||
+   Number(r.releasedAmount||0)>r.amount)
+   return 'Некорректная сумма отложенного аванса';
+  const reserved=Math.round(r.amount*100)-Math.round(Number(r.releasedAmount||0)*100);
+  reservedUsed.set(String(r.paymentId),(reservedUsed.get(String(r.paymentId))||0)+reserved);
+ }
+ for(const [id,payment] of payments){
+  if((paymentUsed.get(id)||0)+(reservedUsed.get(id)||0)>Math.round(Number(payment.amount)*100))
+   return 'Перевод '+id+' распределён или отложен на сумму больше фактического перевода';
  }
  const shipments=new Set();
  for(const i of ops.invoices||[]){
