@@ -687,7 +687,7 @@ function invoiceRow(i,compact=false){
  const charged=invoiceAccrued(i),p=invoicePaid(i.id),due=invoiceDue(i),avail=supplierTotals(i.supplierId).advance;
  const canApply=charged&&due>0&&avail>0,items=Array.isArray(i.items)?i.items:[],status=statusCode(i),good=Number.isFinite(i.goodsCost)?i.goodsCost:Math.max(0,(Number(i.total)||0)-(i.includeDelivery?(Number(i.deliveryCost)||0):0)),legacyShipping=!i.isOpening&&!i.includeDelivery&&Number(i.deliveryCost)>0;
  const selectStatus=i.isOpening?'':`<select class="invoice-status-select" data-invoice-status="${esc(i.id)}" aria-label="Статус накладной ${esc(i.number)}">${Object.entries(CDEK_STATUS).map(([id,label])=>`<option value="${id}" ${status===id?'selected':''}>${label}</option>`).join('')}</select>`;
- const actions=i.isOpening?'':`${charged?`<button class="ops-mini" data-uncharge="${esc(i.id)}" type="button">Отменить начисление</button>`:status==='delivered'?`<button class="ops-mini" data-charge="${esc(i.id)}" type="button">Начислить поставщику</button>`:''}`;
+ const actions=i.isOpening?'':`${charged?`<button class="ops-mini" data-uncharge="${esc(i.id)}" type="button">${p>0?'Отменить начисление и зачёт':'Отменить начисление'}</button>`:status==='delivered'?`<button class="ops-mini" data-charge="${esc(i.id)}" type="button">Начислить поставщику</button>`:''}`;
  const trackActions=(!i.isOpening&&i.tracking)?`<button type="button" class="ops-mini" data-copy-track="${esc(i.tracking)}" title="Скопировать номер отслеживания">Копировать трек</button><a class="ops-mini" data-cdek-open="${esc(i.tracking)}" href="https://www.cdek.ru/ru/tracking/" target="_blank" rel="noopener noreferrer" title="Скопировать номер накладной и открыть отслеживание СДЭК">СДЭК ↗</a>`:'';
  return `<tr><td class="nowrap"><strong>${esc(dateText(i.date))}</strong><small>${esc(supName(i.supplierId))}</small></td>
  <td><strong>${i.isOpening?'Начальный долг':esc(i.number)}</strong><small>${i.isOpening?'Начальный долг без накладной СДЭК':'СДЭК: '+esc(i.tracking||'не указан')+(i.sender?' · '+esc(i.sender):'')+(i.route?' · '+esc(i.route):'')+(i.moysklad?' · МойСклад: '+esc(i.moysklad):'')}</small>${i.note?`<small>${esc(i.note)}</small>`:''}${supplierEditMarkup(i)}<div style="margin-top:7px">${selectStatus}</div></td>
@@ -1160,9 +1160,40 @@ window.LANDA_PALLET_OWNER_APPROVE=async function(sessionId,invoiceKeys){
  }catch(err){toast('Начисление после приёмки остановлено: '+(err?.message||String(err)));return false}
  finally{palletSettlementPending=false}
 };
-function unchargeCdek(id){const i=ops.invoices.find(x=>x.id===id);if(!i||!invoiceAccrued(i)||i.isOpening)return;
- if(invoicePaid(i.id)>0){toast('Сначала отмените зачёты по накладной, иначе долг нельзя снять');return}
- askConfirm('Отменить начисление по накладной '+i.number+'? Баланс поставщика увеличится на '+cashFmt(i.total,'USD')+'. Статус доставки не изменится.',()=>{i.accrued=false;opCommit('Начисление по накладной отменено')});
+function unchargeCdek(id){
+ const invoice=ops.invoices.find(x=>x.id===id);
+ if(!invoice||invoice.isOpening||!invoiceAccrued(invoice))return;
+ const allocations=ops.allocations.filter(a=>a.invoiceId===id);
+ const appliedCents=allocations.reduce((sum,a)=>sum+moneyCents(a.amount),0);
+ const safetySnapshot=JSON.stringify({invoice,allocations});
+ const summary=appliedCents?
+  'С накладной будет снят зачёт '+cashFmt(fromCents(appliedCents),'USD')+' ('+allocations.length+' зачёт/зачётов). Деньги вернутся в свободные авансы соответствующих переводов.':
+  'По накладной нет зачётов.';
+ askConfirm('Отменить начисление по накладной '+invoice.number+' на '+cashFmt(invoice.total,'USD')+'? '+summary+
+  ' Сам перевод поставщику и все кассовые операции сохранятся. Статус доставки не изменится.',()=>{
+  const current=ops.invoices.find(x=>x.id===id);
+  const currentAllocations=ops.allocations.filter(a=>a.invoiceId===id);
+  if(!current||!invoiceAccrued(current)||JSON.stringify({invoice:current,allocations:currentAllocations})!==safetySnapshot){
+   toast('Накладная или её зачёты изменились после открытия подтверждения. Отмена остановлена, обнови данные.');return;
+  }
+  // Change the invoice and its allocations as one ledger transaction.
+  // Never delete supplier payments or the related cash entries.
+  const previous=ops;
+  const next=JSON.parse(JSON.stringify(ops));
+  const target=next.invoices.find(x=>x.id===id);
+  target.accrued=false;
+  delete target.accruedAt;
+  next.allocations=next.allocations.filter(a=>a.invoiceId!==id);
+  ops=next;
+  if(!saveOps()){
+   ops=previous;
+   try{renderOps()}catch(_){}
+   toast('Браузер не подтвердил сохранение. Изменения отменены, проверь резервную копию.');
+   return;
+  }
+  try{renderOps()}catch(e){window.__landaReportError('Отмена начисления сохранена, но интерфейс не обновился: '+(e&&e.message||String(e)))}
+  toast('Начисление '+invoice.number+' отменено'+(appliedCents?' · зачёт '+cashFmt(fromCents(appliedCents),'USD')+' возвращён в свободный аванс':'')+'.');
+ });
 }
 $('invoiceTable').addEventListener('change',e=>{let select=e.target.closest('[data-invoice-status]');if(select)updateCdekStatus(select.dataset.invoiceStatus,select.value)});
 $('supplierInvoices').addEventListener('change',e=>{let select=e.target.closest('[data-invoice-status]');if(select)updateCdekStatus(select.dataset.invoiceStatus,select.value)});
