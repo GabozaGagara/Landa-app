@@ -266,6 +266,8 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
   <label class="field"><span>Назначение закупки</span><input class="textinput" name="purpose" maxlength="180" placeholder="Чайники" required></label></div>
   <label class="field"><span>Комментарий</span><input class="textinput" name="note" maxlength="300" placeholder="Например: ожидаем закупку"></label>
   <div id="reservePreview" class="op-preview">Выбери перевод и сумму.</div>
+  <div id="reserveAllocationHelp" class="op-preview" hidden></div>
+  <button type="button" class="btn" id="reserveMoveAllocations" hidden>⇄ Перенести зачёты на другой аванс</button>
   <div class="modal-ft"><button class="btn" type="button" data-close="reserveDialog">Отмена</button><button class="btn btn-primary" type="submit">Подтвердить отложенный аванс</button></div>
  </form>
 </dialog>
@@ -767,6 +769,89 @@ function previewTransfer(){let f=$('transferForm');try{let from=f.elements.from.
 function openExchange(){let f=$('exchangeForm');f.reset();formDate(f);$('exchangePreview').textContent='Укажите количество долларов и курс.';$('exchangeDialog').showModal()}
 function previewExchange(){let f=$('exchangeForm');try{let d=amountInput(f.elements.usd.value),rate=amountInput(f.elements.rate.value),source=f.elements.sourceRub.value;$('exchangePreview').textContent=`Со счёта «${cashLabel(source)}»: −${cashFmt(fromCents(Math.round(d*rate/100)),'RUB')}. В наличные доллары: +${cashFmt(fromCents(d),'USD')}. Курс: ${cashFmt(fromCents(rate),'RUB')} за доллар.`}catch(e){$('exchangePreview').textContent='Укажите количество долларов и курс.'}}
 
+// A previously paid invoice may be assigned to the wrong supplier transfer.
+// Moving only its allocation to another FREE payment of the same supplier
+// changes neither invoice settlement nor cash, and never invents new money.
+function paymentReassignmentPlan(sourceId){
+ const source=ops.payments.find(p=>p.id===sourceId);
+ if(!source)return null;
+ const assigned=ops.allocations.filter(a=>a.paymentId===sourceId).slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+ if(!assigned.length)return null;
+ const candidates=ops.payments.filter(p=>p.id!==sourceId&&p.supplierId===source.supplierId&&moneyCents(paymentFree(p))>0).sort(sortAsc);
+ const capacity=new Map(candidates.map(p=>[p.id,moneyCents(paymentFree(p))]));
+ const moves=[];
+ for(const a of assigned){
+  const invoice=ops.invoices.find(i=>i.id===a.invoiceId);
+  if(!invoice||invoice.supplierId!==source.supplierId||!invoiceAccrued(invoice))return null;
+  let needed=moneyCents(a.amount);
+  if(!Number.isSafeInteger(needed)||needed<=0)return null;
+  for(const p of candidates){
+   if(!needed)break;
+   const available=capacity.get(p.id)||0,used=Math.min(needed,available);
+   if(used>0){moves.push({allocationId:a.id,invoiceId:a.invoiceId,toPaymentId:p.id,amountCents:used});needed-=used;capacity.set(p.id,available-used)}
+  }
+  if(needed)return {possible:false,sourceId,neededCents:needed,allocatedCents:assigned.reduce((v,x)=>v+moneyCents(x.amount),0)};
+ }
+ return {possible:true,sourceId,moves,allocatedCents:assigned.reduce((v,x)=>v+moneyCents(x.amount),0)};
+}
+function paymentReassignmentDetails(plan){
+ if(!plan?.possible)return '';
+ const groups=new Map();
+ for(const m of plan.moves){
+  const invoice=ops.invoices.find(x=>x.id===m.invoiceId),to=ops.payments.find(x=>x.id===m.toPaymentId);
+  const key=m.invoiceId+'|'+m.toPaymentId;
+  const item=groups.get(key)||{number:invoice?.number||'Без номера',payment:to,total:0};
+  item.total+=m.amountCents;groups.set(key,item);
+ }
+ return [...groups.values()].map(x=>'Накладная '+x.number+': '+cashFmt(fromCents(x.total),'USD')+
+  ' → перевод '+dateText(x.payment.date)+(x.payment.note?' («'+x.payment.note+'»)':'')).join('; ');
+}
+function applyPaymentReassignmentPlan(initialPlan){
+ const plan=paymentReassignmentPlan(initialPlan?.sourceId);
+ if(!plan?.possible||JSON.stringify(plan)!==JSON.stringify(initialPlan))throw Error('Зачёты изменились, пересчитай их');
+ const next=JSON.parse(JSON.stringify(ops));
+ const byId=new Map();
+ for(const move of plan.moves){
+  if(!byId.has(move.allocationId))byId.set(move.allocationId,[]);
+  byId.get(move.allocationId).push(move);
+ }
+ for(const [id,moves] of byId){
+  const original=next.allocations.find(a=>a.id===id);
+  if(!original||original.paymentId!==plan.sourceId)throw Error('Зачёт изменился');
+  if(moves.reduce((v,m)=>v+m.amountCents,0)!==moneyCents(original.amount))throw Error('Сумма зачёта изменилась');
+  original.paymentId=moves[0].toPaymentId;
+  original.amount=fromCents(moves[0].amountCents);
+  for(const extra of moves.slice(1)){
+   next.allocations.push({id:opId('alloc'),paymentId:extra.toPaymentId,invoiceId:original.invoiceId,amount:fromCents(extra.amountCents)});
+  }
+ }
+ return next;
+}
+function moveReservedPaymentAllocations(){
+ const f=$('reserveForm'),p=ops.payments.find(x=>x.id===f.elements.paymentId.value);
+ if(!p)return;
+ const plan=paymentReassignmentPlan(p.id);
+ if(!plan?.possible){toast('Недостаточно свободных средств на других переводах для переноса всех зачётов.');return}
+ const expected=JSON.stringify(ops);
+ const details=paymentReassignmentDetails(plan);
+ askConfirm('Перенести '+cashFmt(fromCents(plan.allocatedCents),'USD')+' зачётов с перевода «'+(p.note||dateText(p.date))+
+  '» на другие свободные авансы ЭТОГО ЖЕ поставщика? '+details+
+  '. Накладные останутся оплаченными. Переводы и касса не изменятся. Продолжить?',()=>{
+  if(JSON.stringify(ops)!==expected){toast('Финансовые данные изменились. Пересчитай зачёты перед повторением.');return}
+  let next;
+  try{next=applyPaymentReassignmentPlan(plan)}
+  catch(e){toast('Не удалось перенести зачёты: '+e.message);return}
+  const previous=ops;ops=next;
+  if(!saveOps()){
+   ops=previous;try{renderOps()}catch(_){}
+   toast('Не удалось подтвердить сохранение переноса. Данные восстановлены.');return;
+  }
+  try{renderOps()}catch(err){window.__landaReportError('Перенос зачётов сохранён, но интерфейс не обновился: '+(err.message||err))}
+  reservePaymentOptions();
+  toast('Зачёты '+cashFmt(fromCents(plan.allocatedCents),'USD')+' перенесены. Можно отложить сумму для закупки.');
+ });
+}
+$('reserveMoveAllocations').addEventListener('click',moveReservedPaymentAllocations);
 function reservePaymentOptions(){
  const f=$('reserveForm'),supplier=f.elements.supplierId.value,previous=f.elements.paymentId.value;
  const available=ops.payments.filter(p=>p.supplierId===supplier&&moneyCents(paymentFree(p))>0).sort(sortDesc);
@@ -776,12 +861,29 @@ function reservePaymentOptions(){
 }
 function previewReserve(){
  const f=$('reserveForm'),p=ops.payments.find(p=>p.id===f.elements.paymentId.value),preview=$('reservePreview');
+ const help=$('reserveAllocationHelp'),button=$('reserveMoveAllocations');
+ help.hidden=true;button.hidden=true;
  if(!p){preview.textContent='Сначала запиши перевод поставщику или освободи часть уже распределённого аванса.';return}
- const free=paymentFree(p);
+ const free=paymentFree(p),allocated=paymentAllocated(p.id),held=fromCents(paymentReservedCents(p.id));
  const raw=String(f.elements.amount.value||'').trim();
- let detail='Доступно к откладыванию: '+cashFmt(free,'USD')+'. В кассе повторного списания не будет.';
- if(raw){try{const cents=amountInput(raw);detail+=' После откладывания свободно: '+cashFmt(fromCents(moneyCents(free)-cents),'USD')+'.';if(cents>moneyCents(free))detail+=' ⚠ Сумма больше доступного аванса.'}catch(_){detail+=' Проверь сумму.'}}
+ let detail='Переведено: '+cashFmt(p.amount,'USD')+'. Зачтено по накладным: '+cashFmt(allocated,'USD')+
+  '. Отложено: '+cashFmt(held,'USD')+'. Сейчас доступно: '+cashFmt(free,'USD')+'. В кассе повторного списания не будет.';
+ if(raw){try{const cents=amountInput(raw);if(cents<=moneyCents(free))detail+=' После откладывания свободно: '+cashFmt(fromCents(moneyCents(free)-cents),'USD')+'.';else detail+=' ⚠ Запрошено больше свободного аванса на '+cashFmt(fromCents(cents-moneyCents(free)),'USD')+'.'}catch(_){detail+=' Проверь сумму.'}}
  preview.textContent=detail;
+ const plan=paymentReassignmentPlan(p.id);
+ if(allocated>0){
+  help.hidden=false;
+  if(plan?.possible){
+   help.textContent='Можно перенести зачёты '+cashFmt(fromCents(plan.allocatedCents),'USD')+
+    ' на другие свободные авансы '+supName(p.supplierId)+'. Тогда на этом переводе будет доступно '+
+    cashFmt(fromCents(moneyCents(free)+plan.allocatedCents),'USD')+'. '+paymentReassignmentDetails(plan)+
+    '. Накладные сохранят статус оплаты.';
+   button.hidden=false;
+  }else{
+   help.textContent='Из этого перевода уже оплачены накладные на '+cashFmt(allocated,'USD')+
+    '. На других переводах недостаточно свободного аванса для полного переноса. Сумму нельзя использовать второй раз.';
+  }
+ }
 }
 function openReserve(paymentId){
  const f=$('reserveForm');f.reset();f.elements.supplierId.innerHTML=supplyOptions(selectedSupplier);
