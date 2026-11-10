@@ -157,6 +157,7 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
  <div class="heading ops-head"><div><div class="eyebrow">РАЗДЕЛ 02 / ВЗАИМОРАСЧЁТЫ</div><h1>Поставщики и оплаты</h1><p>Отдельный долларовый баланс Анны, Алины и Анатолия. Платежи и авансы привязываются к накладным.</p></div><div class="actions"><button type="button" class="btn btn-primary" data-action="newPayment">↗ Отправить деньги</button><button type="button" class="btn" data-action="newInvoice">＋ Накладная</button><button type="button" class="btn" data-action="supplierOpening">⚙ Начальный баланс</button></div></div>
  <div class="ops-grid" id="supplierCards"></div>
  <div class="ops-section"><div><h2 id="supplierTitle">Операции поставщика</h2><p>Плюс — наш аванс у поставщика. Минус — сумма, которую ещё необходимо оплатить.</p></div><button class="btn" type="button" data-action="exportSuppliers">↓ CSV взаиморасчетов</button></div>
+ <div class="ops-notice" id="supplierBalanceBreakdown"></div>
  <div class="ops-notice" id="supplierReconcile"></div>
  <div class="ops-section"><div><h2>Отложенные авансы у поставщика</h2><p>Деньги уже переведены, но закреплены под закупку: они не входят в обычный баланс и недоступны для автоматического зачёта по накладным.</p></div><button class="btn btn-primary" type="button" data-action="newReserve">＋ Отложить из перевода</button></div>
  <div class="ops-list" id="supplierReservedAdvances"></div>
@@ -631,6 +632,8 @@ function usdCostMarkup(){
 function supplierTotals(id){
  const inv=ops.invoices.filter(i=>i.supplierId===id),payments=ops.payments.filter(p=>p.supplierId===id);
  const allInvoiceCents=inv.reduce((sum,i)=>sum+invoiceAmount(i),0);
+ const openingDebtCents=inv.filter(i=>i.isOpening).reduce((sum,i)=>sum+invoiceAmount(i),0);
+ const ordinaryInvoiceCents=allInvoiceCents-openingDebtCents;
  const paidCents=payments.reduce((sum,p)=>sum+moneyCents(p.amount),0);
  const reservedCents=(ops.reservedAdvances||[]).filter(r=>r.supplierId===id).reduce((sum,r)=>sum+reservedRemainingCents(r),0);
  const ids=new Set(inv.map(i=>i.id));
@@ -638,6 +641,8 @@ function supplierTotals(id){
  const inTransit=inv.filter(i=>!i.isOpening&&statusCode(i)==='transit');
  const transitCents=inTransit.reduce((sum,i)=>sum+shipmentTotalCents(i),0);
  return {invoices:inv.length,payments:payments.length,total:fromCents(allInvoiceCents),paid:fromCents(paidCents),
+  ordinaryInvoices:fromCents(ordinaryInvoiceCents),openingDebt:fromCents(openingDebtCents),
+  balanceBeforeOpeningDebt:fromCents(paidCents-ordinaryInvoiceCents-reservedCents),
   allocated:fromCents(allocatedCents),open:fromCents(allInvoiceCents-allocatedCents),
   reserved:fromCents(reservedCents),advance:fromCents(paidCents-allocatedCents-reservedCents),
   balance:fromCents(paidCents-allInvoiceCents-reservedCents),
@@ -662,6 +667,9 @@ function supplierCard(id,clickable=false){
  return `<div class="ops-card op-supplier-card ${selectedSupplier===id?'active':''}" ${clickable?`data-supplier-card="${esc(id)}" role="button" tabindex="0"`:' '}>
  <h3>${esc(supName(id))}</h3><div class="ops-label">Баланс поставщика</div><div class="ops-big ${numColor(b)}">${b>0?'+':''}${cashFmt(b,'USD')}</div>
  <div class="ops-sub">${b<0?'Мы должны поставщику':b>0?'Наш аванс у поставщика':'Взаиморасчёты закрыты'}</div>
+ <div class="ops-kv"><span>Переведено поставщику</span><strong>${cashFmt(s.paid,'USD')}</strong></div>
+ <div class="ops-kv"><span>Обычные начисленные накладные</span><strong class="negative">−${cashFmt(s.ordinaryInvoices,'USD')}</strong></div>
+ <div class="ops-kv"><span>Начальный долг · вычтен из баланса</span><strong class="negative">−${cashFmt(s.openingDebt,'USD')}</strong></div>
  <div class="ops-kv"><span>Не оплачено по накладным</span><strong class="negative">${cashFmt(s.open,'USD')}</strong></div>
  <div class="ops-kv"><span>Свободный аванс</span><strong class="positive">${cashFmt(s.advance,'USD')}</strong></div>
  <div class="ops-kv"><span>Отложено у поставщика</span><strong>${cashFmt(s.reserved,'USD')}</strong></div>
@@ -719,10 +727,16 @@ function cashRows(){let running={};for(let account of Object.keys(CASH_ACCOUNTS)
 function renderCash(){let accounts=['RUB','USD','CARD','AVITO'];$('cashKpis').innerHTML=accounts.map((account,idx)=>{let b=balanceCash(account);return `<div class="ops-card ${idx===0?'primary':''}"><div class="ops-label">${cashLabel(account)}</div><div class="ops-big ${idx!==0?numColor(b):''}">${cashFmt(b,account)}</div><div class="ops-sub">Начало: ${cashFmt(ops.openings[account]||0,account)}${b<0?' · ⚠ проверьте остаток':''}${account==='AVITO'?' · к получению, ещё не на карте':''}</div>${account==='USD'?usdCostMarkup():''}</div>`}).join('');
 document.querySelectorAll('[data-cash-filter]').forEach(b=>b.classList.toggle('active',b.dataset.cashFilter===cashFilter));let rr=cashRows().filter(r=>cashFilter==='all'||r.currency===cashFilter);$('cashTable').innerHTML=opTable(['Дата','Операция / статья','Счёт',{label:'Движение',right:true},{label:'Остаток после',right:true},{label:'',right:true}],rr.map(r=>`<tr><td class="nowrap">${esc(dateText(r.date))}</td><td><strong>${esc(cashKinds[r.kind]||r.kind)}</strong><small>${esc(r.category||'')}${r.note?' · '+esc(r.note):''}${r.kind.startsWith('exchange')?' · курс '+fmt.format(r.rate||0)+' ₽/$':r.currency==='USD'&&r.kind==='income'?(r.rate?' · курс '+fmt.format(r.rate)+' ₽/$':' · курс неизвестен'):''}</small></td><td class="nowrap">${esc(cashLabel(r.currency))}</td><td class="right nowrap ${numColor(r.amount)}"><strong>${signedCashFmt(r.amount,r.currency)}</strong></td><td class="right nowrap">${cashFmt(r.running,r.currency)}</td><td class="ops-td-actions">${r.kind==='supplier'?'<span class="ops-smallnote">Удалить в оплатах</span>':`${r.currency==='USD'&&r.kind==='income'?`<button type="button" class="ops-mini" data-rate-cash="${esc(r.id)}">Курс</button> `:''}<button class="ops-mini danger" data-delete-cash="${esc(r.id)}">Удалить</button>`}</td></tr>`),'Операций пока нет. Установите начальные остатки и добавьте первое движение.')}
 function renderSuppliers(){if(!ops.suppliers.some(s=>s.id===selectedSupplier))selectedSupplier=ops.suppliers[0].id;$('supplierCards').innerHTML=ops.suppliers.map(s=>supplierCard(s.id,true)).join('');$('supplierTitle').textContent='Операции: '+supName(selectedSupplier);let s=supplierTotals(selectedSupplier);
- const openingDebtCents=ops.invoices.filter(i=>i.isOpening&&i.supplierId===selectedSupplier).reduce((total,i)=>total+moneyCents(i.total),0);
- const historicDebtMarkup=openingDebtCents
-  ?'<br><strong>Исторический начальный долг:</strong> '+cashFmt(fromCents(openingDebtCents),'USD')+' (входит в начисленные суммы). Проверь, не учтены ли те же закупки повторно в обычных накладных.'
+ const historicDebtMarkup=s.openingDebt
+  ?'<br><strong>Исторический начальный долг:</strong> '+cashFmt(s.openingDebt,'USD')+' (уже вычтен из баланса). Проверь, не учтены ли те же закупки повторно в обычных накладных.'
   :'';
+ $('supplierBalanceBreakdown').innerHTML='<strong>Проверка баланса · '+esc(supName(selectedSupplier))+'</strong>'+
+  '<div class="ops-kv"><span>Переведено поставщику</span><strong class="positive">+'+cashFmt(s.paid,'USD')+'</strong></div>'+
+  '<div class="ops-kv"><span>Обычные начисленные накладные</span><strong class="negative">−'+cashFmt(s.ordinaryInvoices,'USD')+'</strong></div>'+
+  '<div class="ops-kv"><span>Начальный долг (отдельно вычитается)</span><strong class="negative">−'+cashFmt(s.openingDebt,'USD')+'</strong></div>'+
+  '<div class="ops-kv"><span>Отложенные авансы</span><strong>−'+cashFmt(s.reserved,'USD')+'</strong></div>'+
+  '<div class="ops-kv"><span><strong>Итоговый баланс</strong></span><strong class="'+numColor(s.balance)+'">'+(s.balance>0?'+':'')+cashFmt(s.balance,'USD')+'</strong></div>'+
+  '<div class="ops-sub">Начальный долг уменьшает баланс один раз при начислении. Кнопка «Снять зачёт» возвращает платёж в свободный аванс, но сама по себе не отменяет долг и не уменьшает его второй раз.</div>';
 $('supplierReconcile').innerHTML=`<strong>${esc(supName(selectedSupplier))} · общая позиция: <span class="${numColor(s.balance)}">${s.balance>0?'+':''}${cashFmt(s.balance,'USD')}</span>.</strong> Получено по накладным: ${cashFmt(s.total,'USD')}. Переведено поставщику: ${cashFmt(s.paid,'USD')}. <strong>Нужно зачесть по накладным:</strong> ${cashFmt(s.open,'USD')}. <strong>Свободный аванс:</strong> ${cashFmt(s.advance,'USD')}. <strong>Отложено под закупки:</strong> ${cashFmt(s.reserved,'USD')} (не входит в баланс). <strong>В пути (${s.transitCount}):</strong> ${cashFmt(s.transit,'USD')} (включая доставку)${s.pendingDelivery?' · доставка для '+s.pendingDelivery+' накладных не указана':''}. ${s.legacyDelivery?'<br><strong class="negative">⚠ В '+s.legacyDelivery+' старых накладных доставка не вошла в прежний долг. Проверьте накладные перед изменением баланса.</strong>':''}<br>Зачтённые платежи: ${cashFmt(s.allocated,'USD')}. Формула обычного баланса: переводы − начисленные накладные − отложенные авансы.${historicDebtMarkup}`;
 const reservedRows=(ops.reservedAdvances||[]).filter(r=>r.supplierId===selectedSupplier).slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
 $('supplierReservedAdvances').innerHTML=opTable(['Дата','На какую закупку',{label:'Отложено',right:true},'Из перевода','Статус',{label:'',right:true}],reservedRows.map(r=>{
