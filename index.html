@@ -155,6 +155,17 @@ dialog{border:1px solid #e5eaf2;border-radius:16px;padding:0;background:#fff;col
 </section>
 <section id="suppliersPage" class="page" hidden>
  <div class="heading ops-head"><div><div class="eyebrow">РАЗДЕЛ 02 / ВЗАИМОРАСЧЁТЫ</div><h1>Поставщики и оплаты</h1><p>Отдельный долларовый баланс Анны, Алины и Анатолия. Платежи и авансы привязываются к накладным.</p></div><div class="actions"><button type="button" class="btn btn-primary" data-action="newPayment">↗ Отправить деньги</button><button type="button" class="btn" data-action="newInvoice">＋ Накладная</button><button type="button" class="btn" data-action="supplierOpening">⚙ Начальный баланс</button></div></div>
+ <div class="ops-section"><div><h2>Общая сводка по всем поставщикам</h2><p>Текущий долг и стоимость поставок по статусам LANDA. Все суммы в USD, включая указанную доставку.</p></div></div>
+ <div class="ops-grid" id="supplierOverviewKpis"></div>
+ <div class="ops-notice" id="supplierOverviewNote"></div>
+ <div class="ops-list" id="supplierOverviewTable"></div>
+ <div class="ops-list" style="padding:12px 16px;margin-top:12px">
+  <details><summary class="op-linklike">Забрали / Вручен — список накладных</summary><div id="supplierStageDelivered" style="overflow-x:auto"></div></details>
+  <details><summary class="op-linklike">В пути — список накладных</summary><div id="supplierStageTransit" style="overflow-x:auto"></div></details>
+  <details><summary class="op-linklike">Готово к выдаче — список накладных</summary><div id="supplierStageReady" style="overflow-x:auto"></div></details>
+  <details><summary class="op-linklike">Создано — список накладных</summary><div id="supplierStageCreated" style="overflow-x:auto"></div></details>
+ </div>
+ <div class="ops-section"><div><h2>Балансы отдельных поставщиков</h2><p>Выбери поставщика для просмотра операций и оплаты.</p></div></div>
  <div class="ops-grid" id="supplierCards"></div>
  <div class="ops-section"><div><h2 id="supplierTitle">Операции поставщика</h2><p>Плюс — наш аванс у поставщика. Минус — сумма, которую ещё необходимо оплатить.</p></div><button class="btn" type="button" data-action="exportSuppliers">↓ CSV взаиморасчетов</button></div>
  <div class="ops-notice" id="supplierBalanceBreakdown"></div>
@@ -726,7 +737,49 @@ $('dashboardSuppliers').innerHTML=ops.suppliers.map(s=>supplierCard(s.id,true)).
 function cashRows(){let running={};for(let account of Object.keys(CASH_ACCOUNTS))running[account]=moneyCents(ops.openings[account]||0);let results=[];for(let r of ops.cash.slice().sort(sortAsc)){if(!Object.prototype.hasOwnProperty.call(running,r.currency))continue;running[r.currency]+=moneyCents(r.amount);results.push({...r,running:fromCents(running[r.currency])})}return results.sort(sortDesc)}
 function renderCash(){let accounts=['RUB','USD','CARD','AVITO'];$('cashKpis').innerHTML=accounts.map((account,idx)=>{let b=balanceCash(account);return `<div class="ops-card ${idx===0?'primary':''}"><div class="ops-label">${cashLabel(account)}</div><div class="ops-big ${idx!==0?numColor(b):''}">${cashFmt(b,account)}</div><div class="ops-sub">Начало: ${cashFmt(ops.openings[account]||0,account)}${b<0?' · ⚠ проверьте остаток':''}${account==='AVITO'?' · к получению, ещё не на карте':''}</div>${account==='USD'?usdCostMarkup():''}</div>`}).join('');
 document.querySelectorAll('[data-cash-filter]').forEach(b=>b.classList.toggle('active',b.dataset.cashFilter===cashFilter));let rr=cashRows().filter(r=>cashFilter==='all'||r.currency===cashFilter);$('cashTable').innerHTML=opTable(['Дата','Операция / статья','Счёт',{label:'Движение',right:true},{label:'Остаток после',right:true},{label:'',right:true}],rr.map(r=>`<tr><td class="nowrap">${esc(dateText(r.date))}</td><td><strong>${esc(cashKinds[r.kind]||r.kind)}</strong><small>${esc(r.category||'')}${r.note?' · '+esc(r.note):''}${r.kind.startsWith('exchange')?' · курс '+fmt.format(r.rate||0)+' ₽/$':r.currency==='USD'&&r.kind==='income'?(r.rate?' · курс '+fmt.format(r.rate)+' ₽/$':' · курс неизвестен'):''}</small></td><td class="nowrap">${esc(cashLabel(r.currency))}</td><td class="right nowrap ${numColor(r.amount)}"><strong>${signedCashFmt(r.amount,r.currency)}</strong></td><td class="right nowrap">${cashFmt(r.running,r.currency)}</td><td class="ops-td-actions">${r.kind==='supplier'?'<span class="ops-smallnote">Удалить в оплатах</span>':`${r.currency==='USD'&&r.kind==='income'?`<button type="button" class="ops-mini" data-rate-cash="${esc(r.id)}">Курс</button> `:''}<button class="ops-mini danger" data-delete-cash="${esc(r.id)}">Удалить</button>`}</td></tr>`),'Операций пока нет. Установите начальные остатки и добавьте первое движение.')}
-function renderSuppliers(){if(!ops.suppliers.some(s=>s.id===selectedSupplier))selectedSupplier=ops.suppliers[0].id;$('supplierCards').innerHTML=ops.suppliers.map(s=>supplierCard(s.id,true)).join('');$('supplierTitle').textContent='Операции: '+supName(selectedSupplier);let s=supplierTotals(selectedSupplier);
+// Read-only overview. Never accrue invoices, allocate advances or modify cash here.
+function supplierOverviewData(){
+ const keys=['delivered','transit','ready','created'];
+ const empty=()=>({count:0,cents:0,unaccruedCents:0,unaccruedCount:0,missingCost:0,missingDelivery:0});
+ const totals={debtCents:0,creditCents:0,heldCents:0,unallocatedDebtCents:0,stages:Object.fromEntries(keys.map(k=>[k,empty()]))};
+ const rows=ops.suppliers.map(s=>{
+  const balance=supplierTotals(s.id),stages=Object.fromEntries(keys.map(k=>[k,empty()]));
+  for(const i of ops.invoices.filter(i=>i.supplierId===s.id&&!i.isOpening)){
+   const stage=stages[statusCode(i)],value=shipmentTotalCents(i);
+   stage.count++;stage.cents+=value;
+   if(!invoiceAccrued(i)){stage.unaccruedCount++;stage.unaccruedCents+=value}
+   const goods=Number.isFinite(i.goodsCost)?i.goodsCost:(Number(i.total)||0)-(i.includeDelivery?(Number(i.deliveryCost)||0):0);
+   if(goods<=0)stage.missingCost++;
+   if(i.deliveryMissing===true)stage.missingDelivery++;
+  }
+  const row={id:s.id,name:s.name,debtCents:Math.max(0,-moneyCents(balance.balance)),creditCents:Math.max(0,moneyCents(balance.balance)),heldCents:moneyCents(balance.reserved),unallocatedDebtCents:moneyCents(balance.open),stages};
+  for(const k of ['debtCents','creditCents','heldCents','unallocatedDebtCents'])totals[k]+=row[k];
+  for(const k of keys)for(const field of Object.keys(stages[k]))totals.stages[k][field]+=stages[k][field];
+  return row;
+ });
+ return {rows,totals};
+}
+function renderSupplierOverview(){
+ const {rows,totals}=supplierOverviewData(),stages=totals.stages,money=c=>cashFmt(fromCents(c),'USD');
+ const waiting=['transit','ready','created'].reduce((a,k)=>a+stages[k].cents,0);
+ const count=['transit','ready','created'].reduce((a,k)=>a+stages[k].count,0);
+ const warning=Object.values(stages).reduce((a,x)=>a+x.missingCost+x.missingDelivery,0);
+ const card=(label,value,sub,cls='')=>'<div class="ops-card"><div class="ops-label">'+esc(label)+'</div><div class="ops-big '+cls+'">'+money(value)+'</div><div class="ops-sub">'+esc(sub)+'</div></div>';
+ $('supplierOverviewKpis').innerHTML=
+  card('Общий долг сейчас',totals.debtCents,'Сумма отрицательных балансов, без зачёта авансов других поставщиков','negative')+
+  card('Забрали / Вручен',stages.delivered.cents,stages.delivered.count+' накл. · стоимость полученных поставок')+
+  card('Ожидаем поставки — всего',waiting,count+' накл. · создано, в пути, готово к выдаче')+
+  card('Наш аванс у поставщиков',totals.creditCents,'Сумма положительных балансов · без отложенных средств','positive');
+ $('supplierOverviewNote').textContent='Долг — по уже начисленным суммам с учётом начального баланса, переводов и резервов. Стоимость поставок справочная: не начисленные накладные не входят в текущий долг, а уже начисленные не прибавляются повторно. Забрали, но ещё не начислено: '+money(stages.delivered.unaccruedCents)+' ('+stages.delivered.unaccruedCount+' накл.). Отложенные средства: '+money(totals.heldCents)+'.'+(warning?' Внимание: у части накладных отсутствует стоимость товара или доставки, суммы могут быть неполными.':'');
+ const cell=x=>'<td class="right nowrap"><strong>'+money(x.cents)+'</strong><small>'+x.count+' накл.</small>'+(x.unaccruedCount?'<small>Не начислено: '+money(x.unaccruedCents)+'</small>':'')+'</td>';
+ const row=(name,x)=>'<tr><td><strong>'+esc(name)+'</strong></td><td class="right nowrap negative"><strong>'+money(x.debtCents)+'</strong></td>'+['delivered','transit','ready','created'].map(k=>cell(x.stages[k])).join('')+'</tr>';
+ $('supplierOverviewTable').innerHTML=opTable(['Поставщик',{label:'Долг сейчас',right:true},{label:'Забрали',right:true},{label:'В пути',right:true},{label:'Готово к выдаче',right:true},{label:'Создано',right:true}],[...rows.map(r=>row(r.name,r)),row('ИТОГО',totals)]);
+ for(const [key,id] of Object.entries({delivered:'supplierStageDelivered',transit:'supplierStageTransit',ready:'supplierStageReady',created:'supplierStageCreated'})){
+  const records=ops.invoices.filter(i=>!i.isOpening&&statusCode(i)===key).slice().sort(sortDesc);
+  $(''+id).innerHTML=opTable(['Поставщик','Дата','Накладная / СДЭК',{label:'Стоимость с доставкой',right:true},'Начисление',{label:'Осталось зачесть',right:true}],records.map(i=>'<tr><td>'+esc(supName(i.supplierId))+'</td><td class="nowrap">'+esc(dateText(i.date))+'</td><td>'+esc(i.number||i.tracking||'Без номера')+'</td><td class="right nowrap">'+money(shipmentTotalCents(i))+(i.deliveryMissing===true?'<small>Доставка не указана</small>':'')+'</td><td>'+moneyStatus(i)+'</td><td class="right nowrap">'+(invoiceAccrued(i)?cashFmt(invoiceDue(i),'USD'):'—')+'</td></tr>'),'Нет накладных с этим статусом');
+ }
+}
+function renderSuppliers(){renderSupplierOverview();if(!ops.suppliers.some(s=>s.id===selectedSupplier))selectedSupplier=ops.suppliers[0].id;$('supplierCards').innerHTML=ops.suppliers.map(s=>supplierCard(s.id,true)).join('');$('supplierTitle').textContent='Операции: '+supName(selectedSupplier);let s=supplierTotals(selectedSupplier);
  const historicDebtMarkup=s.openingDebt
   ?'<br><strong>Исторический начальный долг:</strong> '+cashFmt(s.openingDebt,'USD')+' (уже вычтен из баланса). Проверь, не учтены ли те же закупки повторно в обычных накладных.'
   :'';
