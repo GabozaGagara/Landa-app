@@ -2021,4 +2021,31 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
 <script type="module" src="./js/landa-moysklad-ui.mjs"></script>
 <script type="module" src="./js/landa-expenses-ui.mjs"></script>
 <script type="module" src="./js/landa-aux-sync.mjs"></script>
+<script>
+// Offline reopening support for an existing browser installation.
+// Financial data and GitHub tokens are NOT handled by the service worker.
+(function(){
+ if(!('serviceWorker' in navigator)||location.protocol!=='https:')return;
+ const notice=document.createElement('div');
+ notice.id='landaOfflineShellWarning';
+ notice.hidden=true;
+ notice.setAttribute('role','alert');
+ notice.style.cssText='position:fixed;left:10px;right:10px;bottom:12px;z-index:9999;padding:13px 16px;border:2px solid #ca8a04;border-radius:12px;background:#fffbeb;color:#713f12;font:600 13px/1.5 system-ui,sans-serif;box-shadow:0 5px 22px #0003';
+ notice.textContent='LANDA открыта без доступа к серверу. Записи на этом устройстве НЕ подтверждены GitHub. Перед финансовыми операциями проверь синхронизацию и сохрани полную копию.';
+ document.body.appendChild(notice);
+ const warn=()=>{notice.hidden=false};
+ if(!navigator.onLine)warn();
+ window.addEventListener('offline',warn);
+ window.addEventListener('online',()=>{
+  if(!notice.hidden)notice.textContent='Интернет появился, но сохранение в GitHub ещё не подтверждено. Проверь статус синхронизации перед операциями.';
+ });
+ navigator.serviceWorker.addEventListener('message',event=>{
+  if(event.data&&event.data.type==='LANDA_STATIC_FALLBACK')warn();
+ });
+ navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(error=>{
+  // Do not block finance app startup when offline caching is unsupported.
+  console.warn('LANDA offline app cache is unavailable:',error);
+ });
+})();
+</script>
 </body></html>
