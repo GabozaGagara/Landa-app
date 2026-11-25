@@ -2036,6 +2036,15 @@ try{let k='landa_storage_check';localStorage.setItem(k,'ok');if(localStorage.get
  const warn=()=>{notice.hidden=false};
  if(!navigator.onLine)warn();
  window.addEventListener('offline',warn);
+ // Check the actual page host as navigator.onLine can be true while GitHub is blocked.
+ window.addEventListener('load',async()=>{
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5000);
+  try{
+   const response=await fetch('./index.html',{method:'HEAD',cache:'no-store',signal:controller.signal});
+   if(!response.ok)warn();
+  }catch(_){warn()}
+  finally{clearTimeout(timer)}
+ });
  window.addEventListener('online',()=>{
   if(!notice.hidden)notice.textContent='Интернет появился, но сохранение в GitHub ещё не подтверждено. Проверь статус синхронизации перед операциями.';
  });
